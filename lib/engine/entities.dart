@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'stations.dart';
+
 /// Simple 2D vector for pure Dart physics simulation.
 class Vector2 {
   double x;
@@ -44,34 +46,67 @@ class PlayerEntity {
   bool isMoving;
   double walkCycle; // Animation phase (0 to 2*PI)
 
-  // Item carrying stats (for M1+)
+  // Item carrying stats & physics wobble
   int carryCapacity;
-  int carriedCount;
+  final List<ItemType> carriedItems;
+  double wobbleAngle; // Sway in radians
+  double wobbleVelocity;
 
   PlayerEntity({
     Vector2? startPosition,
     this.speed = 220.0,
     this.radius = 20.0,
     this.carryCapacity = 3,
-  }) : position = startPosition ?? Vector2(400.0, 500.0),
+  }) : position = startPosition ?? Vector2(450.0, 600.0),
        velocity = Vector2(0.0, 0.0),
        angle = math.pi / 2, // Default facing forward/down
        isMoving = false,
        walkCycle = 0.0,
-       carriedCount = 0;
+       carriedItems = [],
+       wobbleAngle = 0.0,
+       wobbleVelocity = 0.0;
+
+  int get carriedCount => carriedItems.length;
+  bool get isFull => carriedCount >= carryCapacity;
+
+  bool addItem(ItemType item) {
+    if (carriedCount < carryCapacity) {
+      carriedItems.add(item);
+      return true;
+    }
+    return false;
+  }
+
+  ItemType? removeItem() {
+    if (carriedItems.isNotEmpty) {
+      return carriedItems.removeLast();
+    }
+    return null;
+  }
 
   void update(double dt) {
     if (dt <= 0.0) return;
 
-    if (velocity.length > 1.0) {
+    final currentSpeed = velocity.length;
+    if (currentSpeed > 1.0) {
       isMoving = true;
       position.x += velocity.x * dt;
       position.y += velocity.y * dt;
-      angle = math.atan2(velocity.y, velocity.x);
+
+      // Smooth turning angle
+      final targetAngle = math.atan2(velocity.y, velocity.x);
+      angle = targetAngle;
+
       walkCycle = (walkCycle + dt * 14.0) % (math.pi * 2);
+
+      // Inertia wobble when moving: sways with walking stride + velocity
+      final targetWobble = math.sin(walkCycle) * 0.12 * (currentSpeed / speed);
+      wobbleAngle += (targetWobble - wobbleAngle) * math.min(1.0, dt * 10.0);
     } else {
       isMoving = false;
       walkCycle = 0.0;
+      // Spring back to center upright position when standing still
+      wobbleAngle += (0.0 - wobbleAngle) * math.min(1.0, dt * 8.0);
     }
   }
 }

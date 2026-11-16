@@ -35,7 +35,9 @@ class AppTheme {
         secondary: saffronOrange,
         surface: cream,
       ),
-      scaffoldBackgroundColor: const Color(0xFF2C180B), // Dark surround outside world
+      scaffoldBackgroundColor: const Color(
+        0xFF2C180B,
+      ), // Dark surround outside world
     );
   }
 }

@@ -3,7 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../engine/game_world.dart';
 import 'sprite_renderer.dart';
 
-/// 60 FPS CustomPainter rendering the Dhaba world, walls, floor, and entities.
+/// 60 FPS CustomPainter rendering the Dhaba world, stations, and entities.
 class WorldPainter extends CustomPainter {
   final GameWorld world;
   final Offset cameraOffset;
@@ -35,7 +35,10 @@ class WorldPainter extends CustomPainter {
       world.wallThickness,
     );
 
-    // 4. Draw Player Character
+    // 4. Draw Kitchen Stations (Chai Brewing Kettle)
+    SpriteRenderer.drawChaiStation(canvas, world.chaiStation);
+
+    // 5. Draw Player Character (with head stack)
     SpriteRenderer.drawPlayer(canvas, world.player);
 
     canvas.restore();

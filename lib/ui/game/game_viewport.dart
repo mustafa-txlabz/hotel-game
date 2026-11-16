@@ -158,10 +158,12 @@ class _GameViewportState extends State<GameViewport>
             // Floating Virtual Joystick
             JoystickWidget(origin: _joystickOrigin, current: _joystickCurrent),
 
-            // Top HUD (Rupees & Title)
+            // Top HUD (Rupees & Carry Counter)
             IgnorePointer(
               child: HudOverlay(
                 rupees: controller.rupees,
+                carriedCount: controller.world.player.carriedCount,
+                carryCapacity: controller.world.player.carryCapacity,
                 showTutorial: !_hasMovedOnce,
               ),
             ),

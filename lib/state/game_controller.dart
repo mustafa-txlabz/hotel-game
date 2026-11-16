@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import '../engine/game_world.dart';
 
@@ -6,7 +7,12 @@ import '../engine/game_world.dart';
 class GameController extends ChangeNotifier {
   final GameWorld _world;
 
-  GameController({GameWorld? world}) : _world = world ?? GameWorld();
+  GameController({GameWorld? world}) : _world = world ?? GameWorld() {
+    _world.onItemPickedUp = (_) {
+      HapticFeedback.lightImpact();
+      notifyListeners();
+    };
+  }
 
   GameWorld get world => _world;
   double get rupees => _world.rupees;
