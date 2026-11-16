@@ -1,4 +1,5 @@
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+
 import 'ad_ids.dart';
 
 /// AdMob advertising service managing rewarded and interstitial ad flows.

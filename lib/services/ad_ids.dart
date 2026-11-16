@@ -8,9 +8,11 @@ class AdIds {
   static const bool useTestAds = true;
 
   // Test Ad Unit IDs (Google official test IDs)
-  static const String testAndroidAppId = 'ca-app-pub-3940256099942544~3347511713';
+  static const String testAndroidAppId =
+      'ca-app-pub-3940256099942544~3347511713';
   static const String testRewarded = 'ca-app-pub-3940256099942544/5224354917';
-  static const String testInterstitial = 'ca-app-pub-3940256099942544/1033173712';
+  static const String testInterstitial =
+      'ca-app-pub-3940256099942544/1033173712';
   static const String testBanner = 'ca-app-pub-3940256099942544/6300978111';
 
   // Production Ad Unit IDs (Owner fills these in before Google Play release)
@@ -19,7 +21,7 @@ class AdIds {
   static const String liveBanner = 'REPLACE_ME_LIVE_BANNER_ID';
 
   static String get rewardedUnitId => useTestAds ? testRewarded : liveRewarded;
-  static String get interstitialUnitId => useTestAds ? testInterstitial : liveInterstitial;
+  static String get interstitialUnitId =>
+      useTestAds ? testInterstitial : liveInterstitial;
   static String get bannerUnitId => useTestAds ? testBanner : liveBanner;
 }
-
