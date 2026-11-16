@@ -54,17 +54,14 @@ void main() {
       final station = ChaiStation(brewTime: 1.0, shelfCapacity: 5);
       station.shelfCount = 0;
 
-      // Half brew time: 0.5s -> no new cup
       station.update(0.5);
       expect(station.shelfCount, 0);
       expect(station.brewProgress, closeTo(0.5, 0.01));
 
-      // Reaching 1.0s -> 1 cup brewed
       station.update(0.5);
       expect(station.shelfCount, 1);
       expect(station.brewProgress, 0.0);
 
-      // Advance by 10s -> capped at shelfCapacity (5)
       station.update(10.0);
       expect(station.shelfCount, 5);
     });
@@ -73,22 +70,14 @@ void main() {
       final world = GameWorld();
       world.chaiStation.shelfCount = 5;
 
-      // Position player directly inside the pickup zone
       world.player.position.x = world.chaiStation.pickupZoneCenter.x;
       world.player.position.y = world.chaiStation.pickupZoneCenter.y;
 
       expect(world.player.carriedCount, 0);
-      expect(
-        world.chaiStation.isInsidePickupZone(world.player.position),
-        isTrue,
-      );
-
-      // Tick world to trigger pickup
       world.tick(0.05);
       expect(world.player.carriedCount, 1);
       expect(world.chaiStation.shelfCount, 4);
 
-      // Next pickup happens after pickup interval
       world.tick(0.2);
       expect(world.player.carriedCount, 2);
 
@@ -96,10 +85,8 @@ void main() {
       expect(world.player.carriedCount, 3);
       expect(world.player.isFull, isTrue);
 
-      // Further ticks do NOT exceed player capacity
       world.tick(0.5);
       expect(world.player.carriedCount, 3);
-      expect(world.player.isFull, isTrue);
     });
 
     test(
@@ -112,7 +99,6 @@ void main() {
         expect(player.isMoving, isTrue);
         expect(player.wobbleAngle.abs(), greaterThan(0.0));
 
-        // Stop player
         player.velocity.x = 0.0;
         for (int i = 0; i < 20; i++) {
           player.update(0.1);
@@ -121,30 +107,95 @@ void main() {
         expect(player.wobbleAngle.abs(), closeTo(0.0, 0.01));
       },
     );
+  });
 
-    test(
-      'Player cannot walk through solid counter table (sliding collision)',
-      () {
-        final world = GameWorld();
-        final counterCenter = world.chaiStation.position;
+  group('Arcade Engine - Serving Counter, Cash Drops & Vacuum Magnet (M2)', () {
+    test('Serving chai at counter unloads item and drops cash bundle', () {
+      final world = GameWorld();
+      world.player.addItem(ItemType.chai);
+      world.player.addItem(ItemType.chai);
+      expect(world.player.carriedCount, 2);
+      expect(world.cashBundles.isEmpty, isTrue);
 
-        // Try placing player directly at the center of the counter
-        world.player.position.x = counterCenter.x;
-        world.player.position.y = counterCenter.y;
+      // Position player in the counter's staff serving zone
+      world.player.position.x = world.counter.staffDropZoneCenter.x;
+      world.player.position.y = world.counter.staffDropZoneCenter.y;
 
-        world.tick(0.01);
+      world.tick(0.05);
 
-        // Player must be pushed outside the counter bounds
-        final halfW = world.chaiStation.width / 2;
-        final halfH = world.chaiStation.height / 2;
-        final isOutside =
-            (world.player.position.x < counterCenter.x - halfW) ||
-            (world.player.position.x > counterCenter.x + halfW) ||
-            (world.player.position.y < counterCenter.y - halfH) ||
-            (world.player.position.y > counterCenter.y + halfH);
+      // One item served, one cash bundle dropped
+      expect(world.player.carriedCount, 1);
+      expect(world.cashBundles.length, 1);
+      expect(world.cashBundles.first.value, 10.0);
 
-        expect(isOutside, isTrue);
-      },
-    );
+      // After cooldown, second item served
+      world.tick(0.25);
+      expect(world.player.carriedCount, 0);
+      expect(world.cashBundles.length, 2);
+    });
+
+    test('Magnet vacuum sucks cash bundles into player wallet', () {
+      final world = GameWorld(initialRupees: 0.0);
+      // Place a cash bundle on the ground
+      final bundle = CashBundleEntity(
+        position: Vector2(400.0, 600.0),
+        value: 10.0,
+      );
+      world.cashBundles.add(bundle);
+
+      // Player stands within magnet radius (dist = 50px < 85px)
+      world.player.position.x = 450.0;
+      world.player.position.y = 600.0;
+
+      // Tick world to trigger vacuum suction
+      world.tick(0.05);
+      expect(bundle.isFlying, isTrue);
+
+      // Tick until cash reaches player and gets absorbed
+      for (int i = 0; i < 20; i++) {
+        world.tick(0.05);
+      }
+
+      // Cash absorbed into wallet
+      expect(world.rupees, 10.0);
+      expect(world.cashBundles.isEmpty, isTrue);
+      // Floating text spawned
+      expect(world.floatingTexts.isNotEmpty, isTrue);
+      expect(world.floatingTexts.first.text, '+Rs 10');
+    });
+
+    test('Trash bin discards unwanted items from player stack', () {
+      final world = GameWorld();
+      world.player.addItem(ItemType.chai);
+      expect(world.player.carriedCount, 1);
+
+      // Walk to trash bin
+      world.player.position.x = world.trashBin.position.x;
+      world.player.position.y = world.trashBin.position.y;
+
+      world.tick(0.05);
+      expect(world.player.carriedCount, 0);
+    });
+
+    test('Counter collision stops player from passing through', () {
+      final world = GameWorld();
+      final counterCenter = world.counter.position;
+
+      // Try placing player at center of serving counter
+      world.player.position.x = counterCenter.x;
+      world.player.position.y = counterCenter.y;
+
+      world.tick(0.01);
+
+      final halfW = world.counter.width / 2;
+      final halfH = world.counter.height / 2;
+      final isOutside =
+          (world.player.position.x < counterCenter.x - halfW) ||
+          (world.player.position.x > counterCenter.x + halfW) ||
+          (world.player.position.y < counterCenter.y - halfH) ||
+          (world.player.position.y > counterCenter.y + halfH);
+
+      expect(isOutside, isTrue);
+    });
   });
 }

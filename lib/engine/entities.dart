@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-
 import 'stations.dart';
 
 /// Simple 2D vector for pure Dart physics simulation.
@@ -36,6 +35,71 @@ class Vector2 {
   }
 }
 
+/// Floating combat-text style currency popups (+Rs 10) rendered in world space.
+class FloatingTextEntity {
+  final Vector2 position;
+  final String text;
+  double lifeTime;
+  final double maxLifeTime;
+
+  FloatingTextEntity({
+    required Vector2 position,
+    required this.text,
+    this.lifeTime = 1.2,
+  })  : position = position.copy(),
+        maxLifeTime = lifeTime;
+
+  bool get isExpired => lifeTime <= 0.0;
+
+  void update(double dt) {
+    lifeTime -= dt;
+    position.y -= dt * 45.0; // Float upwards
+  }
+}
+
+/// 3D-styled green Rupee cash bundle dropped on the counter or floor.
+class CashBundleEntity {
+  final Vector2 position;
+  final double value;
+  bool isFlying;
+  double flySpeed;
+  double spawnBounceTimer;
+
+  CashBundleEntity({
+    required Vector2 position,
+    required this.value,
+  })  : position = position.copy(),
+        isFlying = false,
+        flySpeed = 180.0,
+        spawnBounceTimer = 0.2;
+
+  /// Progresses vacuum suction towards target (player).
+  /// Returns true when absorbed into the player's wallet.
+  bool updateTowards(Vector2 targetPos, double dt) {
+    if (spawnBounceTimer > 0.0) {
+      spawnBounceTimer -= dt;
+    }
+
+    if (!isFlying) return false;
+
+    final dist = position.distanceTo(targetPos);
+    final step = flySpeed * dt;
+    if (dist <= 22.0 || step >= dist) {
+      return true; // Reached player, collect!
+    }
+
+    // Accelerate magnetic suction as it flies
+    flySpeed += dt * 800.0;
+    final dx = targetPos.x - position.x;
+    final dy = targetPos.y - position.y;
+
+    position.x += (dx / dist) * step;
+    position.y += (dy / dist) * step;
+
+    return false;
+  }
+}
+
 /// Represents the player character controlled via joystick.
 class PlayerEntity {
   final Vector2 position;
@@ -57,14 +121,14 @@ class PlayerEntity {
     this.speed = 220.0,
     this.radius = 20.0,
     this.carryCapacity = 3,
-  }) : position = startPosition ?? Vector2(450.0, 600.0),
-       velocity = Vector2(0.0, 0.0),
-       angle = math.pi / 2, // Default facing forward/down
-       isMoving = false,
-       walkCycle = 0.0,
-       carriedItems = [],
-       wobbleAngle = 0.0,
-       wobbleVelocity = 0.0;
+  })  : position = startPosition ?? Vector2(450.0, 600.0),
+        velocity = Vector2(0.0, 0.0),
+        angle = math.pi / 2, // Default facing forward/down
+        isMoving = false,
+        walkCycle = 0.0,
+        carriedItems = [],
+        wobbleAngle = 0.0,
+        wobbleVelocity = 0.0;
 
   int get carriedCount => carriedItems.length;
   bool get isFull => carriedCount >= carryCapacity;

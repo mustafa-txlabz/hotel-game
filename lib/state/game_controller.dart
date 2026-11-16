@@ -7,11 +7,37 @@ import '../engine/game_world.dart';
 class GameController extends ChangeNotifier {
   final GameWorld _world;
 
+  // Throttle haptics so fast collection feels snappy without buzzing uncontrollably
+  DateTime _lastHapticTime = DateTime.fromMillisecondsSinceEpoch(0);
+
   GameController({GameWorld? world}) : _world = world ?? GameWorld() {
     _world.onItemPickedUp = (_) {
-      HapticFeedback.lightImpact();
+      _triggerHaptic(HapticFeedback.lightImpact);
       notifyListeners();
     };
+
+    _world.onItemServed = (_) {
+      _triggerHaptic(HapticFeedback.mediumImpact);
+      notifyListeners();
+    };
+
+    _world.onCashCollected = (_) {
+      _triggerHaptic(HapticFeedback.selectionClick);
+      notifyListeners();
+    };
+
+    _world.onItemDiscarded = () {
+      _triggerHaptic(HapticFeedback.lightImpact);
+      notifyListeners();
+    };
+  }
+
+  void _triggerHaptic(AsyncCallback hapticFn) {
+    final now = DateTime.now();
+    if (now.difference(_lastHapticTime).inMilliseconds >= 75) {
+      _lastHapticTime = now;
+      hapticFn();
+    }
   }
 
   GameWorld get world => _world;
