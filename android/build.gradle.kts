@@ -19,6 +19,16 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+subprojects {
+    if (project.name != "app") {
+        project.afterEvaluate {
+            project.extensions.findByType(com.android.build.gradle.BaseExtension::class.java)?.apply {
+                ndkVersion = "27.1.12297006"
+            }
+        }
+    }
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
