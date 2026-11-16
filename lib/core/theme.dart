@@ -1,6 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
-/// Warm, friendly 2D cartoon dhaba theme with truck-art inspired accents.
+/// Dhaba cartoon color palette and styling for Arcade Idle.
 class AppTheme {
   // Brand colors
   static const Color chaiBrown = Color(0xFF6F3C1A);
@@ -13,6 +13,19 @@ class AppTheme {
   static const Color truckArtCyan = Color(0xFF00ACC1);
   static const Color cardBg = Color(0xFFFFFDF8);
 
+  // Floor & Arena Colors
+  static const Color floorTileLight = Color(0xFFF3DEC8);
+  static const Color floorTileDark = Color(0xFFE5CCB3);
+  static const Color wallBrickColor = Color(0xFF8B4513);
+  static const Color wallCapColor = Color(0xFF5C2B09);
+
+  // Character Colors
+  static const Color characterSkin = Color(0xFFFFCC80);
+  static const Color characterApron = Color(0xFFD32F2F);
+  static const Color characterShirt = Color(0xFFFFFFFF);
+  static const Color characterCap = Color(0xFFD32F2F);
+  static const Color characterShadow = Color(0x33000000);
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
@@ -20,24 +33,9 @@ class AppTheme {
         seedColor: chaiBrown,
         primary: chaiBrown,
         secondary: saffronOrange,
-        tertiary: goldYellow,
         surface: cream,
       ),
-      scaffoldBackgroundColor: cream,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: chaiBrown,
-        foregroundColor: cream,
-        elevation: 2,
-        centerTitle: true,
-      ),
-      cardTheme: CardThemeData(
-        color: cardBg,
-        elevation: 3,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: saffronOrange, width: 1.5),
-        ),
-      ),
+      scaffoldBackgroundColor: const Color(0xFF2C180B), // Dark surround outside world
     );
   }
 }

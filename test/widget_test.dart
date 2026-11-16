@@ -1,31 +1,28 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:chai_dhaba_empire/app.dart';
 import 'package:chai_dhaba_empire/core/strings.dart';
+import 'package:chai_dhaba_empire/ui/game/game_viewport.dart';
 
 void main() {
-  testWidgets('Core loop UI smoke test: taps cup and verifies UI updates', (
+  testWidgets('Arcade Viewport Smoke Test: renders canvas and handles touch', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const ChaiDhabaEmpireApp());
     await tester.pump();
 
-    // Verify Title & Initial Header
+    // Verify viewport and HUD title
+    expect(find.byType(GameViewport), findsOneWidget);
     expect(find.text(AppStrings.appTitle), findsOneWidget);
-    expect(find.text('${AppStrings.currencySymbol}0.0'), findsOneWidget);
-    expect(find.text(AppStrings.tapPrompt), findsOneWidget);
+    expect(find.text(AppStrings.dragToMove), findsOneWidget);
 
-    // Verify First Business is visible
-    expect(find.text('Chai Thela'), findsOneWidget);
-    expect(find.text(AppStrings.buyButton), findsWidgets);
-
-    // Tap the big cup
-    final cupFinder = find.byIcon(Icons.local_cafe_rounded);
-    expect(cupFinder, findsOneWidget);
-    await tester.tap(cupFinder);
+    // Simulate touch drag
+    final gesture = await tester.startGesture(const Offset(200, 400));
     await tester.pump();
 
-    // After 1 tap, rupees should be 1.0
-    expect(find.text('${AppStrings.currencySymbol}1.0'), findsOneWidget);
+    await gesture.moveBy(const Offset(40, 40));
+    await tester.pump(const Duration(milliseconds: 16));
+
+    await gesture.up();
+    await tester.pump();
   });
 }

@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'core/strings.dart';
 import 'core/theme.dart';
 import 'state/game_controller.dart';
-import 'ui/screens/dhaba_screen.dart';
+import 'ui/game/game_viewport.dart';
 
 /// Root game application widget.
 class ChaiDhabaEmpireApp extends StatelessWidget {
@@ -18,7 +18,7 @@ class ChaiDhabaEmpireApp extends StatelessWidget {
         title: AppStrings.appTitle,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const DhabaScreen(),
+        home: const GameViewport(),
       ),
     );
   }
