@@ -291,6 +291,84 @@ void main() {
         expect(world.cashBundles.length, 1);
       });
 
+      test('Left Food Zone covers top (behind), left flank, and bottom (front)', () {
+        final counter = ServingCounter();
+        // Top (behind left counter: x=340, y=660)
+        expect(counter.isInsideFoodDepositZone(Vector2(340.0, 660.0)), isTrue);
+        // Left flank (x=260, y=720)
+        expect(counter.isInsideFoodDepositZone(Vector2(260.0, 720.0)), isTrue);
+        // Bottom (in front of left counter: x=340, y=780)
+        expect(counter.isInsideFoodDepositZone(Vector2(340.0, 780.0)), isTrue);
+        // Right of left counter (x=410 towards cashier) -> False!
+        expect(counter.isInsideFoodDepositZone(Vector2(410.0, 720.0)), isFalse);
+      });
+
+      test('Right Cash Zone covers top (behind), right flank, and bottom (front)', () {
+        final counter = ServingCounter();
+        // Top (behind right counter: x=560, y=660)
+        expect(counter.isInsideCashCollectionZone(Vector2(560.0, 660.0)), isTrue);
+        // Right flank (x=640, y=720)
+        expect(counter.isInsideCashCollectionZone(Vector2(640.0, 720.0)), isTrue);
+        // Bottom (in front of right counter: x=560, y=780)
+        expect(counter.isInsideCashCollectionZone(Vector2(560.0, 780.0)), isTrue);
+        // Left of right counter (x=490 towards cashier) -> False!
+        expect(counter.isInsideCashCollectionZone(Vector2(490.0, 720.0)), isFalse);
+      });
+
+      test(
+        'Left Food Zone covers top (behind), left flank, and bottom (front)',
+        () {
+          final counter = ServingCounter();
+          // Top (behind left counter: x=340, y=660)
+          expect(
+            counter.isInsideFoodDepositZone(Vector2(340.0, 660.0)),
+            isTrue,
+          );
+          // Left flank (x=260, y=720)
+          expect(
+            counter.isInsideFoodDepositZone(Vector2(260.0, 720.0)),
+            isTrue,
+          );
+          // Bottom (in front of left counter: x=340, y=780)
+          expect(
+            counter.isInsideFoodDepositZone(Vector2(340.0, 780.0)),
+            isTrue,
+          );
+          // Right of left counter (x=410 towards cashier) -> False!
+          expect(
+            counter.isInsideFoodDepositZone(Vector2(410.0, 720.0)),
+            isFalse,
+          );
+        },
+      );
+
+      test(
+        'Right Cash Zone covers top (behind), right flank, and bottom (front)',
+        () {
+          final counter = ServingCounter();
+          // Top (behind right counter: x=560, y=660)
+          expect(
+            counter.isInsideCashCollectionZone(Vector2(560.0, 660.0)),
+            isTrue,
+          );
+          // Right flank (x=640, y=720)
+          expect(
+            counter.isInsideCashCollectionZone(Vector2(640.0, 720.0)),
+            isTrue,
+          );
+          // Bottom (in front of right counter: x=560, y=780)
+          expect(
+            counter.isInsideCashCollectionZone(Vector2(560.0, 780.0)),
+            isTrue,
+          );
+          // Left of right counter (x=490 towards cashier) -> False!
+          expect(
+            counter.isInsideCashCollectionZone(Vector2(490.0, 720.0)),
+            isFalse,
+          );
+        },
+      );
+
       test(
         'Counter zones are strictly non-overlapping across the entire map',
         () {
