@@ -596,30 +596,33 @@ class SpriteRenderer {
       progressPaint,
     );
 
-    final shelfStartX = left + 80.0;
-    final shelfY = top + 26.0;
+    final shelfStartX = left + 76.0;
+    final shelfBaseY = top + station.height - 20.0;
 
     final trayPaint = Paint()..color = const Color(0xFF78909C);
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(
-          center: Offset(shelfStartX + 12, shelfY + 12),
-          width: 44,
-          height: 32,
+          center: Offset(shelfStartX + 12, top + station.height / 2),
+          width: 48,
+          height: station.height - 16,
         ),
         const Radius.circular(4),
       ),
       trayPaint,
     );
 
+    // Stacking cups UPWARDS into vertical towers (new items add on top!)
+    const maxPerTower = 8;
     for (int i = 0; i < station.shelfCount; i++) {
-      final col = i % 2;
-      final row = i ~/ 2;
-      final cupPos = Offset(shelfStartX + col * 20.0, shelfY + row * 10.0);
+      final towerIndex = i ~/ maxPerTower;
+      final stackIndex = i % maxPerTower;
+      final towerX = shelfStartX + (towerIndex * 24.0);
+      final itemY = shelfBaseY - (stackIndex * 5.5); // Stacks UPWARDS
 
       canvas.save();
-      canvas.translate(cupPos.dx, cupPos.dy);
-      _drawChaiCup(canvas, 0.75);
+      canvas.translate(towerX, itemY);
+      _drawChaiCup(canvas, 0.65);
       canvas.restore();
     }
 
