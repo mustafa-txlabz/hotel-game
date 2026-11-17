@@ -199,7 +199,7 @@ Set up the 60 FPS CustomPainter game loop, coordinate space, camera follow syste
 ### **M1 — Kitchen Station & Item Stacking Physics** *(Completed)*
 Add the Chai Brewing Kettle station producing hot chai cups onto an output shelf. When the Owner steps into the pickup zone, cups stack vertically above the head with wobble physics and capacity limit (with `"MAX"` badge when full).
 
-### **M2 — Three-Part Counter Architecture, Food Towers & Cash Towers** *(Current Milestone - In Progress)*
+### **M2 — Three-Part Counter Architecture, Food Towers & Cash Towers** *(Completed)*
 Transform the Front Serving Counter into a full 3-part arcade counter:
 1. **Left Section**: Food deposit zone where Owner unloads carried items onto the counter into neat single-item food towers.
 2. **Center Section**: Cashier station with green zone where Owner must stand to activate service.
@@ -207,21 +207,21 @@ Transform the Front Serving Counter into a full 3-part arcade counter:
 4. **Trash Bin**: For discarding unwanted items.
 *Done when: Owner can carry chai from kettle, stack it on the counter's left food towers, stand at cashier to trigger cash to right-side money towers, and collect cash towers.*
 
-### **M3 — Customer AI, Orders & Queue Wait System**
+### **M3 — Customer AI, Orders & Queue Wait System** *(Completed)*
 Implement full Customer AI: Customers enter from the entrance, queue up at the counter with order speech bubbles (`☕ x1`), wait for cashier attendance (with background patience timer). If cashier is present and food is on counter towers, food is handed to customer and cash is placed on the right cash towers; if unattended, customer leaves disappointed.
 *Done when: Continuous customer flow lines up, requires cashier presence to be served, and pays cash onto counter cash towers.*
 
-### **M4 — In-Place Machine Upgrade & Floor Unlock Pads**
+### **M4 — In-Place Machine Upgrade & Floor Unlock Pads** *(Completed)*
 Add interactive ground rectangle pads with cash icon and pour mechanic:
 1. **Machine In-Place Upgrade Pad**: Standing on the pad next to the kettle pours cash to upgrade storage capacity and brewing speed.
 2. **Unlock Pads**: Pour cash to unlock dining tables and new zones with partial progress memory (stops if player runs out of cash).
 *Done when: Owner can stand on pads to smoothly pour cash and upgrade machines or unlock new items.*
 
-### **M5 — Dine-In Dining Tables & Cleaning**
+### **M5 — Dine-In Dining Tables & Cleaning** *(Completed)*
 Add customer dine-in behavior: Customers can choose to sit at unlocked dining tables, enjoy their meal, leave larger cash tips on the table, and leave dirty trays. Owner cleans trays to keep tables open for new customers.
 *Done when: Customers sit at tables, eat, tip, and tables require cleaning.*
 
-### **M6 — Staff Hiring & Cashier Faculty**
+### **M6 — Staff Hiring & Cashier Faculty** *(Current Milestone - Up Next)*
 Add hiring and staff management:
 1. **Hire Cashier**: Stands permanently in the center green cashier spot so the Owner is free to manage the dhaba.
 2. **Hire Chotus (Waiters)**: Autonomous AI helpers who carry items from kitchen to counter towers and clean tables.
@@ -240,4 +240,4 @@ Add AdMob Rewarded Ads for instant boosts (Chai Rush 2x Speed, Free VIP Helper, 
 
 ## 7. Current Step
 
-Milestone **M2 — Three-Part Counter Architecture, Food Towers & Cash Towers** is the active step being implemented and enhanced.
+Milestone **M5 — Dine-In Dining Tables & Cleaning** has been completed and fully verified with unit and simulation tests. Milestone **M6 — Staff Hiring & Cashier Faculty** is up next upon user approval.

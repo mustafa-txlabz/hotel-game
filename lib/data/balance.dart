@@ -16,10 +16,12 @@ class GameBalance {
   static const double joystickRadius = 60.0;
   static const double knobRadius = 26.0;
 
-  // Customer & Economy Settings (M3)
+  // Customer & Economy Settings (M3 & M5)
   static const double customerSpeed = 135.0;
   static const double customerSpawnInterval = 3.2;
   static const int maxQueueCapacity = 5;
   static const double customerPatienceTime = 22.0;
   static const double chaiPrice = 10.0;
+  static const double customerEatDuration = 5.0;
+  static const double dineInTip = 25.0;
 }

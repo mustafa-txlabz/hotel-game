@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'entities.dart';
 
-enum ItemType { chai, burger, samosa }
+enum ItemType { chai, burger, samosa, dirtyTray }
 
 /// Kitchen Chai Brewing Kettle station producing hot chai cups onto an output shelf.
 class ChaiStation {
@@ -354,6 +354,7 @@ class DiningTable {
   bool isUnlocked;
   bool isOccupied;
   bool hasDirtyTray;
+  double cashTip;
 
   DiningTable({
     required this.id,
@@ -361,6 +362,28 @@ class DiningTable {
     this.width = 90.0,
     this.height = 64.0,
     this.isUnlocked = false,
-  }) : isOccupied = false,
-       hasDirtyTray = false;
+    this.isOccupied = false,
+    this.hasDirtyTray = false,
+    this.cashTip = 0.0,
+  });
+
+  /// Table is available for a customer to sit and dine in.
+  bool get isAvailable => isUnlocked && !isOccupied && !hasDirtyTray;
+
+  /// Stool seat position where customer sits while dining (facing North towards table).
+  Vector2 get seatPosition => Vector2(position.x, position.y + (height / 2) + 12.0);
+
+  /// Checks if player is within reach to clean dirty trays or collect cash tip.
+  bool isInsideCleanZone(Vector2 pos) {
+    final halfW = width / 2;
+    final halfH = height / 2;
+    final left = position.x - halfW;
+    final right = position.x + halfW;
+    final top = position.y - halfH;
+    final bottom = position.y + halfH;
+
+    final dx = math.max(0.0, math.max(left - pos.x, pos.x - right));
+    final dy = math.max(0.0, math.max(top - pos.y, pos.y - bottom));
+    return math.sqrt(dx * dx + dy * dy) <= 45.0;
+  }
 }

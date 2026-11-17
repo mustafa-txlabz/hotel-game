@@ -75,8 +75,16 @@ class GameWorld {
                position: Vector2(200.0, 950.0),
                isUnlocked: false,
              ),
+             DiningTable(
+               id: 2,
+               position: Vector2(700.0, 950.0),
+               isUnlocked: false,
+             ),
            ],
        groundPads = pads ?? [] {
+    // Bind tables to customer system for dine-in seating
+    customerSystem.diningTables = diningTables;
+
     // Forward customer served events to sound/haptic callback
     customerSystem.onCustomerServed = (customer, item) {
       onItemServed?.call(item);
@@ -112,18 +120,31 @@ class GameWorld {
         },
       );
 
-      final tablePad = GroundPad(
+      final table1Pad = GroundPad(
         id: 'table_1_unlock',
         type: PadType.floorUnlock,
         position: Vector2(200.0, 950.0),
         title: 'TABLE 1',
         totalCost: 80.0,
         onUnlocked: () {
-          diningTables.first.isUnlocked = true;
+          diningTables[0].isUnlocked = true;
         },
       );
 
-      groundPads.addAll([kettlePad, tablePad]);
+      final table2Pad = GroundPad(
+        id: 'table_2_unlock',
+        type: PadType.floorUnlock,
+        position: Vector2(700.0, 950.0),
+        title: 'TABLE 2',
+        totalCost: 120.0,
+        onUnlocked: () {
+          if (diningTables.length > 1) {
+            diningTables[1].isUnlocked = true;
+          }
+        },
+      );
+
+      groundPads.addAll([kettlePad, table1Pad, table2Pad]);
     }
   }
 
@@ -187,7 +208,10 @@ class GameWorld {
     // 10. Trash bin discard detection
     _checkTrashDiscard();
 
-    // 11. Ground Upgrade & Unlock Pads (M4)
+    // 11. Table Tip Collection & Dirty Tray Cleaning (M5)
+    _checkTableCleaning();
+
+    // 12. Ground Upgrade & Unlock Pads (M4)
     _checkGroundPads(dt);
 
     // 12. Flying cash bundles & absorption
@@ -321,6 +345,50 @@ class GameWorld {
       if (discarded != null) {
         trashBin.triggerDiscarded();
         onItemDiscarded?.call();
+
+        floatingTexts.add(
+          FloatingTextEntity(
+            position: Vector2(trashBin.position.x, trashBin.position.y - 25.0),
+            text: discarded == ItemType.dirtyTray ? 'TRASHED 🗑️' : 'DISCARDED',
+          ),
+        );
+      }
+    }
+  }
+
+  void _checkTableCleaning() {
+    for (final table in diningTables) {
+      if (!table.isUnlocked) continue;
+
+      if (table.isInsideCleanZone(player.position)) {
+        // 1. Vacuum cash tip if present
+        if (table.cashTip > 0.0) {
+          final tipValue = table.cashTip;
+          table.cashTip = 0.0;
+
+          final spawnPos = Vector2(table.position.x, table.position.y);
+          final bundle = CashBundleEntity(
+            position: spawnPos,
+            value: tipValue,
+          );
+          bundle.isFlying = true;
+          bundle.spawnBounceTimer = 0.0;
+          cashBundles.add(bundle);
+        }
+
+        // 2. Pick up dirty tray if present and player has room in carry stack
+        if (table.hasDirtyTray && !player.isFull) {
+          player.addItem(ItemType.dirtyTray);
+          table.hasDirtyTray = false;
+          onItemPickedUp?.call(ItemType.dirtyTray);
+
+          floatingTexts.add(
+            FloatingTextEntity(
+              position: Vector2(table.position.x, table.position.y - 20.0),
+              text: 'CLEANED! ✨',
+            ),
+          );
+        }
       }
     }
   }

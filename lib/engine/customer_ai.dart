@@ -9,6 +9,8 @@ enum CustomerState {
   spawning, // Entering dhaba through front door, walking towards queue
   waitingInQueue, // Waiting in line in front of the serving counter
   beingServed, // Actively receiving food at the head of the queue
+  walkingToTable, // Walking to assigned dining table to sit
+  eating, // Sitting at dining table, eating/drinking
   leavingHappy, // Satisfied customer walking towards exit door
   leavingUnhappy, // Disappointed customer leaving due to unattended counter
   despawned, // Left the dhaba floor, removed from simulation
@@ -37,6 +39,11 @@ class CustomerEntity {
   double walkCycle;
   bool isMoving;
 
+  // Dine-in table dining state (M5)
+  DiningTable? assignedTable;
+  double eatTimer;
+  final double eatDuration;
+
   CustomerEntity({
     required this.id,
     required Vector2 startPosition,
@@ -46,6 +53,7 @@ class CustomerEntity {
     this.desiredItem = ItemType.chai,
     this.desiredCount = 1,
     this.patienceTime = GameBalance.customerPatienceTime,
+    this.eatDuration = GameBalance.customerEatDuration,
     this.variant = 0,
   }) : position = startPosition.copy(),
        angle = -math.pi / 2, // Facing North (towards counter)
@@ -53,7 +61,9 @@ class CustomerEntity {
        receivedCount = 0,
        patienceTimer = 0.0,
        walkCycle = 0.0,
-       isMoving = false;
+       isMoving = false,
+       eatTimer = 0.0,
+       assignedTable = null;
 
   bool get isOrderComplete => receivedCount >= desiredCount;
   bool get isLeaving =>
@@ -63,6 +73,14 @@ class CustomerEntity {
   /// Progresses movement towards target position.
   void update(double dt) {
     if (dt <= 0.0) return;
+
+    if (state == CustomerState.eating) {
+      isMoving = false;
+      walkCycle = 0.0;
+      angle = -math.pi / 2;
+      eatTimer += dt;
+      return;
+    }
 
     final dist = position.distanceTo(targetPosition);
     final step = speed * dt;
@@ -75,6 +93,11 @@ class CustomerEntity {
       // When standing in queue facing the counter, face North (-pi/2)
       if (state == CustomerState.waitingInQueue ||
           state == CustomerState.beingServed) {
+        angle = -math.pi / 2;
+      } else if (state == CustomerState.walkingToTable) {
+        // Arrived at dining table seat! Transition to eating
+        state = CustomerState.eating;
+        eatTimer = 0.0;
         angle = -math.pi / 2;
       }
     } else {
@@ -151,11 +174,12 @@ class CustomerQueue {
 }
 
 /// Orchestrates customer spawning, queue management, cashier service transactions,
-/// and despawning.
+/// dine-in eating, and despawning.
 class CustomerSystem {
   final CustomerQueue queue;
   final List<CustomerEntity> activeCustomers;
   final Vector2 entrancePosition;
+  List<DiningTable> diningTables;
 
   double spawnInterval;
   double spawnTimer;
@@ -165,13 +189,17 @@ class CustomerSystem {
   void Function(CustomerEntity, ItemType)? onCustomerServed;
   void Function(CustomerEntity)? onCustomerLeftUnhappy;
   void Function(CustomerEntity)? onCustomerSpawned;
+  void Function(CustomerEntity, DiningTable)? onCustomerDinedIn;
+  void Function(CustomerEntity, DiningTable)? onCustomerFinishedEating;
 
   CustomerSystem({
     CustomerQueue? queue,
     Vector2? entrancePosition,
+    List<DiningTable>? tables,
     this.spawnInterval = GameBalance.customerSpawnInterval,
   }) : queue = queue ?? CustomerQueue(),
        entrancePosition = entrancePosition ?? Vector2(450.0, 1165.0),
+       diningTables = tables ?? [],
        activeCustomers = [],
        spawnTimer = 0.0,
        nextCustomerId = 1;
@@ -215,13 +243,29 @@ class CustomerSystem {
       spawnTimer = 0.0;
     }
 
-    // 2. Update movement for all active customers
+    // 2. Update movement and dining for all active customers
     for (final customer in activeCustomers) {
       customer.update(dt);
 
       // Transition to waitingInQueue when reached destination slot
       if (customer.state == CustomerState.spawning && !customer.isMoving) {
         customer.state = CustomerState.waitingInQueue;
+      }
+
+      // Check dine-in eating duration completion
+      if (customer.state == CustomerState.eating) {
+        if (customer.eatTimer >= customer.eatDuration) {
+          final table = customer.assignedTable;
+          if (table != null) {
+            table.isOccupied = false;
+            table.hasDirtyTray = true;
+            table.cashTip = GameBalance.dineInTip; // Leave Rs 25 tip on table!
+            onCustomerFinishedEating?.call(customer, table);
+          }
+          customer.assignedTable = null;
+          customer.state = CustomerState.leavingHappy;
+          customer.targetPosition = entrancePosition.copy();
+        }
       }
     }
 
@@ -258,9 +302,29 @@ class CustomerSystem {
               onCustomerServed?.call(headCustomer, served);
 
               if (headCustomer.isOrderComplete) {
-                headCustomer.state = CustomerState.leavingHappy;
-                headCustomer.targetPosition = entrancePosition.copy();
-                queue.dequeue();
+                // Check if an unlocked dining table is free to dine in (M5)
+                DiningTable? freeTable;
+                for (final table in diningTables) {
+                  if (table.isAvailable) {
+                    freeTable = table;
+                    break;
+                  }
+                }
+
+                if (freeTable != null) {
+                  // Customer claims table and walks to sit down
+                  freeTable.isOccupied = true;
+                  headCustomer.assignedTable = freeTable;
+                  headCustomer.state = CustomerState.walkingToTable;
+                  headCustomer.targetPosition = freeTable.seatPosition.copy();
+                  queue.dequeue();
+                  onCustomerDinedIn?.call(headCustomer, freeTable);
+                } else {
+                  // Takeaway to go!
+                  headCustomer.state = CustomerState.leavingHappy;
+                  headCustomer.targetPosition = entrancePosition.copy();
+                  queue.dequeue();
+                }
               }
             }
           }

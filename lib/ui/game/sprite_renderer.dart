@@ -138,7 +138,12 @@ class SpriteRenderer {
       canvas.translate(currentX, currentY);
       canvas.rotate(player.wobbleAngle * (i + 1) * 0.4);
 
-      _drawChaiCup(canvas);
+      final item = player.carriedItems[i];
+      if (item == ItemType.dirtyTray) {
+        _drawCarriedDirtyTray(canvas);
+      } else {
+        _drawChaiCup(canvas);
+      }
 
       canvas.restore();
     }
@@ -183,6 +188,43 @@ class SpriteRenderer {
 
       canvas.restore();
     }
+  }
+
+  /// Draws a stylized restaurant serving tray with empty glass and crumpled napkin.
+  static void _drawCarriedDirtyTray(Canvas canvas, [double scale = 1.0]) {
+    canvas.save();
+    canvas.scale(scale, scale);
+
+    // Tray base (Dark Slate Gray with rounded rim)
+    final trayPaint = Paint()..color = const Color(0xFF455A64);
+    final trayRRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: const Offset(0, 0), width: 34, height: 14),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(trayRRect, trayPaint);
+
+    final rimPaint = Paint()
+      ..color = const Color(0xFF263238)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawRRect(trayRRect, rimPaint);
+
+    // Empty cup with tea residue ring
+    final cupPaint = Paint()..color = const Color(0x99ECEFF1);
+    final cupRRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: const Offset(-6, -4), width: 10, height: 10),
+      const Radius.circular(2),
+    );
+    canvas.drawRRect(cupRRect, cupPaint);
+
+    final residuePaint = Paint()..color = AppTheme.chaiDarkBrown;
+    canvas.drawCircle(const Offset(-6, -2), 3, residuePaint);
+
+    // Crumpled napkin
+    final napkinPaint = Paint()..color = Colors.white70;
+    canvas.drawCircle(const Offset(6, -3), 4, napkinPaint);
+
+    canvas.restore();
   }
 
   /// Draws an animated cartoon customer with clothing variant, hair/cap,
@@ -305,8 +347,9 @@ class SpriteRenderer {
     canvas.drawCircle(const Offset(-13, 2), 4.5, handPaint);
     canvas.drawCircle(const Offset(13, 2), 4.5, handPaint);
 
-    // If leaving happy, carry a cup of chai in hand!
-    if (customer.state == CustomerState.leavingHappy) {
+    // If leaving happy or walking to table, carry a cup of chai in hand!
+    if (customer.state == CustomerState.leavingHappy ||
+        customer.state == CustomerState.walkingToTable) {
       canvas.save();
       canvas.translate(0, 12);
       _drawChaiCup(canvas, 0.65);
@@ -315,7 +358,7 @@ class SpriteRenderer {
 
     canvas.restore(); // Restore rotation
 
-    // 4. Floating Speech Bubble (Order Bubble when in queue, or reaction when leaving)
+    // 4. Floating Speech Bubble (Order Bubble when in queue, or reaction when leaving / eating)
     if (customer.state == CustomerState.waitingInQueue ||
         customer.state == CustomerState.beingServed ||
         customer.state == CustomerState.spawning) {
@@ -324,9 +367,52 @@ class SpriteRenderer {
       _drawUnhappyReaction(canvas);
     } else if (customer.state == CustomerState.leavingHappy) {
       _drawHappyReaction(canvas);
+    } else if (customer.state == CustomerState.eating) {
+      _drawEatingReaction(canvas, customer);
     }
 
     canvas.restore();
+  }
+
+  static void _drawEatingReaction(Canvas canvas, CustomerEntity customer) {
+    const bubbleWidth = 38.0;
+    const bubbleHeight = 22.0;
+    const bubbleY = -34.0;
+
+    final bubblePath = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: const Offset(0, bubbleY),
+            width: bubbleWidth,
+            height: bubbleHeight,
+          ),
+          const Radius.circular(8),
+        ),
+      );
+
+    canvas.drawShadow(bubblePath, Colors.black38, 3.0, false);
+    canvas.drawPath(bubblePath, Paint()..color = Colors.white);
+
+    // Speech bubble tail pointing towards customer
+    final tail = Path()
+      ..moveTo(-4, bubbleY + bubbleHeight / 2)
+      ..lineTo(0, bubbleY + bubbleHeight / 2 + 5)
+      ..lineTo(4, bubbleY + bubbleHeight / 2)
+      ..close();
+    canvas.drawPath(tail, Paint()..color = Colors.white);
+
+    final textPainter = TextPainter(
+      text: const TextSpan(
+        text: '☕😋',
+        style: TextStyle(fontSize: 10),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    textPainter.paint(
+      canvas,
+      Offset(-textPainter.width / 2, bubbleY - textPainter.height / 2),
+    );
   }
 
   static void _drawOrderSpeechBubble(Canvas canvas, CustomerEntity customer) {
@@ -1417,12 +1503,39 @@ class SpriteRenderer {
     }
   }
 
-  /// Draws an unlocked wooden Dhaba dining table with chairs and charpai styling.
+  /// Draws an unlocked wooden Dhaba dining table with chairs, customer meal,
+  /// dirty trays, cash tips, and clean indicators.
   static void drawDiningTable(Canvas canvas, DiningTable table) {
     if (!table.isUnlocked) return;
 
     final left = table.position.x - table.width / 2;
     final top = table.position.y - table.height / 2;
+
+    // Clean / Interaction zone indicator when dirty or with cash tip
+    if (table.hasDirtyTray || table.cashTip > 0.0) {
+      final pulse = 0.5 + 0.5 * math.sin(DateTime.now().millisecondsSinceEpoch * 0.006);
+      final cleanZoneRect = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(table.position.x, table.position.y),
+          width: table.width + 48.0,
+          height: table.height + 48.0,
+        ),
+        const Radius.circular(20.0),
+      );
+      final zonePaint = Paint()
+        ..color = (table.cashTip > 0.0
+            ? AppTheme.goldYellow.withValues(alpha: 0.12 + 0.08 * pulse)
+            : AppTheme.saffronOrange.withValues(alpha: 0.10 + 0.06 * pulse));
+      canvas.drawRRect(cleanZoneRect, zonePaint);
+
+      final zoneBorder = Paint()
+        ..color = (table.cashTip > 0.0
+            ? AppTheme.goldYellow.withValues(alpha: 0.6)
+            : AppTheme.saffronOrange.withValues(alpha: 0.5))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      canvas.drawRRect(cleanZoneRect, zoneBorder);
+    }
 
     // Drop shadow
     final shadowPaint = Paint()..color = const Color(0x2E000000);
@@ -1500,5 +1613,90 @@ class SpriteRenderer {
       7,
       stoolBorder,
     );
+
+    // Active diner eating chai on table
+    if (table.isOccupied) {
+      canvas.save();
+      canvas.translate(table.position.x, table.position.y + 4.0);
+      _drawChaiCup(canvas, 0.70);
+      canvas.restore();
+    }
+
+    // Dirty tray on table
+    if (table.hasDirtyTray) {
+      canvas.save();
+      canvas.translate(table.position.x - 12.0, table.position.y);
+      _drawCarriedDirtyTray(canvas, 0.90);
+      canvas.restore();
+
+      // Floating "CLEAN ME" tag above table
+      final tagRect = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(table.position.x, top - 18.0),
+          width: 72,
+          height: 18,
+        ),
+        const Radius.circular(5),
+      );
+      canvas.drawRRect(tagRect, Paint()..color = const Color(0xFFD84315));
+      final cleanText = TextPainter(
+        text: const TextSpan(
+          text: '🧹 CLEAN ME',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 9,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      cleanText.paint(
+        canvas,
+        Offset(
+          table.position.x - cleanText.width / 2,
+          top - 18.0 - cleanText.height / 2,
+        ),
+      );
+    }
+
+    // Cash Tip on table
+    if (table.cashTip > 0.0) {
+      final tipX = table.position.x + (table.hasDirtyTray ? 16.0 : 0.0);
+      final tipY = table.position.y;
+
+      final tipBundle = CashBundleEntity(
+        position: Vector2(tipX, tipY),
+        value: table.cashTip,
+      );
+      drawCashBundle(canvas, tipBundle);
+
+      final tipBadgeRect = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(tipX, top - (table.hasDirtyTray ? 38.0 : 18.0)),
+          width: 66,
+          height: 18,
+        ),
+        const Radius.circular(5),
+      );
+      canvas.drawRRect(tipBadgeRect, Paint()..color = const Color(0xFF2E7D32));
+      final tipText = TextPainter(
+        text: TextSpan(
+          text: '₹${table.cashTip.toInt()} TIP!',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 9,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tipText.paint(
+        canvas,
+        Offset(
+          tipX - tipText.width / 2,
+          top - (table.hasDirtyTray ? 38.0 : 18.0) - tipText.height / 2,
+        ),
+      );
+    }
   }
 }
