@@ -89,6 +89,29 @@ void main() {
       expect(world.player.carriedCount, 3);
     });
 
+    test('Player can pick up cups from all sides of kettle (front, behind, left, right)', () {
+      final station = ChaiStation(
+        position: Vector2(240.0, 240.0),
+        width: 130.0,
+        height: 70.0,
+      );
+
+      // In front (y = 240 + 35 + 25 = 300)
+      expect(station.isInsidePickupZone(Vector2(240.0, 300.0)), isTrue);
+
+      // Behind (y = 240 - 35 - 25 = 180)
+      expect(station.isInsidePickupZone(Vector2(240.0, 180.0)), isTrue);
+
+      // Left flank (x = 240 - 65 - 25 = 150)
+      expect(station.isInsidePickupZone(Vector2(150.0, 240.0)), isTrue);
+
+      // Right flank (x = 240 + 65 + 25 = 330)
+      expect(station.isInsidePickupZone(Vector2(330.0, 240.0)), isTrue);
+
+      // Far away outside zone
+      expect(station.isInsidePickupZone(Vector2(500.0, 500.0)), isFalse);
+    });
+
     test(
       'Stack wobble angle activates when moving and damps when stopping',
       () {
@@ -211,6 +234,83 @@ void main() {
           expect(world.counter.cashBundleCount, 0);
           expect(world.floatingTexts.isNotEmpty, isTrue);
           expect(world.floatingTexts.first.text, '+Rs 10');
+        },
+      );
+
+      test('Player can deposit food from the left flank of the counter', () {
+        final world = GameWorld();
+        world.player.addItem(ItemType.chai);
+        expect(world.player.carriedCount, 1);
+        expect(world.counter.totalFoodCount, 0);
+
+        // Stand at the left side (flank) of the counter
+        world.player.position.x = 265.0;
+        world.player.position.y = 720.0;
+
+        expect(
+          world.counter.isInsideFoodDepositZone(world.player.position),
+          isTrue,
+        );
+        expect(
+          world.counter.isInsideCashierZone(world.player.position),
+          isFalse,
+        );
+        expect(
+          world.counter.isInsideCashCollectionZone(world.player.position),
+          isFalse,
+        );
+
+        world.tick(0.05);
+        expect(world.player.carriedCount, 0);
+        expect(world.counter.totalFoodCount, 1);
+      });
+
+      test('Player can collect cash from the right flank of the counter', () {
+        final world = GameWorld(initialRupees: 0.0);
+        world.counter.cashBundleCount = 1;
+
+        // Stand at the right side (flank) of the counter
+        world.player.position.x = 635.0;
+        world.player.position.y = 720.0;
+
+        expect(
+          world.counter.isInsideCashCollectionZone(world.player.position),
+          isTrue,
+        );
+        expect(
+          world.counter.isInsideCashierZone(world.player.position),
+          isFalse,
+        );
+        expect(
+          world.counter.isInsideFoodDepositZone(world.player.position),
+          isFalse,
+        );
+
+        world.tick(0.05);
+        expect(world.counter.cashBundleCount, 0);
+        expect(world.cashBundles.length, 1);
+      });
+
+      test(
+        'Counter zones are strictly non-overlapping across the entire map',
+        () {
+          final counter = ServingCounter();
+          // Check a 10px grid spanning across and behind the counter
+          for (double x = 200.0; x <= 700.0; x += 10.0) {
+            for (double y = 600.0; y <= 800.0; y += 10.0) {
+              final pt = Vector2(x, y);
+              int activeZones = 0;
+              if (counter.isInsideFoodDepositZone(pt)) activeZones++;
+              if (counter.isInsideCashierZone(pt)) activeZones++;
+              if (counter.isInsideCashCollectionZone(pt)) activeZones++;
+
+              expect(
+                activeZones,
+                lessThanOrEqualTo(1),
+                reason: 'Point ($x, $y) overlapped multiple zones!',
+              );
+            }
+          }
         },
       );
 

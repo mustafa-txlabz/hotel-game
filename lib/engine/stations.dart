@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'entities.dart';
 
 enum ItemType { chai, burger, samosa }
@@ -8,9 +10,10 @@ class ChaiStation {
   final double width;
   final double height;
 
-  // Pickup zone in front of the counter
+  // Pickup zone around the station (accessible from front, behind, left, or right)
   final Vector2 pickupZoneCenter;
   final double pickupZoneRadius;
+  final double pickupReach;
 
   // Brewing properties
   double brewTime; // Seconds per cup
@@ -29,12 +32,13 @@ class ChaiStation {
     this.brewTime = 1.0,
     this.shelfCapacity = 8,
     this.pickupInterval = 0.14,
+    this.pickupReach = 55.0,
   }) : position = position ?? Vector2(240.0, 240.0),
        pickupZoneCenter = Vector2(
          (position?.x ?? 240.0),
-         (position?.y ?? 240.0) + 72.0,
+         (position?.y ?? 240.0) + 60.0,
        ),
-       pickupZoneRadius = 45.0,
+       pickupZoneRadius = 55.0,
        brewTimer = 0.0,
        shelfCount = 3, // Start with a few cups ready
        pickupTimer = 0.0;
@@ -63,9 +67,27 @@ class ChaiStation {
     }
   }
 
-  /// Checks if character position is within the pickup zone.
+  /// Checks if character position is within pickup range anywhere around the machine
+  /// (front, behind, left side, or right side).
   bool isInsidePickupZone(Vector2 characterPos) {
-    return characterPos.distanceTo(pickupZoneCenter) <= pickupZoneRadius;
+    final halfW = width / 2;
+    final halfH = height / 2;
+    final left = position.x - halfW;
+    final right = position.x + halfW;
+    final top = position.y - halfH;
+    final bottom = position.y + halfH;
+
+    final dx = math.max(
+      0.0,
+      math.max(left - characterPos.x, characterPos.x - right),
+    );
+    final dy = math.max(
+      0.0,
+      math.max(top - characterPos.y, characterPos.y - bottom),
+    );
+    final dist = math.sqrt(dx * dx + dy * dy);
+
+    return dist <= pickupReach;
   }
 
   /// Attempts to take one chai cup from the shelf.
@@ -96,9 +118,9 @@ class CounterItemTower {
 }
 
 /// Enhanced Three-Part Front Serving Counter:
-/// - Left Section: Food deposit zone & single-item towers
+/// - Left Section: Food deposit zone & single-item towers (behind and left flank)
 /// - Center Section: Cashier station (green zone) where Owner/Cashier must stand to serve
-/// - Right Section: Money tower grid & collection zone
+/// - Right Section: Money tower grid & collection zone (behind and right flank)
 class ServingCounter {
   final Vector2 position;
   final double width;
@@ -135,28 +157,28 @@ class ServingCounter {
   }) : position = position ?? Vector2(450.0, 720.0),
        // Food deposit is behind the left portion of the counter
        foodDepositZoneCenter = Vector2(
-         (position?.x ?? 450.0) - 85.0,
+         (position?.x ?? 450.0) - 90.0,
          (position?.y ?? 720.0) - 52.0,
        ),
-       foodDepositZoneRadius = 40.0,
+       foodDepositZoneRadius = 46.0,
        foodTowers = [CounterItemTower(itemType: ItemType.chai, count: 0)],
        depositTimer = 0.0,
 
-       // Cashier station is behind the center of the counter
+       // Cashier station is strictly behind the center of the counter
        cashierZoneCenter = Vector2(
          (position?.x ?? 450.0),
          (position?.y ?? 720.0) - 52.0,
        ),
-       cashierZoneRadius = 36.0,
+       cashierZoneRadius = 38.0,
        isCashierPresent = false,
        serviceTimer = 0.0,
 
-       // Cash collection is behind/around the right portion of the counter
+       // Cash collection is behind the right portion of the counter
        cashCollectionZoneCenter = Vector2(
-         (position?.x ?? 450.0) + 85.0,
+         (position?.x ?? 450.0) + 90.0,
          (position?.y ?? 720.0) - 52.0,
        ),
-       cashCollectionZoneRadius = 42.0,
+       cashCollectionZoneRadius = 46.0,
        cashBundleCount = 0,
        cashCollectTimer = 0.0;
 
@@ -174,17 +196,55 @@ class ServingCounter {
     if (cashCollectTimer > 0.0) cashCollectTimer -= dt;
   }
 
-  // --- Zone checks ---
+  // --- Strictly Non-Overlapping Zone Checks ---
+
+  /// Food deposit: accessible behind the left section OR along the left side (flank) of counter.
+  /// Hard partition: pos.x <= 400.0 (Cashier starts at >= 412.0)
   bool isInsideFoodDepositZone(Vector2 pos) {
-    return pos.distanceTo(foodDepositZoneCenter) <= foodDepositZoneRadius;
+    if (pos.x > 400.0) return false;
+
+    // Behind left counter
+    if (pos.distanceTo(foodDepositZoneCenter) <= foodDepositZoneRadius) {
+      return true;
+    }
+
+    // Left flank of the counter (left of counter edge, along its vertical side)
+    final counterLeft = position.x - width / 2; // 300.0
+    if (pos.x >= counterLeft - 70.0 &&
+        pos.x <= counterLeft + 15.0 &&
+        pos.y >= position.y - height / 2 - 50.0 &&
+        pos.y <= position.y + height / 2 + 40.0) {
+      return true;
+    }
+
+    return false;
   }
 
+  /// Cashier station: strictly centered behind the counter.
   bool isInsideCashierZone(Vector2 pos) {
     return pos.distanceTo(cashierZoneCenter) <= cashierZoneRadius;
   }
 
+  /// Cash collection: accessible behind the right section OR along the right side (flank) of counter.
+  /// Hard partition: pos.x >= 500.0 (Cashier ends at <= 488.0)
   bool isInsideCashCollectionZone(Vector2 pos) {
-    return pos.distanceTo(cashCollectionZoneCenter) <= cashCollectionZoneRadius;
+    if (pos.x < 500.0) return false;
+
+    // Behind right counter
+    if (pos.distanceTo(cashCollectionZoneCenter) <= cashCollectionZoneRadius) {
+      return true;
+    }
+
+    // Right flank of the counter (right of counter edge, along its vertical side)
+    final counterRight = position.x + width / 2; // 600.0
+    if (pos.x >= counterRight - 15.0 &&
+        pos.x <= counterRight + 70.0 &&
+        pos.y >= position.y - height / 2 - 50.0 &&
+        pos.y <= position.y + height / 2 + 40.0) {
+      return true;
+    }
+
+    return false;
   }
 
   // --- Food Operations ---

@@ -250,41 +250,35 @@ class SpriteRenderer {
 
   /// Draws the Chai Brewing Kettle station.
   static void drawChaiStation(Canvas canvas, ChaiStation station) {
-    final pzCenter = station.pickupZoneCenter;
-    final pzRadius = station.pickupZoneRadius;
+    // 1. All-Around Interactive Floor Pickup Pad (accessible from front, behind, left, right)
+    final padRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(station.position.x, station.position.y),
+        width: station.width + 60.0,
+        height: station.height + 60.0,
+      ),
+      const Radius.circular(20.0),
+    );
 
-    final zoneFill = Paint()
-      ..color = AppTheme.goldYellow.withValues(alpha: 0.18);
-    canvas.drawCircle(Offset(pzCenter.x, pzCenter.y), pzRadius, zoneFill);
+    final padFill = Paint()
+      ..color = AppTheme.goldYellow.withValues(alpha: 0.16);
+    canvas.drawRRect(padRect, padFill);
 
-    final zoneBorder = Paint()
+    final padBorder = Paint()
       ..color = AppTheme.saffronOrange
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
+      ..strokeWidth = 2.0;
+    canvas.drawRRect(padRect, padBorder);
 
-    const dashCount = 20;
-    for (int i = 0; i < dashCount; i += 2) {
-      final startAngle = (i / dashCount) * (math.pi * 2);
-      final sweepAngle = (1 / dashCount) * (math.pi * 2);
-      canvas.drawArc(
-        Rect.fromCircle(
-          center: Offset(pzCenter.x, pzCenter.y),
-          radius: pzRadius,
-        ),
-        startAngle,
-        sweepAngle,
-        false,
-        zoneBorder,
-      );
-    }
-
+    // Front pickup label
+    final pzCenter = station.pickupZoneCenter;
     final pzText = TextPainter(
       text: const TextSpan(
-        text: 'PICKUP',
+        text: '☕ PICKUP CHAI',
         style: TextStyle(
           color: AppTheme.chaiDarkBrown,
           fontWeight: FontWeight.w900,
-          fontSize: 10,
+          fontSize: 9,
           letterSpacing: 0.5,
         ),
       ),
@@ -292,7 +286,10 @@ class SpriteRenderer {
     )..layout();
     pzText.paint(
       canvas,
-      Offset(pzCenter.x - pzText.width / 2, pzCenter.y - pzText.height / 2),
+      Offset(
+        pzCenter.x - pzText.width / 2,
+        pzCenter.y + 14 - pzText.height / 2,
+      ),
     );
 
     final left = station.position.x - station.width / 2;
@@ -431,7 +428,7 @@ class SpriteRenderer {
     // 1. Floor Interactive Zones Behind Counter
     // -------------------------------------------------------------
 
-    // Left: Food Deposit Zone
+    // Left: Food Deposit Zone (Behind & Left Flank)
     final fz = counter.foodDepositZoneCenter;
     final fzRadius = counter.foodDepositZoneRadius;
     final fzFill = Paint()
@@ -450,13 +447,30 @@ class SpriteRenderer {
       AppTheme.saffronOrange,
     );
 
-    // Center: Cashier Standing Station (Green Zone)
+    // Left flank side wing (drop items from left side of counter)
+    final leftSideCenter = Offset(
+      counter.position.x - counter.width / 2 - 22.0,
+      counter.position.y,
+    );
+    final leftSideRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: leftSideCenter, width: 30, height: 56),
+      const Radius.circular(8),
+    );
+    canvas.drawRRect(leftSideRect, fzFill);
+    final leftSideBorder = Paint()
+      ..color = AppTheme.saffronOrange
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawRRect(leftSideRect, leftSideBorder);
+    _drawZoneText(canvas, leftSideCenter, 'DROP', AppTheme.saffronOrange);
+
+    // Center: Cashier Standing Station (Strictly Green Center Zone - No Overlap)
     final cz = counter.cashierZoneCenter;
     final czRadius = counter.cashierZoneRadius;
     final isPresent = counter.isCashierPresent;
     final czFill = Paint()
       ..color = (isPresent
-          ? AppTheme.truckArtGreen.withValues(alpha: 0.4)
+          ? AppTheme.truckArtGreen.withValues(alpha: 0.45)
           : AppTheme.truckArtGreen.withValues(alpha: 0.15));
     canvas.drawCircle(Offset(cz.x, cz.y), czRadius, czFill);
     _drawDashedCircle(
@@ -474,7 +488,7 @@ class SpriteRenderer {
       isPresent ? Colors.white : AppTheme.truckArtGreen,
     );
 
-    // Right: Cash Collection Zone
+    // Right: Cash Collection Zone (Behind & Right Flank)
     final rz = counter.cashCollectionZoneCenter;
     final rzRadius = counter.cashCollectionZoneRadius;
     final rzFill = Paint()..color = AppTheme.goldYellow.withValues(alpha: 0.15);
@@ -491,6 +505,23 @@ class SpriteRenderer {
       'COLLECT',
       AppTheme.chaiDarkBrown,
     );
+
+    // Right flank side wing (vacuum cash from right side of counter)
+    final rightSideCenter = Offset(
+      counter.position.x + counter.width / 2 + 22.0,
+      counter.position.y,
+    );
+    final rightSideRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: rightSideCenter, width: 30, height: 56),
+      const Radius.circular(8),
+    );
+    canvas.drawRRect(rightSideRect, rzFill);
+    final rightSideBorder = Paint()
+      ..color = AppTheme.goldYellow
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawRRect(rightSideRect, rightSideBorder);
+    _drawZoneText(canvas, rightSideCenter, 'CASH', AppTheme.chaiDarkBrown);
 
     // -------------------------------------------------------------
     // 2. Physical Three-Part Counter Structure
