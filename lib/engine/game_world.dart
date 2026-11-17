@@ -304,10 +304,16 @@ class GameWorld {
 
     if (counter.isInsideFoodDepositZone(player.position) &&
         counter.canDepositFood()) {
-      final topItem = player.carriedItems.last;
-      if (counter.addFoodItem(topItem)) {
-        player.removeItem();
-        onItemDeposited?.call(topItem);
+      // Only deposit edible food items onto counter (never dirty trays!)
+      final foodIndex = player.carriedItems.lastIndexWhere(
+        (item) => item != ItemType.dirtyTray,
+      );
+      if (foodIndex != -1) {
+        final foodItem = player.carriedItems[foodIndex];
+        if (counter.addFoodItem(foodItem)) {
+          player.carriedItems.removeAt(foodIndex);
+          onItemDeposited?.call(foodItem);
+        }
       }
     }
   }
@@ -341,18 +347,24 @@ class GameWorld {
     if (player.carriedCount == 0) return;
 
     if (trashBin.isInsideZone(player.position) && trashBin.canDiscard()) {
-      final discarded = player.removeItem();
-      if (discarded != null) {
-        trashBin.triggerDiscarded();
-        onItemDiscarded?.call();
-
-        floatingTexts.add(
-          FloatingTextEntity(
-            position: Vector2(trashBin.position.x, trashBin.position.y - 25.0),
-            text: discarded == ItemType.dirtyTray ? 'TRASHED 🗑️' : 'DISCARDED',
-          ),
-        );
+      // Prioritize discarding dirty trays first, then other items
+      int discardIndex = player.carriedItems.lastIndexWhere(
+        (item) => item == ItemType.dirtyTray,
+      );
+      if (discardIndex == -1) {
+        discardIndex = player.carriedItems.length - 1;
       }
+
+      final discarded = player.carriedItems.removeAt(discardIndex);
+      trashBin.triggerDiscarded();
+      onItemDiscarded?.call();
+
+      floatingTexts.add(
+        FloatingTextEntity(
+          position: Vector2(trashBin.position.x, trashBin.position.y - 25.0),
+          text: discarded == ItemType.dirtyTray ? 'TRASHED 🗑️' : 'DISCARDED',
+        ),
+      );
     }
   }
 

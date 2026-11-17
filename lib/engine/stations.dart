@@ -258,6 +258,8 @@ class ServingCounter {
   bool canDepositFood() => depositTimer <= 0.0;
 
   bool addFoodItem(ItemType item) {
+    // Dirty trays must NEVER be deposited on the food counter!
+    if (item == ItemType.dirtyTray) return false;
     if (!canDepositFood()) return false;
 
     // Find existing non-full tower of the SAME item type

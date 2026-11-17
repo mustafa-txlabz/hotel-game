@@ -291,5 +291,40 @@ void main() {
 
       expect(world.player.carriedCount, 0);
     });
+
+    test('Dirty trays are strictly forbidden from depositing onto counter', () {
+      final world = GameWorld();
+      final counter = world.counter;
+
+      // 1. Direct counter check
+      expect(counter.addFoodItem(ItemType.dirtyTray), isFalse);
+      expect(counter.foodTowers.any((t) => t.itemType == ItemType.dirtyTray), isFalse);
+
+      // 2. Player carrying only dirty tray standing in food deposit zone
+      world.player.addItem(ItemType.dirtyTray);
+      expect(world.player.carriedCount, 1);
+
+      world.player.position.x = 350.0;
+      world.player.position.y = 700.0; // In food deposit zone
+      expect(counter.isInsideFoodDepositZone(world.player.position), isTrue);
+
+      world.tick(0.5);
+
+      // Tray must remain in player's stack and NOT deposit onto counter
+      expect(world.player.carriedCount, 1);
+      expect(world.player.carriedItems.first, ItemType.dirtyTray);
+      expect(counter.foodTowers.first.count, 0);
+
+      // 3. Player carrying mixed items [dirtyTray, chai]
+      world.player.addItem(ItemType.chai);
+      expect(world.player.carriedCount, 2);
+
+      world.tick(0.5);
+
+      // Chai deposits onto counter, dirty tray remains in stack
+      expect(counter.foodTowers.first.count, 1);
+      expect(world.player.carriedCount, 1);
+      expect(world.player.carriedItems.first, ItemType.dirtyTray);
+    });
   });
 }
