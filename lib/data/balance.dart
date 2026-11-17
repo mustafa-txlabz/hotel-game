@@ -24,4 +24,26 @@ class GameBalance {
   static const double chaiPrice = 10.0;
   static const double customerEatDuration = 5.0;
   static const double dineInTip = 25.0;
+
+  // Staff Hiring & HR Upgrades (M6)
+  static const double hireCashierCost = 150.0;
+  static const double hireChotuBaseCost = 200.0;
+  static const double hireChotuCostMultiplier = 1.6;
+
+  // Owner Upgrades
+  static const List<double> playerSpeedLevels = [220.0, 255.0, 290.0, 330.0, 370.0];
+  static const List<double> playerSpeedUpgradeCosts = [60.0, 120.0, 200.0, 320.0];
+
+  static const List<int> playerCapacityLevels = [3, 5, 8, 12, 16];
+  static const List<double> playerCapacityUpgradeCosts = [80.0, 150.0, 250.0, 400.0];
+
+  // Worker (Chotu) Stats & Upgrades
+  static const double workerBaseSpeed = 150.0;
+  static const int workerBaseCapacity = 2;
+
+  static const List<double> workerSpeedLevels = [150.0, 185.0, 220.0, 260.0];
+  static const List<double> workerSpeedUpgradeCosts = [75.0, 140.0, 240.0];
+
+  static const List<int> workerCapacityLevels = [2, 3, 5, 8];
+  static const List<double> workerCapacityUpgradeCosts = [90.0, 180.0, 300.0];
 }

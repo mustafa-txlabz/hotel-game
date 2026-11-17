@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../engine/customer_ai.dart';
 import '../../engine/entities.dart';
 import '../../engine/game_world.dart';
+import '../../engine/staff_ai.dart';
 import 'sprite_renderer.dart';
 
 /// 60 FPS CustomPainter rendering the Dhaba world, stations, entities, cash bundles, and popups.
@@ -47,20 +48,26 @@ class WorldPainter extends CustomPainter {
       world.wallThickness,
     );
 
-    // 6. Draw Stations (Chai Kettle, Serving Counter, Trash Bin)
+    // 6. Draw Stations (Chai Kettle, Serving Counter, Trash Bin, HR Desk)
     SpriteRenderer.drawChaiStation(canvas, world.chaiStation);
     SpriteRenderer.drawServingCounter(canvas, world.counter);
     SpriteRenderer.drawTrashBin(canvas, world.trashBin);
+    SpriteRenderer.drawHRDesk(
+      canvas,
+      world.hrDesk,
+      world.hrDesk.isInsideZone(world.player.position),
+    );
 
     // 7. Draw Ground Cash Bundles
     for (final bundle in world.cashBundles) {
       SpriteRenderer.drawCashBundle(canvas, bundle);
     }
 
-    // 8. Draw Characters (Player and Customers) sorted by Y-depth
+    // 8. Draw Characters (Player, Customers, and Staff) sorted by Y-depth
     final characters = <dynamic>[
       world.player,
       ...world.customerSystem.activeCustomers,
+      ...world.staff,
     ]..sort((a, b) => a.position.y.compareTo(b.position.y));
 
     for (final char in characters) {
@@ -68,6 +75,12 @@ class WorldPainter extends CustomPainter {
         SpriteRenderer.drawPlayer(canvas, char);
       } else if (char is CustomerEntity) {
         SpriteRenderer.drawCustomer(canvas, char);
+      } else if (char is StaffEntity) {
+        if (char.role == StaffRole.cashier) {
+          SpriteRenderer.drawCashier(canvas, char);
+        } else {
+          SpriteRenderer.drawChotu(canvas, char);
+        }
       }
     }
 

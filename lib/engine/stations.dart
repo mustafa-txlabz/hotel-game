@@ -487,3 +487,25 @@ class DiningTable {
     return math.sqrt(dx * dx + dy * dy) <= 45.0;
   }
 }
+
+/// HR Desk station where Owner manages staff and upgrades (M6).
+class HRDesk {
+  final Vector2 position;
+  final double width;
+  final double height;
+  final double zoneRadius;
+
+  HRDesk({
+    Vector2? position,
+    this.width = 90.0,
+    this.height = 60.0,
+    this.zoneRadius = 60.0,
+  }) : position = position ?? Vector2(750.0, 260.0);
+
+  /// Interaction zone in front of the desk where player stands to open HR clipboard
+  Vector2 get interactionZoneCenter => Vector2(position.x, position.y + 55.0);
+
+  bool isInsideZone(Vector2 pos) {
+    return interactionZoneCenter.distanceTo(pos) <= zoneRadius;
+  }
+}

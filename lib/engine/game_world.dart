@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 
+import '../data/balance.dart';
 import 'customer_ai.dart';
 import 'entities.dart';
 import 'ground_pad.dart';
+import 'staff_ai.dart';
 import 'stations.dart';
 
 /// Pure Dart world simulation managing physical bounds, entities, stations, and collisions.
@@ -17,6 +19,17 @@ class GameWorld {
   final ChaiStation chaiStation;
   final ServingCounter counter;
   final TrashBin trashBin;
+
+  // HR Desk Station & Staff Management (M6)
+  final HRDesk hrDesk;
+  final List<StaffEntity> staff;
+  int nextStaffId;
+
+  // Upgrades Levels
+  int playerSpeedLevel;
+  int playerCapacityLevel;
+  int workerSpeedLevel;
+  int workerCapacityLevel;
 
   // Customer AI & Queue System (M3)
   final CustomerSystem customerSystem;
@@ -52,6 +65,8 @@ class GameWorld {
     CustomerSystem? customers,
     List<GroundPad>? pads,
     List<DiningTable>? tables,
+    HRDesk? hr,
+    List<StaffEntity>? staffMembers,
   }) : player = PlayerEntity(startPosition: Vector2(450.0, 600.0)),
        chaiStation = station ?? ChaiStation(position: Vector2(260.0, 260.0)),
        counter =
@@ -81,7 +96,19 @@ class GameWorld {
                isUnlocked: false,
              ),
            ],
-       groundPads = pads ?? [] {
+       groundPads = pads ?? [],
+       hrDesk = hr ?? HRDesk(position: Vector2(750.0, 260.0)),
+       staff = staffMembers ?? [],
+       nextStaffId = 1,
+       playerSpeedLevel = 1,
+       playerCapacityLevel = 1,
+       workerSpeedLevel = 1,
+       workerCapacityLevel = 1 {
+    // Apply initial upgrade stats to player
+    player.speed = GameBalance.playerSpeedLevels[playerSpeedLevel - 1];
+    player.carryCapacity =
+        GameBalance.playerCapacityLevels[playerCapacityLevel - 1];
+
     // Bind tables to customer system for dine-in seating
     customerSystem.diningTables = diningTables;
 
@@ -120,6 +147,28 @@ class GameWorld {
         },
       );
 
+      final cashierPad = GroundPad(
+        id: 'hire_cashier',
+        type: PadType.floorUnlock,
+        position: Vector2(560.0, 580.0),
+        title: 'CASHIER',
+        totalCost: GameBalance.hireCashierCost,
+        onUnlocked: () {
+          hireCashier(free: true);
+        },
+      );
+
+      final chotuPad = GroundPad(
+        id: 'hire_chotu',
+        type: PadType.floorUnlock,
+        position: Vector2(660.0, 480.0),
+        title: 'CHOTU',
+        totalCost: GameBalance.hireChotuBaseCost,
+        onUnlocked: () {
+          hireChotu(free: true);
+        },
+      );
+
       final table1Pad = GroundPad(
         id: 'table_1_unlock',
         type: PadType.floorUnlock,
@@ -144,7 +193,7 @@ class GameWorld {
         },
       );
 
-      groundPads.addAll([kettlePad, table1Pad, table2Pad]);
+      groundPads.addAll([kettlePad, cashierPad, chotuPad, table1Pad, table2Pad]);
     }
   }
 
@@ -177,13 +226,14 @@ class GameWorld {
     // 3. Collision against perimeter boundary walls
     _clampPlayerToWorldBounds();
 
-    // 4. Solid collisions (kitchen kettle, serving counter, unlocked dining tables)
+    // 4. Solid collisions (kitchen kettle, serving counter, HR desk, unlocked dining tables)
     _resolveBoxCollision(
       chaiStation.position,
       chaiStation.width,
       chaiStation.height,
     );
     _resolveBoxCollision(counter.position, counter.width, counter.height);
+    _resolveBoxCollision(hrDesk.position, hrDesk.width, hrDesk.height);
     for (final table in diningTables) {
       if (table.isUnlocked) {
         _resolveBoxCollision(table.position, table.width, table.height);
@@ -199,25 +249,32 @@ class GameWorld {
     // 7. Cashier Presence check (Center Section of Counter)
     _checkCashierPresence();
 
-    // 8. Customer AI, queue, patience, and cashier service transactions (M3)
+    // 8. Staff AI Updates (Cashier & Chotus) (M6)
+    for (final member in staff) {
+      if (member.role == StaffRole.chotu) {
+        _updateChotuAI(member, dt);
+      }
+    }
+
+    // 9. Customer AI, queue, patience, and cashier service transactions (M3)
     customerSystem.update(dt, counter);
 
-    // 9. Cash Collection detection (Right Section of Counter)
+    // 10. Cash Collection detection (Right Section of Counter)
     _checkCashCollection();
 
-    // 10. Trash bin discard detection
+    // 11. Trash bin discard detection
     _checkTrashDiscard();
 
-    // 11. Table Tip Collection & Dirty Tray Cleaning (M5)
+    // 12. Table Tip Collection & Dirty Tray Cleaning (M5)
     _checkTableCleaning();
 
-    // 12. Ground Upgrade & Unlock Pads (M4)
+    // 13. Ground Upgrade & Unlock Pads (M4 & M6)
     _checkGroundPads(dt);
 
-    // 12. Flying cash bundles & absorption
+    // 14. Flying cash bundles & absorption
     _updateCashBundles(dt);
 
-    // 13. Floating text popups
+    // 15. Floating text popups
     _updateFloatingTexts(dt);
   }
 
@@ -319,9 +376,9 @@ class GameWorld {
   }
 
   void _checkCashierPresence() {
-    // Cashier presence check (Owner standing in center green circle)
+    // Cashier presence check: Owner standing in center green circle OR hired Cashier on duty
     final isOwnerAtCashier = counter.isInsideCashierZone(player.position);
-    counter.isCashierPresent = isOwnerAtCashier;
+    counter.isCashierPresent = hasCashier || isOwnerAtCashier;
   }
 
   void _checkCashCollection() {
@@ -438,5 +495,318 @@ class GameWorld {
       ft.update(dt);
     }
     floatingTexts.removeWhere((ft) => ft.isExpired);
+  }
+
+  // --- Staff & HR Upgrades Methods (M6) ---
+
+  bool get hasCashier => staff.any((s) => s.role == StaffRole.cashier);
+  int get chotuCount => staff.where((s) => s.role == StaffRole.chotu).length;
+
+  double get currentWorkerSpeed =>
+      GameBalance.workerSpeedLevels[workerSpeedLevel - 1];
+  int get currentWorkerCapacity =>
+      GameBalance.workerCapacityLevels[workerCapacityLevel - 1];
+
+  bool hireCashier({bool free = false}) {
+    if (hasCashier) return false;
+    if (!free && rupees < GameBalance.hireCashierCost) return false;
+    if (!free) rupees -= GameBalance.hireCashierCost;
+
+    final cashier = StaffEntity(
+      id: nextStaffId++,
+      name: 'Mian Ji (Cashier)',
+      role: StaffRole.cashier,
+      startPosition: counter.cashierZoneCenter,
+    );
+    cashier.angle = math.pi / 2; // Facing South towards customers
+    staff.add(cashier);
+    counter.isCashierPresent = true;
+
+    // Complete cashier ground pad if present
+    for (final pad in groundPads) {
+      if (pad.id == 'hire_cashier' && !pad.isCompleted) {
+        pad.remainingCost = 0.0;
+        pad.isCompleted = true;
+      }
+    }
+
+    floatingTexts.add(
+      FloatingTextEntity(
+        position: Vector2(
+          counter.cashierZoneCenter.x,
+          counter.cashierZoneCenter.y - 25.0,
+        ),
+        text: 'CASHIER HIRED! 👔',
+      ),
+    );
+    return true;
+  }
+
+  double get nextChotuCost =>
+      GameBalance.hireChotuBaseCost *
+      math.pow(GameBalance.hireChotuCostMultiplier, chotuCount);
+
+  bool hireChotu({bool free = false}) {
+    final cost = nextChotuCost;
+    if (!free && rupees < cost) return false;
+    if (!free) rupees -= cost;
+
+    final chotu = StaffEntity(
+      id: nextStaffId++,
+      name: 'Chotu ${chotuCount + 1}',
+      role: StaffRole.chotu,
+      startPosition: Vector2(660.0, 380.0),
+      speed: currentWorkerSpeed,
+      carryCapacity: currentWorkerCapacity,
+    );
+    staff.add(chotu);
+
+    // If first chotu and floor pad exists, complete it
+    if (chotuCount == 1) {
+      for (final pad in groundPads) {
+        if (pad.id == 'hire_chotu' && !pad.isCompleted) {
+          pad.remainingCost = 0.0;
+          pad.isCompleted = true;
+        }
+      }
+    }
+
+    floatingTexts.add(
+      FloatingTextEntity(
+        position: Vector2(chotu.position.x, chotu.position.y - 25.0),
+        text: 'CHOTU HIRED! 🏃',
+      ),
+    );
+    return true;
+  }
+
+  bool get canUpgradePlayerSpeed =>
+      playerSpeedLevel < GameBalance.playerSpeedLevels.length &&
+      rupees >= GameBalance.playerSpeedUpgradeCosts[playerSpeedLevel - 1];
+
+  double? get playerSpeedUpgradeCost =>
+      playerSpeedLevel < GameBalance.playerSpeedLevels.length
+          ? GameBalance.playerSpeedUpgradeCosts[playerSpeedLevel - 1]
+          : null;
+
+  bool upgradePlayerSpeed() {
+    final cost = playerSpeedUpgradeCost;
+    if (cost == null || rupees < cost) return false;
+    rupees -= cost;
+    playerSpeedLevel++;
+    player.speed = GameBalance.playerSpeedLevels[playerSpeedLevel - 1];
+    floatingTexts.add(
+      FloatingTextEntity(
+        position: Vector2(player.position.x, player.position.y - 25.0),
+        text: 'SPEED UP! ⚡',
+      ),
+    );
+    return true;
+  }
+
+  bool get canUpgradePlayerCapacity =>
+      playerCapacityLevel < GameBalance.playerCapacityLevels.length &&
+      rupees >= GameBalance.playerCapacityUpgradeCosts[playerCapacityLevel - 1];
+
+  double? get playerCapacityUpgradeCost =>
+      playerCapacityLevel < GameBalance.playerCapacityLevels.length
+          ? GameBalance.playerCapacityUpgradeCosts[playerCapacityLevel - 1]
+          : null;
+
+  bool upgradePlayerCapacity() {
+    final cost = playerCapacityUpgradeCost;
+    if (cost == null || rupees < cost) return false;
+    rupees -= cost;
+    playerCapacityLevel++;
+    player.carryCapacity =
+        GameBalance.playerCapacityLevels[playerCapacityLevel - 1];
+    floatingTexts.add(
+      FloatingTextEntity(
+        position: Vector2(player.position.x, player.position.y - 25.0),
+        text: 'CAPACITY UP! 🎒',
+      ),
+    );
+    return true;
+  }
+
+  bool get canUpgradeWorkerSpeed =>
+      workerSpeedLevel < GameBalance.workerSpeedLevels.length &&
+      rupees >= GameBalance.workerSpeedUpgradeCosts[workerSpeedLevel - 1];
+
+  double? get workerSpeedUpgradeCost =>
+      workerSpeedLevel < GameBalance.workerSpeedLevels.length
+          ? GameBalance.workerSpeedUpgradeCosts[workerSpeedLevel - 1]
+          : null;
+
+  bool upgradeWorkerSpeed() {
+    final cost = workerSpeedUpgradeCost;
+    if (cost == null || rupees < cost) return false;
+    rupees -= cost;
+    workerSpeedLevel++;
+    final newSpeed = currentWorkerSpeed;
+    for (final s in staff) {
+      if (s.role == StaffRole.chotu) {
+        s.speed = newSpeed;
+      }
+    }
+    floatingTexts.add(
+      FloatingTextEntity(
+        position: Vector2(hrDesk.position.x, hrDesk.position.y - 25.0),
+        text: 'WORKER SPEED! ⚡',
+      ),
+    );
+    return true;
+  }
+
+  bool get canUpgradeWorkerCapacity =>
+      workerCapacityLevel < GameBalance.workerCapacityLevels.length &&
+      rupees >= GameBalance.workerCapacityUpgradeCosts[workerCapacityLevel - 1];
+
+  double? get workerCapacityUpgradeCost =>
+      workerCapacityLevel < GameBalance.workerCapacityLevels.length
+          ? GameBalance.workerCapacityUpgradeCosts[workerCapacityLevel - 1]
+          : null;
+
+  bool upgradeWorkerCapacity() {
+    final cost = workerCapacityUpgradeCost;
+    if (cost == null || rupees < cost) return false;
+    rupees -= cost;
+    workerCapacityLevel++;
+    final newCap = currentWorkerCapacity;
+    for (final s in staff) {
+      if (s.role == StaffRole.chotu) {
+        s.carryCapacity = newCap;
+      }
+    }
+    floatingTexts.add(
+      FloatingTextEntity(
+        position: Vector2(hrDesk.position.x, hrDesk.position.y - 25.0),
+        text: 'WORKER CAPACITY! 🎒',
+      ),
+    );
+    return true;
+  }
+
+  // --- Autonomous Chotu AI Logic (M6) ---
+
+  void _updateChotuAI(StaffEntity chotu, double dt) {
+    chotu.updateMovement(dt);
+
+    // 1. If carrying dirty trays, primary objective is to dump them at Trash Bin!
+    if (chotu.carriedItems.contains(ItemType.dirtyTray)) {
+      chotu.targetPosition.x = trashBin.position.x + 25.0;
+      chotu.targetPosition.y = trashBin.position.y;
+      chotu.taskState = ChotuTaskState.dumpingTrash;
+
+      if (trashBin.isInsideZone(chotu.position) && trashBin.canDiscard()) {
+        final idx = chotu.carriedItems.indexOf(ItemType.dirtyTray);
+        if (idx != -1) {
+          chotu.carriedItems.removeAt(idx);
+          trashBin.triggerDiscarded();
+          onItemDiscarded?.call();
+          floatingTexts.add(
+            FloatingTextEntity(
+              position: Vector2(trashBin.position.x, trashBin.position.y - 20.0),
+              text: 'CLEANED! 🗑️',
+            ),
+          );
+        }
+      }
+      return;
+    }
+
+    // 2. If carrying chai cups, deliver them to the Serving Counter food towers!
+    if (chotu.carriedItems.contains(ItemType.chai)) {
+      chotu.targetPosition.x = counter.position.x - 70.0;
+      chotu.targetPosition.y = counter.position.y - 45.0;
+      chotu.taskState = ChotuTaskState.deliveringChai;
+
+      if (counter.isInsideFoodDepositZone(chotu.position) &&
+          counter.canDepositFood()) {
+        final idx = chotu.carriedItems.indexOf(ItemType.chai);
+        if (idx != -1) {
+          if (counter.addFoodItem(ItemType.chai)) {
+            chotu.carriedItems.removeAt(idx);
+            onItemDeposited?.call(ItemType.chai);
+          }
+        }
+      }
+      return;
+    }
+
+    // 3. Not carrying items: check if any unlocked dining table has dirty trays or cash tips!
+    DiningTable? dirtyTable;
+    for (final table in diningTables) {
+      if (table.isUnlocked && (table.hasDirtyTray || table.cashTip > 0.0)) {
+        dirtyTable = table;
+        break;
+      }
+    }
+
+    if (dirtyTable != null && !chotu.isFull) {
+      chotu.targetPosition.x = dirtyTable.position.x;
+      chotu.targetPosition.y = dirtyTable.position.y + 40.0;
+      chotu.taskState = ChotuTaskState.cleaningTable;
+
+      if (dirtyTable.isInsideCleanZone(chotu.position)) {
+        // Collect tips
+        for (final seat in dirtyTable.seats) {
+          if (seat.cashTip > 0.0) {
+            final tip = seat.cashTip;
+            seat.cashTip = 0.0;
+            rupees += tip;
+            lifetimeRupees += tip;
+            floatingTexts.add(
+              FloatingTextEntity(
+                position: Vector2(seat.position.x, dirtyTable.position.y - 20.0),
+                text: '+Rs ${tip.toInt()}',
+              ),
+            );
+            onCashCollected?.call(tip);
+          }
+        }
+
+        // Pick up dirty trays
+        for (final seat in dirtyTable.seats) {
+          if (seat.hasDirtyTray && !chotu.isFull) {
+            chotu.addItem(ItemType.dirtyTray);
+            seat.hasDirtyTray = false;
+            onItemPickedUp?.call(ItemType.dirtyTray);
+          }
+        }
+        if (chotu.carriedItems.contains(ItemType.dirtyTray)) {
+          chotu.taskState = ChotuTaskState.dumpingTrash;
+        }
+      }
+      return;
+    }
+
+    // 4. Counter needs restocking: fetch chai from Chai Kettle!
+    if (counter.totalFoodCount < 6 &&
+        chaiStation.shelfCount > 0 &&
+        !chotu.isFull) {
+      chotu.targetPosition.x = chaiStation.pickupZoneCenter.x;
+      chotu.targetPosition.y = chaiStation.pickupZoneCenter.y;
+      chotu.taskState = ChotuTaskState.fetchingChai;
+
+      if (chaiStation.isInsidePickupZone(chotu.position)) {
+        if (chaiStation.tryTakeCup()) {
+          chotu.addItem(ItemType.chai);
+          onItemPickedUp?.call(ItemType.chai);
+          chotu.taskState = ChotuTaskState.deliveringChai;
+        }
+      }
+      return;
+    }
+
+    // 5. Idle / Standby near Dhaba staff rest area (near HR desk)
+    chotu.taskState = ChotuTaskState.idle;
+    final restX = 660.0 + (chotu.id % 3) * 35.0;
+    final restY = 380.0 + ((chotu.id ~/ 3) % 2) * 35.0;
+    chotu.targetPosition.x = restX;
+    chotu.targetPosition.y = restY;
+    if (!chotu.isMoving) {
+      chotu.angle = math.pi / 2; // Face forward
+    }
   }
 }

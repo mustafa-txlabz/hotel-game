@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../engine/customer_ai.dart';
 import '../../engine/entities.dart';
 import '../../engine/ground_pad.dart';
+import '../../engine/staff_ai.dart';
 import '../../engine/stations.dart';
 
 /// Vector-based high-performance sprite and character renderer for Dhaba Arcade Tycoon.
@@ -1707,6 +1708,422 @@ class SpriteRenderer {
           tipBadgeY - tipText.height / 2,
         ),
       );
+    }
+  }
+
+  /// Draws the HR Desk station with mahogany table, computer monitor, desk lamp,
+  /// paperwork clipboard, executive chair, and glowing interaction zone.
+  static void drawHRDesk(Canvas canvas, HRDesk desk, bool isPlayerInsideZone) {
+    final x = desk.position.x;
+    final y = desk.position.y;
+    final halfH = desk.height / 2;
+
+    // 1. Interaction Zone on the floor in front of desk
+    final zoneCenter = desk.interactionZoneCenter;
+    final pulse = 1.0 + math.sin(DateTime.now().millisecondsSinceEpoch * 0.005) * 0.05;
+    final ringPaint = Paint()
+      ..color = isPlayerInsideZone
+          ? AppTheme.saffronOrange.withValues(alpha: 0.4)
+          : AppTheme.truckArtGreen.withValues(alpha: 0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = isPlayerInsideZone ? 3.0 : 2.0;
+
+    canvas.drawCircle(Offset(zoneCenter.x, zoneCenter.y), desk.zoneRadius * pulse, ringPaint);
+
+    final zoneFill = Paint()
+      ..color = isPlayerInsideZone
+          ? AppTheme.saffronOrange.withValues(alpha: 0.15)
+          : AppTheme.truckArtGreen.withValues(alpha: 0.08);
+    canvas.drawCircle(Offset(zoneCenter.x, zoneCenter.y), desk.zoneRadius * pulse, zoneFill);
+
+    // Zone Badge
+    final zoneBadgeRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(zoneCenter.x, zoneCenter.y), width: 70, height: 20),
+      const Radius.circular(8),
+    );
+    canvas.drawRRect(
+      zoneBadgeRect,
+      Paint()..color = isPlayerInsideZone ? AppTheme.saffronOrange : AppTheme.truckArtGreen,
+    );
+    final zoneText = TextPainter(
+      text: const TextSpan(
+        text: '📋 HR DESK',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+          fontSize: 9,
+          letterSpacing: 0.4,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    zoneText.paint(
+      canvas,
+      Offset(zoneCenter.x - zoneText.width / 2, zoneCenter.y - zoneText.height / 2),
+    );
+
+    // 2. Swivel Chair behind desk
+    final chairPaint = Paint()..color = const Color(0xFF37474F);
+    canvas.drawCircle(Offset(x, y - halfH - 12), 14, chairPaint);
+    final cushionPaint = Paint()..color = const Color(0xFF263238);
+    canvas.drawCircle(Offset(x, y - halfH - 12), 10, cushionPaint);
+
+    // 3. Desk Shadow
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(x + 4, y + 6), width: desk.width, height: desk.height),
+        const Radius.circular(8),
+      ),
+      Paint()..color = Colors.black.withValues(alpha: 0.25),
+    );
+
+    // 4. Mahogany Wood Desk Surface
+    final deskRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(x, y), width: desk.width, height: desk.height),
+      const Radius.circular(8),
+    );
+    final deskPaint = Paint()..color = const Color(0xFF5D4037);
+    canvas.drawRRect(deskRect, deskPaint);
+
+    // Desk border / bevel
+    final borderPaint = Paint()
+      ..color = const Color(0xFF8D6E63)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawRRect(deskRect, borderPaint);
+
+    // 5. Desktop Computer Monitor (left side of desk)
+    final monX = x - 20.0;
+    final monY = y - 4.0;
+    // Stand base
+    canvas.drawRect(
+      Rect.fromCenter(center: Offset(monX, monY + 12), width: 14, height: 4),
+      Paint()..color = const Color(0xFF424242),
+    );
+    // Screen bezel
+    final screenRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(monX, monY), width: 26, height: 18),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(screenRect, Paint()..color = const Color(0xFF212121));
+    // Display screen with bar chart
+    final displayRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(monX, monY), width: 22, height: 14),
+      const Radius.circular(2),
+    );
+    canvas.drawRRect(displayRect, Paint()..color = const Color(0xFF004D40));
+    // Bar chart lines on screen
+    final barPaint = Paint()..color = const Color(0xFF00E676);
+    canvas.drawLine(Offset(monX - 6, monY + 4), Offset(monX - 6, monY - 1), barPaint..strokeWidth = 2);
+    canvas.drawLine(Offset(monX - 2, monY + 4), Offset(monX - 2, monY - 4), barPaint..strokeWidth = 2);
+    canvas.drawLine(Offset(monX + 2, monY + 4), Offset(monX + 2, monY + 1), barPaint..strokeWidth = 2);
+    canvas.drawLine(Offset(monX + 6, monY + 4), Offset(monX + 6, monY - 5), barPaint..strokeWidth = 2);
+
+    // 6. Clipboard with Papers (right side of desk)
+    final clipX = x + 22.0;
+    final clipY = y;
+    final clipBoardRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(clipX, clipY), width: 18, height: 24),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(clipBoardRect, Paint()..color = const Color(0xFFD7CCC8));
+    // Paper on clipboard
+    final paperRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(clipX, clipY + 1), width: 14, height: 18),
+      const Radius.circular(1),
+    );
+    canvas.drawRRect(paperRect, Paint()..color = Colors.white);
+    // Clip at top
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(clipX, clipY - 10), width: 8, height: 4),
+        const Radius.circular(1),
+      ),
+      Paint()..color = const Color(0xFF757575),
+    );
+
+    // 7. Desk Lamp (top right corner of desk)
+    final lampX = x + 34.0;
+    final lampY = y - 14.0;
+    canvas.drawCircle(Offset(lampX, lampY), 5, Paint()..color = const Color(0xFFFFD54F));
+    canvas.drawCircle(
+      Offset(lampX, lampY),
+      9,
+      Paint()..color = const Color(0xFFFFD54F).withValues(alpha: 0.35),
+    );
+  }
+
+  /// Draws the hired Cashier character standing behind the counter inside the green zone.
+  static void drawCashier(Canvas canvas, StaffEntity cashier) {
+    canvas.save();
+    canvas.translate(cashier.position.x, cashier.position.y);
+
+    // 1. Shadow
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(0, 16), width: 34, height: 16),
+      Paint()..color = AppTheme.characterShadow,
+    );
+
+    // 2. Torso (facing South)
+    // White collared shirt
+    canvas.drawCircle(const Offset(0, 2), 15, Paint()..color = Colors.white);
+
+    // Emerald green Dhaba waistcoat vest with gold trim
+    final vestRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: const Offset(0, 4), width: 20, height: 15),
+      const Radius.circular(4),
+    );
+    canvas.drawRRect(vestRect, Paint()..color = const Color(0xFF1B5E20));
+
+    // Gold vest buttons
+    final goldPaint = Paint()..color = AppTheme.goldYellow;
+    canvas.drawCircle(const Offset(0, 0), 1.5, goldPaint);
+    canvas.drawCircle(const Offset(0, 4), 1.5, goldPaint);
+    canvas.drawCircle(const Offset(0, 8), 1.5, goldPaint);
+
+    // Bow tie
+    final tiePaint = Paint()..color = const Color(0xFFB71C1C);
+    canvas.drawCircle(const Offset(0, -5), 2.5, tiePaint);
+
+    // 3. Head & Face
+    canvas.drawCircle(const Offset(0, -6), 13, Paint()..color = AppTheme.characterSkin);
+
+    // Hair / Cap (neat black hair)
+    final hairPaint = Paint()..color = const Color(0xFF212121);
+    final hairPath = Path()
+      ..moveTo(-11, -8)
+      ..quadraticBezierTo(0, -18, 11, -8)
+      ..quadraticBezierTo(12, -4, 9, -2)
+      ..quadraticBezierTo(0, -10, -9, -2)
+      ..close();
+    canvas.drawPath(hairPath, hairPaint);
+
+    // Mustache & Smile
+    final mustachePaint = Paint()..color = const Color(0xFF212121);
+    final mustachePath = Path()
+      ..moveTo(-5, -4)
+      ..quadraticBezierTo(-2, -6, 0, -4)
+      ..quadraticBezierTo(2, -6, 5, -4)
+      ..quadraticBezierTo(0, -2, -5, -4)
+      ..close();
+    canvas.drawPath(mustachePath, mustachePaint);
+
+    // Eyes
+    canvas.drawCircle(const Offset(-4, -9), 1.5, Paint()..color = const Color(0xFF212121));
+    canvas.drawCircle(const Offset(4, -9), 1.5, Paint()..color = const Color(0xFF212121));
+
+    // Hands resting forward
+    canvas.drawCircle(const Offset(-12, 3), 4, Paint()..color = AppTheme.characterSkin);
+    canvas.drawCircle(const Offset(12, 3), 4, Paint()..color = AppTheme.characterSkin);
+
+    // 4. Cashier badge above head
+    final badgeRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: const Offset(0, -28), width: 56, height: 16),
+      const Radius.circular(5),
+    );
+    canvas.drawRRect(badgeRect, Paint()..color = AppTheme.truckArtGreen);
+    final badgeText = TextPainter(
+      text: const TextSpan(
+        text: '👔 CASHIER',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+          fontSize: 8,
+          letterSpacing: 0.3,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    badgeText.paint(
+      canvas,
+      Offset(-badgeText.width / 2, -28 - badgeText.height / 2),
+    );
+
+    canvas.restore();
+  }
+
+  /// Draws the autonomous Chotu Waiter running around, with walking physics,
+  /// orange apron, head stack wobble, and MAX badge.
+  static void drawChotu(Canvas canvas, StaffEntity chotu) {
+    canvas.save();
+    canvas.translate(chotu.position.x, chotu.position.y);
+
+    // 1. Drop shadow (scales slightly while running)
+    final shadowScale =
+        1.0 + (chotu.isMoving ? math.sin(chotu.walkCycle * 2) * 0.08 : 0.0);
+    final shadowPaint = Paint()..color = AppTheme.characterShadow;
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: const Offset(0, 16),
+        width: 32 * shadowScale,
+        height: 16 * shadowScale,
+      ),
+      shadowPaint,
+    );
+
+    // 2. Walking bob
+    final bobOffset = chotu.isMoving
+        ? math.sin(chotu.walkCycle * 2).abs() * -3.5
+        : 0.0;
+    canvas.translate(0, bobOffset);
+
+    // 3. Rotate towards heading
+    canvas.save();
+    canvas.rotate(chotu.angle - math.pi / 2);
+
+    // Feet animation
+    final leftFootOffset = chotu.isMoving
+        ? math.sin(chotu.walkCycle) * 6.0
+        : 0.0;
+    final rightFootOffset = chotu.isMoving
+        ? -math.sin(chotu.walkCycle) * 6.0
+        : 0.0;
+    final shoePaint = Paint()..color = const Color(0xFF4E342E);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(-7, 12 + leftFootOffset), width: 7, height: 12),
+        const Radius.circular(3),
+      ),
+      shoePaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(7, 12 + rightFootOffset), width: 7, height: 12),
+        const Radius.circular(3),
+      ),
+      shoePaint,
+    );
+
+    // Body: White shalwar kameez
+    canvas.drawCircle(const Offset(0, 2), 14, Paint()..color = const Color(0xFFF5F5F5));
+
+    // Vibrant Orange Runner Vest / Apron
+    final apronRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: const Offset(0, 3), width: 19, height: 14),
+      const Radius.circular(4),
+    );
+    canvas.drawRRect(apronRect, Paint()..color = Colors.deepOrange);
+
+    // Apron Pocket
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: const Offset(0, 6), width: 9, height: 5),
+        const Radius.circular(2),
+      ),
+      Paint()..color = const Color(0xFFBF360C),
+    );
+
+    // Head
+    canvas.drawCircle(const Offset(0, -6), 12, Paint()..color = AppTheme.characterSkin);
+
+    // Red Headband / Kerchief
+    final bandPaint = Paint()..color = const Color(0xFFD32F2F);
+    canvas.drawCircle(const Offset(0, -7), 10, bandPaint);
+    canvas.drawRect(
+      Rect.fromCenter(center: const Offset(0, -6), width: 18, height: 4),
+      bandPaint,
+    );
+
+    // Hands
+    canvas.drawCircle(const Offset(-12, 1), 4, Paint()..color = AppTheme.characterSkin);
+    canvas.drawCircle(const Offset(12, 1), 4, Paint()..color = AppTheme.characterSkin);
+
+    canvas.restore(); // Restore body rotation
+
+    // 4. Carried Item Stack above head
+    if (chotu.carriedCount > 0) {
+      _drawWorkerCarriedStack(canvas, chotu);
+    }
+
+    // 5. Name badge above head (if not carrying items)
+    if (chotu.carriedCount == 0) {
+      final nameBadge = RRect.fromRectAndRadius(
+        Rect.fromCenter(center: const Offset(0, -25), width: 44, height: 14),
+        const Radius.circular(4),
+      );
+      canvas.drawRRect(nameBadge, Paint()..color = Colors.deepOrange.shade800);
+      final nameText = TextPainter(
+        text: TextSpan(
+          text: chotu.name,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 7.5,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      nameText.paint(
+        canvas,
+        Offset(-nameText.width / 2, -25 - nameText.height / 2),
+      );
+    }
+
+    canvas.restore();
+  }
+
+  static void _drawWorkerCarriedStack(Canvas canvas, StaffEntity staff) {
+    const baseSpacing = 16.0;
+    double currentX = 0.0;
+    double currentY = -24.0;
+
+    for (int i = 0; i < staff.carriedCount; i++) {
+      final sway = staff.wobbleAngle * (i + 1) * 8.0;
+      currentX += sway;
+      currentY -= baseSpacing;
+
+      canvas.save();
+      canvas.translate(currentX, currentY);
+      canvas.rotate(staff.wobbleAngle * (i + 1) * 0.4);
+
+      final item = staff.carriedItems[i];
+      if (item == ItemType.dirtyTray) {
+        _drawCarriedDirtyTray(canvas);
+      } else {
+        _drawChaiCup(canvas);
+      }
+
+      canvas.restore();
+    }
+
+    if (staff.isFull) {
+      final pulse =
+          1.0 + math.sin(DateTime.now().millisecondsSinceEpoch * 0.008) * 0.12;
+      canvas.save();
+      canvas.translate(currentX, currentY - 20);
+      canvas.scale(pulse, pulse);
+
+      final badgeRect = RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset.zero, width: 40, height: 18),
+        const Radius.circular(6),
+      );
+      canvas.drawRRect(badgeRect, Paint()..color = const Color(0xFFD32F2F));
+      canvas.drawRRect(
+        badgeRect,
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
+
+      final textPainter = TextPainter(
+        text: const TextSpan(
+          text: 'MAX',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 10,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      textPainter.paint(
+        canvas,
+        Offset(-textPainter.width / 2, -textPainter.height / 2),
+      );
+
+      canvas.restore();
     }
   }
 }

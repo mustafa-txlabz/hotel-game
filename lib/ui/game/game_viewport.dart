@@ -2,8 +2,10 @@ import 'package:flutter/scheduler.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme.dart';
 import '../../data/balance.dart';
 import '../../state/game_controller.dart';
+import '../overlays/hr_upgrade_sheet.dart';
 import '../overlays/hud_overlay.dart';
 import '../overlays/joystick_widget.dart';
 import 'world_painter.dart';
@@ -165,6 +167,66 @@ class _GameViewportState extends State<GameViewport>
                 carriedCount: controller.world.player.carriedCount,
                 carryCapacity: controller.world.player.carryCapacity,
                 showTutorial: !_hasMovedOnce,
+              ),
+            ),
+
+            // Quick HR Desk & Upgrades Button
+            Positioned(
+              top: 66,
+              right: 16,
+              child: GestureDetector(
+                onTap: () {
+                  HrUpgradeSheet.show(context, controller);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: controller.world.hrDesk.isInsideZone(
+                          controller.world.player.position,
+                        )
+                        ? AppTheme.saffronOrange
+                        : AppTheme.chaiDarkBrown.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppTheme.goldYellow,
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.assignment_ind_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        controller.world.hrDesk.isInsideZone(
+                              controller.world.player.position,
+                            )
+                            ? 'OPEN HR DESK 📋'
+                            : 'HR DESK 📋',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 11,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
