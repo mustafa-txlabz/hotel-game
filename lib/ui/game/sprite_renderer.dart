@@ -1579,70 +1579,88 @@ class SpriteRenderer {
         ..strokeWidth = 1.5,
     );
 
-    // Stools around the table (Top, Bottom)
+    // Stools around the table (2 on Top side, 2 on Bottom side)
     final stoolPaint = Paint()..color = const Color(0xFF8D6E63);
     final stoolBorder = Paint()
       ..color = const Color(0xFF4E342E)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
-    // Top stools
-    canvas.drawCircle(Offset(table.position.x - 20, top - 12), 7, stoolPaint);
-    canvas.drawCircle(Offset(table.position.x - 20, top - 12), 7, stoolBorder);
-    canvas.drawCircle(Offset(table.position.x + 20, top - 12), 7, stoolPaint);
-    canvas.drawCircle(Offset(table.position.x + 20, top - 12), 7, stoolBorder);
+    // Top stools (Left & Right)
+    canvas.drawCircle(Offset(table.position.x - 30.0, top - 12), 8, stoolPaint);
+    canvas.drawCircle(Offset(table.position.x - 30.0, top - 12), 8, stoolBorder);
+    canvas.drawCircle(Offset(table.position.x + 30.0, top - 12), 8, stoolPaint);
+    canvas.drawCircle(Offset(table.position.x + 30.0, top - 12), 8, stoolBorder);
 
-    // Bottom stools
+    // Bottom stools (Left & Right)
     canvas.drawCircle(
-      Offset(table.position.x - 20, top + table.height + 12),
-      7,
+      Offset(table.position.x - 30.0, top + table.height + 12),
+      8,
       stoolPaint,
     );
     canvas.drawCircle(
-      Offset(table.position.x - 20, top + table.height + 12),
-      7,
+      Offset(table.position.x - 30.0, top + table.height + 12),
+      8,
       stoolBorder,
     );
     canvas.drawCircle(
-      Offset(table.position.x + 20, top + table.height + 12),
-      7,
+      Offset(table.position.x + 30.0, top + table.height + 12),
+      8,
       stoolPaint,
     );
     canvas.drawCircle(
-      Offset(table.position.x + 20, top + table.height + 12),
-      7,
+      Offset(table.position.x + 30.0, top + table.height + 12),
+      8,
       stoolBorder,
     );
 
-    // Active diner eating chai on table
-    if (table.isOccupied) {
-      canvas.save();
-      canvas.translate(table.position.x, table.position.y + 4.0);
-      _drawChaiCup(canvas, 0.70);
-      canvas.restore();
+    // Render per-seat table surface items (hot chai, dirty trays, and cash tips)
+    for (final seat in table.seats) {
+      final surfaceX = seat.position.x;
+      final surfaceY =
+          seat.facingAngle > 0 ? (table.position.y - 14.0) : (table.position.y + 14.0);
+
+      // Active diner eating chai at this seat
+      if (seat.isOccupied) {
+        canvas.save();
+        canvas.translate(surfaceX, surfaceY);
+        _drawChaiCup(canvas, 0.65);
+        canvas.restore();
+      }
+
+      // Dirty tray left at this seat
+      if (seat.hasDirtyTray) {
+        canvas.save();
+        canvas.translate(surfaceX, surfaceY);
+        _drawCarriedDirtyTray(canvas, 0.85);
+        canvas.restore();
+      }
+
+      // Cash tip left at this seat
+      if (seat.cashTip > 0.0) {
+        final tipBundle = CashBundleEntity(
+          position: Vector2(surfaceX, surfaceY),
+          value: seat.cashTip,
+        );
+        drawCashBundle(canvas, tipBundle);
+      }
     }
 
-    // Dirty tray on table
+    // Floating "CLEAN ME" tag above table if any seat has a dirty tray
     if (table.hasDirtyTray) {
-      canvas.save();
-      canvas.translate(table.position.x - 12.0, table.position.y);
-      _drawCarriedDirtyTray(canvas, 0.90);
-      canvas.restore();
-
-      // Floating "CLEAN ME" tag above table
       final tagRect = RRect.fromRectAndRadius(
         Rect.fromCenter(
-          center: Offset(table.position.x, top - 18.0),
-          width: 72,
+          center: Offset(table.position.x, top - 20.0),
+          width: 80,
           height: 18,
         ),
         const Radius.circular(5),
       );
       canvas.drawRRect(tagRect, Paint()..color = const Color(0xFFD84315));
       final cleanText = TextPainter(
-        text: const TextSpan(
-          text: '🧹 CLEAN ME',
-          style: TextStyle(
+        text: TextSpan(
+          text: '🧹 CLEAN (${table.dirtyCount})',
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w900,
             fontSize: 9,
@@ -1654,26 +1672,18 @@ class SpriteRenderer {
         canvas,
         Offset(
           table.position.x - cleanText.width / 2,
-          top - 18.0 - cleanText.height / 2,
+          top - 20.0 - cleanText.height / 2,
         ),
       );
     }
 
-    // Cash Tip on table
+    // Floating total tip badge above table if any seat has a tip
     if (table.cashTip > 0.0) {
-      final tipX = table.position.x + (table.hasDirtyTray ? 16.0 : 0.0);
-      final tipY = table.position.y;
-
-      final tipBundle = CashBundleEntity(
-        position: Vector2(tipX, tipY),
-        value: table.cashTip,
-      );
-      drawCashBundle(canvas, tipBundle);
-
+      final tipBadgeY = top - (table.hasDirtyTray ? 42.0 : 20.0);
       final tipBadgeRect = RRect.fromRectAndRadius(
         Rect.fromCenter(
-          center: Offset(tipX, top - (table.hasDirtyTray ? 38.0 : 18.0)),
-          width: 66,
+          center: Offset(table.position.x, tipBadgeY),
+          width: 74,
           height: 18,
         ),
         const Radius.circular(5),
@@ -1693,8 +1703,8 @@ class SpriteRenderer {
       tipText.paint(
         canvas,
         Offset(
-          tipX - tipText.width / 2,
-          top - (table.hasDirtyTray ? 38.0 : 18.0) - tipText.height / 2,
+          table.position.x - tipText.width / 2,
+          tipBadgeY - tipText.height / 2,
         ),
       );
     }

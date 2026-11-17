@@ -41,6 +41,7 @@ class CustomerEntity {
 
   // Dine-in table dining state (M5)
   DiningTable? assignedTable;
+  TableSeat? assignedSeat;
   double eatTimer;
   final double eatDuration;
 
@@ -63,7 +64,8 @@ class CustomerEntity {
        walkCycle = 0.0,
        isMoving = false,
        eatTimer = 0.0,
-       assignedTable = null;
+       assignedTable = null,
+       assignedSeat = null;
 
   bool get isOrderComplete => receivedCount >= desiredCount;
   bool get isLeaving =>
@@ -77,7 +79,7 @@ class CustomerEntity {
     if (state == CustomerState.eating) {
       isMoving = false;
       walkCycle = 0.0;
-      angle = -math.pi / 2;
+      angle = assignedSeat?.facingAngle ?? -math.pi / 2;
       eatTimer += dt;
       return;
     }
@@ -98,7 +100,7 @@ class CustomerEntity {
         // Arrived at dining table seat! Transition to eating
         state = CustomerState.eating;
         eatTimer = 0.0;
-        angle = -math.pi / 2;
+        angle = assignedSeat?.facingAngle ?? -math.pi / 2;
       }
     } else {
       isMoving = true;
@@ -256,12 +258,16 @@ class CustomerSystem {
       if (customer.state == CustomerState.eating) {
         if (customer.eatTimer >= customer.eatDuration) {
           final table = customer.assignedTable;
+          final seat = customer.assignedSeat;
+          if (seat != null) {
+            seat.isOccupied = false;
+            seat.hasDirtyTray = true;
+            seat.cashTip = GameBalance.dineInTip; // Leave Rs 25 tip at this seat!
+          }
           if (table != null) {
-            table.isOccupied = false;
-            table.hasDirtyTray = true;
-            table.cashTip = GameBalance.dineInTip; // Leave Rs 25 tip on table!
             onCustomerFinishedEating?.call(customer, table);
           }
+          customer.assignedSeat = null;
           customer.assignedTable = null;
           customer.state = CustomerState.leavingHappy;
           customer.targetPosition = entrancePosition.copy();
@@ -302,23 +308,29 @@ class CustomerSystem {
               onCustomerServed?.call(headCustomer, served);
 
               if (headCustomer.isOrderComplete) {
-                // Check if an unlocked dining table is free to dine in (M5)
-                DiningTable? freeTable;
+                // Find first available seat across all unlocked dining tables (M5)
+                TableSeat? targetSeat;
+                DiningTable? targetTable;
                 for (final table in diningTables) {
-                  if (table.isAvailable) {
-                    freeTable = table;
-                    break;
+                  if (table.isUnlocked) {
+                    final freeSeat = table.firstAvailableSeat;
+                    if (freeSeat != null) {
+                      targetSeat = freeSeat;
+                      targetTable = table;
+                      break;
+                    }
                   }
                 }
 
-                if (freeTable != null) {
-                  // Customer claims table and walks to sit down
-                  freeTable.isOccupied = true;
-                  headCustomer.assignedTable = freeTable;
+                if (targetSeat != null && targetTable != null) {
+                  // Customer claims specific seat and walks to sit down
+                  targetSeat.isOccupied = true;
+                  headCustomer.assignedTable = targetTable;
+                  headCustomer.assignedSeat = targetSeat;
                   headCustomer.state = CustomerState.walkingToTable;
-                  headCustomer.targetPosition = freeTable.seatPosition.copy();
+                  headCustomer.targetPosition = targetSeat.position.copy();
                   queue.dequeue();
-                  onCustomerDinedIn?.call(headCustomer, freeTable);
+                  onCustomerDinedIn?.call(headCustomer, targetTable);
                 } else {
                   // Takeaway to go!
                   headCustomer.state = CustomerState.leavingHappy;

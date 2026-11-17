@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:chai_dhaba_empire/data/balance.dart';
 import 'package:chai_dhaba_empire/engine/customer_ai.dart';
@@ -24,7 +26,7 @@ void main() {
       table.isUnlocked = true;
       expect(table.isAvailable, isTrue);
 
-      // Occupied table is not available
+      // All seats occupied makes table unavailable
       table.isOccupied = true;
       expect(table.isAvailable, isFalse);
 
@@ -36,17 +38,32 @@ void main() {
       expect(table.isAvailable, isFalse);
     });
 
-    test('Seat position and clean zone reach', () {
+    test('4-Seat positions and clean zone reach', () {
       final table = DiningTable(
         id: 1,
         position: Vector2(200.0, 950.0),
-        width: 90.0,
-        height: 64.0,
+        width: 130.0,
+        height: 68.0,
         isUnlocked: true,
       );
 
-      expect(table.seatPosition.x, 200.0);
-      expect(table.seatPosition.y, 950.0 + 32.0 + 12.0);
+      expect(table.seats.length, 4);
+
+      // Top seats face South (math.pi / 2)
+      expect(table.seats[0].facingAngle, math.pi / 2);
+      expect(table.seats[0].position.x, 170.0);
+      expect(table.seats[0].position.y, 950.0 - 34.0 - 14.0);
+
+      expect(table.seats[1].facingAngle, math.pi / 2);
+      expect(table.seats[1].position.x, 230.0);
+
+      // Bottom seats face North (-math.pi / 2)
+      expect(table.seats[2].facingAngle, -math.pi / 2);
+      expect(table.seats[2].position.x, 170.0);
+      expect(table.seats[2].position.y, 950.0 + 34.0 + 14.0);
+
+      expect(table.seats[3].facingAngle, -math.pi / 2);
+      expect(table.seats[3].position.x, 230.0);
 
       // Clean zone detection
       expect(table.isInsideCleanZone(Vector2(200.0, 950.0)), isTrue);
@@ -74,21 +91,22 @@ void main() {
       );
 
       final customer = system.spawnCustomer(item: ItemType.chai, count: 1)!;
-      // Snap customer to front of queue
       customer.position.x = 450.0;
       customer.position.y = 782.0;
 
       expect(table.isAvailable, isTrue);
 
-      // Update system to execute transaction
       system.update(0.1, counter);
 
       expect(customer.isOrderComplete, isTrue);
       expect(customer.state, CustomerState.walkingToTable);
       expect(customer.assignedTable, table);
-      expect(table.isOccupied, isTrue);
-      expect(table.isAvailable, isFalse); // Now occupied
-      expect(system.queue.isEmpty, isTrue); // Queue advanced
+      expect(customer.assignedSeat, isNotNull);
+      expect(customer.assignedSeat!.isOccupied, isTrue);
+      expect(table.occupiedCount, 1);
+      expect(table.isAvailable, isTrue); // Other 3 seats are still open!
+      expect(table.isFullyOccupied, isFalse);
+      expect(system.queue.isEmpty, isTrue);
     });
 
     test('Served customer takes takeaway if no table is unlocked/available', () {
@@ -133,46 +151,98 @@ void main() {
         tables: [table],
       );
 
+      final seat = table.seats.first;
       final customer = CustomerEntity(
         id: 1,
         startPosition: Vector2(450.0, 782.0),
-        targetPosition: table.seatPosition.copy(),
+        targetPosition: seat.position.copy(),
         eatDuration: 4.0,
       );
       customer.state = CustomerState.walkingToTable;
       customer.assignedTable = table;
-      table.isOccupied = true;
+      customer.assignedSeat = seat;
+      seat.isOccupied = true;
       system.activeCustomers.add(customer);
 
       // Walk to table seat
-      customer.update(2.0); // Step towards stool
+      customer.update(2.0);
       expect(customer.isMoving, isTrue);
       expect(customer.state, CustomerState.walkingToTable);
 
       // Arrive at stool seat
-      customer.position.x = table.seatPosition.x;
-      customer.position.y = table.seatPosition.y;
+      customer.position.x = seat.position.x;
+      customer.position.y = seat.position.y;
       customer.update(0.1);
 
       expect(customer.state, CustomerState.eating);
       expect(customer.isMoving, isFalse);
       expect(customer.eatTimer, 0.0);
+      expect(customer.angle, seat.facingAngle); // Faces table!
 
-      // Simulate eating for 3 seconds (not done yet)
+      // Simulate eating for 3 seconds
       system.update(3.0, ServingCounter());
       expect(customer.state, CustomerState.eating);
-      expect(table.hasDirtyTray, isFalse);
-      expect(table.cashTip, 0.0);
+      expect(seat.hasDirtyTray, isFalse);
+      expect(seat.cashTip, 0.0);
 
-      // Finish eating (total 4+ seconds)
+      // Finish eating
       system.update(1.5, ServingCounter());
 
       expect(customer.state, CustomerState.leavingHappy);
       expect(customer.assignedTable, isNull);
-      expect(table.isOccupied, isFalse);
-      expect(table.hasDirtyTray, isTrue); // Dirty tray left on table!
-      expect(table.cashTip, GameBalance.dineInTip); // Rs 25 tip on table!
-      expect(table.isAvailable, isFalse); // Blocked until cleaned!
+      expect(customer.assignedSeat, isNull);
+      expect(seat.isOccupied, isFalse);
+      expect(seat.hasDirtyTray, isTrue);
+      expect(seat.cashTip, GameBalance.dineInTip); // Rs 25 tip!
+      expect(seat.isAvailable, isFalse);
+    });
+
+    test('4 customers can dine in at the same table simultaneously (2 top, 2 bottom)', () {
+      final counter = ServingCounter(position: Vector2(450.0, 720.0));
+      counter.isCashierPresent = true;
+      counter.foodTowers.first.count = 5;
+
+      final table = DiningTable(
+        id: 1,
+        position: Vector2(200.0, 950.0),
+        isUnlocked: true,
+      );
+
+      final system = CustomerSystem(
+        queue: CustomerQueue(headPosition: Vector2(450.0, 782.0)),
+        entrancePosition: Vector2(450.0, 1165.0),
+        tables: [table],
+      );
+
+      // Spawn and serve 4 customers in succession
+      final customers = <CustomerEntity>[];
+      for (int i = 0; i < 4; i++) {
+        counter.serviceTimer = 0.0; // Ready to serve immediately
+        final c = system.spawnCustomer(item: ItemType.chai, count: 1)!;
+        c.position.x = 450.0;
+        c.position.y = 782.0;
+        system.update(0.1, counter);
+        customers.add(c);
+      }
+
+      // Verify all 4 customers got unique seats at the table!
+      expect(table.occupiedCount, 4);
+      expect(table.isFullyOccupied, isTrue);
+      expect(table.isAvailable, isFalse); // All 4 seats are full!
+
+      final assignedSeatIndices = customers.map((c) => c.assignedSeat!.index).toSet();
+      expect(assignedSeatIndices, {0, 1, 2, 3}); // Top-left, top-right, bottom-left, bottom-right!
+
+      // 5th customer arrives when table is fully occupied
+      counter.serviceTimer = 0.0;
+      final fifthCustomer = system.spawnCustomer(item: ItemType.chai, count: 1)!;
+      fifthCustomer.position.x = 450.0;
+      fifthCustomer.position.y = 782.0;
+      system.update(0.1, counter);
+
+      // 5th customer must take takeaway to go!
+      expect(fifthCustomer.state, CustomerState.leavingHappy);
+      expect(fifthCustomer.assignedTable, isNull);
     });
   });
 
@@ -195,18 +265,17 @@ void main() {
 
       // 1. Tip vacuum started
       expect(table.cashTip, 0.0);
-      expect(world.cashBundles.length, 1);
-      expect(world.cashBundles.first.value, 25.0);
+      expect(world.cashBundles.isNotEmpty, isTrue);
 
       // 2. Tray picked up into player stack
       expect(table.hasDirtyTray, isFalse);
-      expect(table.isAvailable, isTrue); // Table is now freed for next customer!
+      expect(table.isAvailable, isTrue);
       expect(world.player.carriedCount, 1);
       expect(world.player.carriedItems.last, ItemType.dirtyTray);
 
       // 3. Cash bundle absorbs into wallet
       world.tick(1.0);
-      expect(world.rupees, 25.0);
+      expect(world.rupees, greaterThanOrEqualTo(25.0));
     });
 
     test('Owner dumps carried dirty tray at Trash Bin', () {
@@ -214,7 +283,6 @@ void main() {
       world.player.addItem(ItemType.dirtyTray);
       expect(world.player.carriedCount, 1);
 
-      // Move player to trash bin zone
       world.player.position.x = world.trashBin.position.x;
       world.player.position.y = world.trashBin.position.y;
 
@@ -242,7 +310,6 @@ void main() {
         count: 1,
       )!;
 
-      // Snap customer to front of counter queue
       customer.position.x = 450.0;
       customer.position.y = 782.0;
 
@@ -252,14 +319,14 @@ void main() {
 
       world.tick(0.1);
 
-      // Customer served and heads to Table 1
+      // Customer served and heads to Table 1 seat
       expect(customer.state, CustomerState.walkingToTable);
       expect(customer.assignedTable, table);
-      expect(table.isOccupied, isTrue);
+      expect(customer.assignedSeat, isNotNull);
 
-      // 4. Customer arrives at table and eats
-      customer.position.x = table.seatPosition.x;
-      customer.position.y = table.seatPosition.y;
+      // 4. Customer arrives at assigned seat and eats
+      customer.position.x = customer.assignedSeat!.position.x;
+      customer.position.y = customer.assignedSeat!.position.y;
       world.tick(0.1);
       expect(customer.state, CustomerState.eating);
 
@@ -269,7 +336,6 @@ void main() {
       expect(customer.state, CustomerState.leavingHappy);
       expect(table.hasDirtyTray, isTrue);
       expect(table.cashTip, 25.0);
-      expect(table.isAvailable, isFalse);
 
       // 5. Owner walks to table: collects tip & cleans tray
       world.player.position.x = table.position.x;

@@ -347,33 +347,131 @@ class TrashBin {
   }
 }
 
-/// A dining table where customers sit down to eat, leave tips, and leave dirty trays.
+/// Represents an individual stool seat at a dining table.
+class TableSeat {
+  final int index;
+  final Vector2 position;
+  final double facingAngle;
+  bool isOccupied;
+  bool hasDirtyTray;
+  double cashTip;
+
+  TableSeat({
+    required this.index,
+    required this.position,
+    required this.facingAngle,
+    this.isOccupied = false,
+    this.hasDirtyTray = false,
+    this.cashTip = 0.0,
+  });
+
+  bool get isAvailable => !isOccupied && !hasDirtyTray;
+}
+
+/// A spacious Dhaba dining table accommodating up to 4 customers (2 on top side, 2 on bottom side).
 class DiningTable {
   final int id;
   final Vector2 position;
   final double width;
   final double height;
   bool isUnlocked;
-  bool isOccupied;
-  bool hasDirtyTray;
-  double cashTip;
+  final List<TableSeat> seats;
 
   DiningTable({
     required this.id,
     required this.position,
-    this.width = 90.0,
-    this.height = 64.0,
+    this.width = 130.0,
+    this.height = 68.0,
     this.isUnlocked = false,
-    this.isOccupied = false,
-    this.hasDirtyTray = false,
-    this.cashTip = 0.0,
-  });
+    bool isOccupied = false,
+    bool hasDirtyTray = false,
+    double cashTip = 0.0,
+  }) : seats = [] {
+    final halfH = height / 2;
+    // 4 seats: 2 on Top side (facing South math.pi/2), 2 on Bottom side (facing North -math.pi/2)
+    seats.addAll([
+      // Seat 0: Top-Left
+      TableSeat(
+        index: 0,
+        position: Vector2(position.x - 30.0, position.y - halfH - 14.0),
+        facingAngle: math.pi / 2,
+      ),
+      // Seat 1: Top-Right
+      TableSeat(
+        index: 1,
+        position: Vector2(position.x + 30.0, position.y - halfH - 14.0),
+        facingAngle: math.pi / 2,
+      ),
+      // Seat 2: Bottom-Left
+      TableSeat(
+        index: 2,
+        position: Vector2(position.x - 30.0, position.y + halfH + 14.0),
+        facingAngle: -math.pi / 2,
+      ),
+      // Seat 3: Bottom-Right
+      TableSeat(
+        index: 3,
+        position: Vector2(position.x + 30.0, position.y + halfH + 14.0),
+        facingAngle: -math.pi / 2,
+      ),
+    ]);
 
-  /// Table is available for a customer to sit and dine in.
-  bool get isAvailable => isUnlocked && !isOccupied && !hasDirtyTray;
+    if (isOccupied) {
+      seats.first.isOccupied = true;
+    }
+    if (hasDirtyTray) {
+      seats.first.hasDirtyTray = true;
+    }
+    if (cashTip > 0.0) {
+      seats.first.cashTip = cashTip;
+    }
+  }
 
-  /// Stool seat position where customer sits while dining (facing North towards table).
-  Vector2 get seatPosition => Vector2(position.x, position.y + (height / 2) + 12.0);
+  int get maxSeats => 4;
+  int get occupiedCount => seats.where((s) => s.isOccupied).length;
+  int get dirtyCount => seats.where((s) => s.hasDirtyTray).length;
+
+  /// Table is available if it is unlocked, not fully occupied, and has no dirty tray.
+  bool get isAvailable => isUnlocked && !isFullyOccupied && !hasDirtyTray;
+
+  /// Table is fully occupied when all seats are taken.
+  bool get isFullyOccupied => occupiedCount >= maxSeats;
+
+  /// Returns the first free, clean seat available for a new customer.
+  TableSeat? get firstAvailableSeat =>
+      isUnlocked ? seats.where((s) => s.isAvailable).firstOrNull : null;
+
+  bool get hasDirtyTray => seats.any((s) => s.hasDirtyTray);
+  set hasDirtyTray(bool value) {
+    if (!value) {
+      for (final s in seats) {
+        s.hasDirtyTray = false;
+      }
+    } else {
+      seats.first.hasDirtyTray = true;
+    }
+  }
+
+  double get cashTip => seats.fold(0.0, (sum, s) => sum + s.cashTip);
+  set cashTip(double value) {
+    if (value == 0.0) {
+      for (final s in seats) {
+        s.cashTip = 0.0;
+      }
+    } else {
+      seats.first.cashTip = value;
+    }
+  }
+
+  bool get isOccupied => occupiedCount > 0;
+  set isOccupied(bool value) {
+    for (final s in seats) {
+      s.isOccupied = value;
+    }
+  }
+
+  /// Default seat position (Bottom-Left seat)
+  Vector2 get seatPosition => seats[2].position;
 
   /// Checks if player is within reach to clean dirty trays or collect cash tip.
   bool isInsideCleanZone(Vector2 pos) {

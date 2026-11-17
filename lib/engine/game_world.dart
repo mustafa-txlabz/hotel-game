@@ -373,33 +373,37 @@ class GameWorld {
       if (!table.isUnlocked) continue;
 
       if (table.isInsideCleanZone(player.position)) {
-        // 1. Vacuum cash tip if present
-        if (table.cashTip > 0.0) {
-          final tipValue = table.cashTip;
-          table.cashTip = 0.0;
+        // 1. Vacuum cash tips from any seats that have tips
+        for (final seat in table.seats) {
+          if (seat.cashTip > 0.0) {
+            final tipValue = seat.cashTip;
+            seat.cashTip = 0.0;
 
-          final spawnPos = Vector2(table.position.x, table.position.y);
-          final bundle = CashBundleEntity(
-            position: spawnPos,
-            value: tipValue,
-          );
-          bundle.isFlying = true;
-          bundle.spawnBounceTimer = 0.0;
-          cashBundles.add(bundle);
+            final spawnPos = Vector2(seat.position.x, table.position.y);
+            final bundle = CashBundleEntity(
+              position: spawnPos,
+              value: tipValue,
+            );
+            bundle.isFlying = true;
+            bundle.spawnBounceTimer = 0.0;
+            cashBundles.add(bundle);
+          }
         }
 
-        // 2. Pick up dirty tray if present and player has room in carry stack
-        if (table.hasDirtyTray && !player.isFull) {
-          player.addItem(ItemType.dirtyTray);
-          table.hasDirtyTray = false;
-          onItemPickedUp?.call(ItemType.dirtyTray);
+        // 2. Pick up dirty trays from seats as long as player has room in carry stack
+        for (final seat in table.seats) {
+          if (seat.hasDirtyTray && !player.isFull) {
+            player.addItem(ItemType.dirtyTray);
+            seat.hasDirtyTray = false;
+            onItemPickedUp?.call(ItemType.dirtyTray);
 
-          floatingTexts.add(
-            FloatingTextEntity(
-              position: Vector2(table.position.x, table.position.y - 20.0),
-              text: 'CLEANED! ✨',
-            ),
-          );
+            floatingTexts.add(
+              FloatingTextEntity(
+                position: Vector2(seat.position.x, table.position.y - 20.0),
+                text: 'CLEANED! ✨',
+              ),
+            );
+          }
         }
       }
     }
