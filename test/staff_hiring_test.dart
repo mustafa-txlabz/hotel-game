@@ -128,12 +128,46 @@ void main() {
       // Teleport Chotu to counter food deposit zone
       chotu.position.x = world.counter.position.x - 70.0;
       chotu.position.y = world.counter.position.y - 45.0;
+      chotu.targetPosition.x = world.counter.position.x - 70.0;
+      chotu.targetPosition.y = world.counter.position.y - 45.0;
 
-      world.tick(0.1);
+      // Tick world until all carried items are deposited
+      for (int i = 0; i < 5; i++) {
+        world.tick(0.15);
+      }
 
       // Chai delivered onto counter tower!
       expect(world.counter.foodTowers.first.count, greaterThan(0));
       expect(chotu.carriedCount, 0);
+    });
+
+    test('Chotu picks up multiple chai cups matching upgraded carry capacity', () {
+      final world = GameWorld(initialRupees: 500.0);
+      world.hireChotu(free: true);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.chotu);
+
+      // Upgrade Worker Capacity twice: Lvl 1 (2) -> Lvl 2 (3) -> Lvl 3 (5)
+      world.upgradeWorkerCapacity(); // now 3
+      world.upgradeWorkerCapacity(); // now 5
+      expect(chotu.carryCapacity, 5);
+
+      // Kettle has 6 cups ready
+      world.chaiStation.shelfCount = 6;
+      world.counter.foodTowers.first.count = 0;
+
+      // Position Chotu at kettle pickup
+      chotu.position.x = world.chaiStation.pickupZoneCenter.x;
+      chotu.position.y = world.chaiStation.pickupZoneCenter.y;
+      chotu.targetPosition.x = world.chaiStation.pickupZoneCenter.x;
+      chotu.targetPosition.y = world.chaiStation.pickupZoneCenter.y;
+
+      world.tick(0.1);
+
+      // Chotu must have picked up ALL 5 cups up to full capacity!
+      expect(chotu.carriedCount, 5);
+      expect(chotu.isFull, isTrue);
+      expect(world.chaiStation.shelfCount, 1); // 6 - 5 = 1 left on shelf!
+      expect(chotu.taskState, ChotuTaskState.deliveringChai);
     });
 
     test('Chotu automatically cleans dirty tables and dumps trays in trash bin', () {

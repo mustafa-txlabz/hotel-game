@@ -716,19 +716,24 @@ class GameWorld {
     }
 
     // 2. If carrying chai cups, deliver them to the Serving Counter food towers!
-    if (chotu.carriedItems.contains(ItemType.chai)) {
+    if (chotu.taskState == ChotuTaskState.deliveringChai ||
+        chotu.carriedItems.contains(ItemType.chai)) {
       chotu.targetPosition.x = counter.position.x - 70.0;
       chotu.targetPosition.y = counter.position.y - 45.0;
       chotu.taskState = ChotuTaskState.deliveringChai;
 
-      if (counter.isInsideFoodDepositZone(chotu.position) &&
-          counter.canDepositFood()) {
-        final idx = chotu.carriedItems.indexOf(ItemType.chai);
-        if (idx != -1) {
-          if (counter.addFoodItem(ItemType.chai)) {
-            chotu.carriedItems.removeAt(idx);
-            onItemDeposited?.call(ItemType.chai);
+      if (counter.isInsideFoodDepositZone(chotu.position)) {
+        if (counter.canDepositFood()) {
+          final idx = chotu.carriedItems.indexOf(ItemType.chai);
+          if (idx != -1) {
+            if (counter.addFoodItem(ItemType.chai)) {
+              chotu.carriedItems.removeAt(idx);
+              onItemDeposited?.call(ItemType.chai);
+            }
           }
+        }
+        if (!chotu.carriedItems.contains(ItemType.chai)) {
+          chotu.taskState = ChotuTaskState.idle;
         }
       }
       return;
@@ -782,7 +787,7 @@ class GameWorld {
     }
 
     // 4. Counter needs restocking: fetch chai from Chai Kettle!
-    if (counter.totalFoodCount < 6 &&
+    if (counter.totalFoodCount < 10 &&
         chaiStation.shelfCount > 0 &&
         !chotu.isFull) {
       chotu.targetPosition.x = chaiStation.pickupZoneCenter.x;
@@ -790,9 +795,13 @@ class GameWorld {
       chotu.taskState = ChotuTaskState.fetchingChai;
 
       if (chaiStation.isInsidePickupZone(chotu.position)) {
-        if (chaiStation.tryTakeCup()) {
+        // Pick up chai cups up to Chotu's full upgraded capacity!
+        while (!chotu.isFull && chaiStation.shelfCount > 0) {
+          chaiStation.shelfCount--;
           chotu.addItem(ItemType.chai);
           onItemPickedUp?.call(ItemType.chai);
+        }
+        if (chotu.carriedCount > 0) {
           chotu.taskState = ChotuTaskState.deliveringChai;
         }
       }
