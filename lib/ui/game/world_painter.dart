@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../engine/customer_ai.dart';
+import '../../engine/entities.dart';
 import '../../engine/game_world.dart';
 import 'sprite_renderer.dart';
 
@@ -45,8 +47,19 @@ class WorldPainter extends CustomPainter {
       SpriteRenderer.drawCashBundle(canvas, bundle);
     }
 
-    // 6. Draw Player Character (with towering stack)
-    SpriteRenderer.drawPlayer(canvas, world.player);
+    // 6. Draw Characters (Player and Customers) sorted by Y-depth
+    final characters = <dynamic>[
+      world.player,
+      ...world.customerSystem.activeCustomers,
+    ]..sort((a, b) => a.position.y.compareTo(b.position.y));
+
+    for (final char in characters) {
+      if (char is PlayerEntity) {
+        SpriteRenderer.drawPlayer(canvas, char);
+      } else if (char is CustomerEntity) {
+        SpriteRenderer.drawCustomer(canvas, char);
+      }
+    }
 
     // 7. Draw Floating "+Rs X" popups
     SpriteRenderer.drawFloatingTexts(canvas, world.floatingTexts);

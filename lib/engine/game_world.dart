@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'customer_ai.dart';
 import 'entities.dart';
 import 'stations.dart';
 
@@ -15,6 +16,9 @@ class GameWorld {
   final ChaiStation chaiStation;
   final ServingCounter counter;
   final TrashBin trashBin;
+
+  // Customer AI & Queue System (M3)
+  final CustomerSystem customerSystem;
 
   // Flying cash bundles and floating text popups
   final List<CashBundleEntity> cashBundles;
@@ -39,15 +43,27 @@ class GameWorld {
     ChaiStation? station,
     ServingCounter? servingCounter,
     TrashBin? trash,
+    CustomerSystem? customers,
   }) : player = PlayerEntity(startPosition: Vector2(450.0, 600.0)),
        chaiStation = station ?? ChaiStation(position: Vector2(260.0, 260.0)),
        counter =
            servingCounter ?? ServingCounter(position: Vector2(450.0, 720.0)),
        trashBin = trash ?? TrashBin(position: Vector2(100.0, 460.0)),
+       customerSystem =
+           customers ??
+           CustomerSystem(
+             queue: CustomerQueue(headPosition: Vector2(450.0, 782.0)),
+             entrancePosition: Vector2(450.0, 1165.0),
+           ),
        cashBundles = [],
        floatingTexts = [],
        rupees = initialRupees,
-       lifetimeRupees = initialRupees;
+       lifetimeRupees = initialRupees {
+    // Forward customer served events to sound/haptic callback
+    customerSystem.onCustomerServed = (customer, item) {
+      onItemServed?.call(item);
+    };
+  }
 
   /// Sets joystick input vector normalized (-1.0 to 1.0).
   void setJoystickInput(double dx, double dy) {
@@ -92,19 +108,22 @@ class GameWorld {
     // 6. Food Deposit Zone detection (Left Section of Counter)
     _checkFoodDeposit();
 
-    // 7. Cashier Service detection (Center Section of Counter)
-    _checkCashierService();
+    // 7. Cashier Presence check (Center Section of Counter)
+    _checkCashierPresence();
 
-    // 8. Cash Collection detection (Right Section of Counter)
+    // 8. Customer AI, queue, patience, and cashier service transactions (M3)
+    customerSystem.update(dt, counter);
+
+    // 9. Cash Collection detection (Right Section of Counter)
     _checkCashCollection();
 
-    // 9. Trash bin discard detection
+    // 10. Trash bin discard detection
     _checkTrashDiscard();
 
-    // 10. Flying cash bundles & absorption
+    // 11. Flying cash bundles & absorption
     _updateCashBundles(dt);
 
-    // 11. Floating text popups
+    // 12. Floating text popups
     _updateFloatingTexts(dt);
   }
 
@@ -187,21 +206,10 @@ class GameWorld {
     }
   }
 
-  void _checkCashierService() {
+  void _checkCashierPresence() {
     // Cashier presence check (Owner standing in center green circle)
     final isOwnerAtCashier = counter.isInsideCashierZone(player.position);
     counter.isCashierPresent = isOwnerAtCashier;
-
-    // Service ONLY happens if someone is in the cashier zone!
-    if (counter.canServe()) {
-      final servedItem = counter.takeFoodItem(ItemType.chai);
-      if (servedItem != null) {
-        counter.triggerService();
-        // Payment drops onto the right counter cash towers!
-        counter.addCashBundle();
-        onItemServed?.call(servedItem);
-      }
-    }
   }
 
   void _checkCashCollection() {

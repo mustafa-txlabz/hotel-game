@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme.dart';
+import '../../engine/customer_ai.dart';
 import '../../engine/entities.dart';
 import '../../engine/stations.dart';
 
@@ -181,6 +182,237 @@ class SpriteRenderer {
 
       canvas.restore();
     }
+  }
+
+  /// Draws an animated cartoon customer with clothing variant, hair/cap,
+  /// walking animation, drop shadow, and floating order speech bubble.
+  static void drawCustomer(Canvas canvas, CustomerEntity customer) {
+    if (customer.state == CustomerState.despawned) return;
+
+    canvas.save();
+    canvas.translate(customer.position.x, customer.position.y);
+
+    // 1. Drop shadow beneath feet
+    final shadowScale =
+        1.0 +
+        (customer.isMoving ? math.sin(customer.walkCycle * 2) * 0.08 : 0.0);
+    final shadowPaint = Paint()..color = AppTheme.characterShadow;
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: const Offset(0, 16),
+        width: 32 * shadowScale,
+        height: 16 * shadowScale,
+      ),
+      shadowPaint,
+    );
+
+    // 2. Walking bob
+    final bobOffset = customer.isMoving
+        ? math.sin(customer.walkCycle * 2).abs() * -3.5
+        : 0.0;
+    canvas.translate(0, bobOffset);
+
+    // 3. Body rotation towards facing angle
+    canvas.save();
+    canvas.rotate(customer.angle - math.pi / 2);
+
+    // Feet / Shoes
+    final leftFoot = customer.isMoving
+        ? math.sin(customer.walkCycle) * 6.0
+        : 0.0;
+    final rightFoot = customer.isMoving
+        ? -math.sin(customer.walkCycle) * 6.0
+        : 0.0;
+    final shoePaint = Paint()..color = const Color(0xFF263238);
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(-7, 12 + leftFoot),
+          width: 7,
+          height: 12,
+        ),
+        const Radius.circular(3),
+      ),
+      shoePaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(7, 12 + rightFoot),
+          width: 7,
+          height: 12,
+        ),
+        const Radius.circular(3),
+      ),
+      shoePaint,
+    );
+
+    // Torso / Clothing (Variant Shalwar Kameez Colors)
+    Color shirtColor;
+    switch (customer.variant % 4) {
+      case 0:
+        shirtColor = const Color(0xFF1976D2); // Royal Blue
+        break;
+      case 1:
+        shirtColor = const Color(0xFF2E7D32); // Emerald Green
+        break;
+      case 2:
+        shirtColor = const Color(0xFFC2185B); // Maroon / Rose
+        break;
+      default:
+        shirtColor = const Color(0xFFE65100); // Warm Saffron
+        break;
+    }
+
+    final torsoPaint = Paint()..color = shirtColor;
+    final torsoRRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: const Offset(0, 2), width: 26, height: 18),
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(torsoRRect, torsoPaint);
+
+    // Head
+    final headPaint = Paint()..color = AppTheme.characterSkin;
+    canvas.drawCircle(const Offset(0, -6), 11, headPaint);
+
+    // Hair / Cap / Turban based on variant
+    if (customer.variant % 2 == 0) {
+      // Peshawari / Kufi Cap
+      final capPaint = Paint()..color = const Color(0xFFECEFF1);
+      canvas.drawArc(
+        Rect.fromCircle(center: const Offset(0, -9), radius: 10),
+        math.pi,
+        math.pi,
+        true,
+        capPaint,
+      );
+    } else {
+      // Dark Hair
+      final hairPaint = Paint()..color = const Color(0xFF212121);
+      canvas.drawArc(
+        Rect.fromCircle(center: const Offset(0, -9), radius: 10),
+        math.pi,
+        math.pi,
+        true,
+        hairPaint,
+      );
+    }
+
+    // Hands
+    final handPaint = Paint()..color = AppTheme.characterSkin;
+    canvas.drawCircle(const Offset(-13, 2), 4.5, handPaint);
+    canvas.drawCircle(const Offset(13, 2), 4.5, handPaint);
+
+    // If leaving happy, carry a cup of chai in hand!
+    if (customer.state == CustomerState.leavingHappy) {
+      canvas.save();
+      canvas.translate(0, 12);
+      _drawChaiCup(canvas, 0.65);
+      canvas.restore();
+    }
+
+    canvas.restore(); // Restore rotation
+
+    // 4. Floating Speech Bubble (Order Bubble when in queue, or reaction when leaving)
+    if (customer.state == CustomerState.waitingInQueue ||
+        customer.state == CustomerState.beingServed ||
+        customer.state == CustomerState.spawning) {
+      _drawOrderSpeechBubble(canvas, customer);
+    } else if (customer.state == CustomerState.leavingUnhappy) {
+      _drawUnhappyReaction(canvas);
+    } else if (customer.state == CustomerState.leavingHappy) {
+      _drawHappyReaction(canvas);
+    }
+
+    canvas.restore();
+  }
+
+  static void _drawOrderSpeechBubble(Canvas canvas, CustomerEntity customer) {
+    const bubbleWidth = 44.0;
+    const bubbleHeight = 24.0;
+    const bubbleY = -34.0;
+
+    final bubblePath = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: const Offset(0, bubbleY),
+            width: bubbleWidth,
+            height: bubbleHeight,
+          ),
+          const Radius.circular(8),
+        ),
+      )
+      ..moveTo(-4, bubbleY + bubbleHeight / 2)
+      ..lineTo(0, bubbleY + bubbleHeight / 2 + 5)
+      ..lineTo(4, bubbleY + bubbleHeight / 2)
+      ..close();
+
+    // Drop shadow
+    canvas.drawPath(
+      bubblePath,
+      Paint()
+        ..color = const Color(0x2A000000)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+    );
+
+    // Bubble white body
+    canvas.drawPath(bubblePath, Paint()..color = Colors.white);
+    canvas.drawPath(
+      bubblePath,
+      Paint()
+        ..color = const Color(0xFFCFD8DC)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+
+    // Miniature Cup icon
+    canvas.save();
+    canvas.translate(-10, bubbleY - 2);
+    _drawChaiCup(canvas, 0.55);
+    canvas.restore();
+
+    // Order count text
+    final remaining = customer.desiredCount - customer.receivedCount;
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: 'x$remaining',
+        style: const TextStyle(
+          color: Color(0xFF263238),
+          fontWeight: FontWeight.w900,
+          fontSize: 10,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    textPainter.paint(canvas, Offset(4, bubbleY - textPainter.height / 2));
+  }
+
+  static void _drawUnhappyReaction(Canvas canvas) {
+    final badgePaint = Paint()..color = const Color(0xFFD32F2F);
+    canvas.drawCircle(const Offset(0, -32), 10, badgePaint);
+    final textPainter = TextPainter(
+      text: const TextSpan(text: '😤', style: TextStyle(fontSize: 12)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    textPainter.paint(
+      canvas,
+      Offset(-textPainter.width / 2, -32 - textPainter.height / 2),
+    );
+  }
+
+  static void _drawHappyReaction(Canvas canvas) {
+    final badgePaint = Paint()..color = const Color(0xFF388E3C);
+    canvas.drawCircle(const Offset(0, -32), 10, badgePaint);
+    final textPainter = TextPainter(
+      text: const TextSpan(text: '😊', style: TextStyle(fontSize: 12)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    textPainter.paint(
+      canvas,
+      Offset(-textPainter.width / 2, -32 - textPainter.height / 2),
+    );
   }
 
   static void _drawChaiCup(Canvas canvas, [double scale = 1.0]) {

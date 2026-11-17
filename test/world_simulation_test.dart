@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:chai_dhaba_empire/engine/customer_ai.dart';
 import 'package:chai_dhaba_empire/engine/entities.dart';
 import 'package:chai_dhaba_empire/engine/game_world.dart';
 import 'package:chai_dhaba_empire/engine/stations.dart';
@@ -132,275 +133,253 @@ void main() {
     );
   });
 
-  group(
-    'Arcade Engine - Three-Part Counter, Food Towers & Cash Towers (M2)',
-    () {
-      test('Player deposits carried food into left counter food towers', () {
-        final world = GameWorld();
-        world.player.addItem(ItemType.chai);
-        world.player.addItem(ItemType.chai);
-        expect(world.player.carriedCount, 2);
-        expect(world.counter.totalFoodCount, 0);
+  group('Arcade Engine - Three-Part Counter, Food Towers & Cash Towers (M2)', () {
+    test('Player deposits carried food into left counter food towers', () {
+      final world = GameWorld();
+      world.player.addItem(ItemType.chai);
+      world.player.addItem(ItemType.chai);
+      expect(world.player.carriedCount, 2);
+      expect(world.counter.totalFoodCount, 0);
 
-        // Stand in food deposit zone (left side behind counter)
-        world.player.position.x = world.counter.foodDepositZoneCenter.x;
-        world.player.position.y = world.counter.foodDepositZoneCenter.y;
+      // Stand in food deposit zone (left side behind counter)
+      world.player.position.x = world.counter.foodDepositZoneCenter.x;
+      world.player.position.y = world.counter.foodDepositZoneCenter.y;
 
-        world.tick(0.05);
-        expect(world.player.carriedCount, 1);
-        expect(world.counter.totalFoodCount, 1);
-        expect(world.counter.foodTowers.first.itemType, ItemType.chai);
-        expect(world.counter.foodTowers.first.count, 1);
+      world.tick(0.05);
+      expect(world.player.carriedCount, 1);
+      expect(world.counter.totalFoodCount, 1);
+      expect(world.counter.foodTowers.first.itemType, ItemType.chai);
+      expect(world.counter.foodTowers.first.count, 1);
 
-        // After deposit interval, second item deposits
-        world.tick(0.2);
-        expect(world.player.carriedCount, 0);
-        expect(world.counter.totalFoodCount, 2);
-        expect(world.counter.foodTowers.first.count, 2);
-      });
+      // After deposit interval, second item deposits
+      world.tick(0.2);
+      expect(world.player.carriedCount, 0);
+      expect(world.counter.totalFoodCount, 2);
+      expect(world.counter.foodTowers.first.count, 2);
+    });
 
-      test('Strict single-item tower logic with max tower height', () {
-        final counter = ServingCounter();
-        // Initially 0 items
-        expect(counter.totalFoodCount, 0);
+    test('Strict single-item tower logic with max tower height', () {
+      final counter = ServingCounter();
+      // Initially 0 items
+      expect(counter.totalFoodCount, 0);
 
-        // Add 10 chai items to fill first tower
-        for (int i = 0; i < 10; i++) {
-          counter.depositTimer = 0.0;
-          final success = counter.addFoodItem(ItemType.chai);
-          expect(success, isTrue);
-        }
-        expect(counter.foodTowers.length, 1);
-        expect(counter.foodTowers.first.isFull, isTrue);
-        expect(counter.foodTowers.first.count, 10);
-
-        // 11th chai creates a second tower
+      // Add 10 chai items to fill first tower
+      for (int i = 0; i < 10; i++) {
         counter.depositTimer = 0.0;
-        final added11th = counter.addFoodItem(ItemType.chai);
-        expect(added11th, isTrue);
-        expect(counter.foodTowers.length, 2);
-        expect(counter.foodTowers[1].count, 1);
-        expect(counter.totalFoodCount, 11);
-      });
+        final success = counter.addFoodItem(ItemType.chai);
+        expect(success, isTrue);
+      }
+      expect(counter.foodTowers.length, 1);
+      expect(counter.foodTowers.first.isFull, isTrue);
+      expect(counter.foodTowers.first.count, 10);
 
-      test('Cashier presence requirement: no service unless someone is in green zone', () {
-        final world = GameWorld();
-        world.counter.addFoodItem(ItemType.chai);
-        expect(world.counter.totalFoodCount, 1);
-        expect(world.counter.cashBundleCount, 0);
+      // 11th chai creates a second tower
+      counter.depositTimer = 0.0;
+      final added11th = counter.addFoodItem(ItemType.chai);
+      expect(added11th, isTrue);
+      expect(counter.foodTowers.length, 2);
+      expect(counter.foodTowers[1].count, 1);
+      expect(counter.totalFoodCount, 11);
+    });
 
-        // Player is NOT at cashier station (e.g. at 450, 500)
-        world.player.position.x = 450.0;
-        world.player.position.y = 500.0;
+    test('Cashier presence requirement: service requires both cashier and customer', () {
+      final world = GameWorld();
+      world.counter.addFoodItem(ItemType.chai);
+      expect(world.counter.totalFoodCount, 1);
+      expect(world.counter.cashBundleCount, 0);
 
-        world.tick(0.5);
-        // No service occurred because cashier green zone is empty
-        expect(world.counter.isCashierPresent, isFalse);
-        expect(world.counter.totalFoodCount, 1);
-        expect(world.counter.cashBundleCount, 0);
+      // 1. Without customer at counter, standing at cashier does NOT sell food
+      world.player.position.x = world.counter.cashierZoneCenter.x;
+      world.player.position.y = world.counter.cashierZoneCenter.y;
+      world.tick(0.05);
+      expect(world.counter.isCashierPresent, isTrue);
+      expect(world.counter.totalFoodCount, 1); // No customer to buy!
+      expect(world.counter.cashBundleCount, 0);
 
-        // Player steps into center green cashier zone
-        world.player.position.x = world.counter.cashierZoneCenter.x;
-        world.player.position.y = world.counter.cashierZoneCenter.y;
+      // 2. Customer arrives at counter slot 0
+      final customer = world.customerSystem.spawnCustomer(
+        item: ItemType.chai,
+        count: 1,
+      )!;
+      customer.position.x = world.customerSystem.queue.getSlotPosition(0).x;
+      customer.position.y = world.customerSystem.queue.getSlotPosition(0).y;
 
+      // 3. Now with cashier present AND customer at counter, service triggers!
+      world.tick(0.05);
+      expect(world.counter.totalFoodCount, 0);
+      expect(world.counter.cashBundleCount, 1);
+      expect(customer.state, CustomerState.leavingHappy);
+    });
+
+    test('Collecting cash from right-side cash towers vacuums into wallet', () {
+      final world = GameWorld(initialRupees: 0.0);
+      world.counter.cashBundleCount = 2;
+
+      // Stand in cash collection zone (right side behind counter)
+      world.player.position.x = world.counter.cashCollectionZoneCenter.x;
+      world.player.position.y = world.counter.cashCollectionZoneCenter.y;
+
+      world.tick(0.05);
+      // 1 cash bundle launched as flying bundle
+      expect(world.counter.cashBundleCount, 1);
+      expect(world.cashBundles.length, 1);
+
+      // Tick world until cash reaches player and gets absorbed into wallet
+      for (int i = 0; i < 20; i++) {
         world.tick(0.05);
-        // Service triggered! Food converted to cash tower on right
-        expect(world.counter.isCashierPresent, isTrue);
-        expect(world.counter.totalFoodCount, 0);
-        expect(world.counter.cashBundleCount, 1);
-      });
+      }
+      // Both bundles vacuumed into wallet
+      expect(world.rupees, 20.0);
+      expect(world.counter.cashBundleCount, 0);
+      expect(world.floatingTexts.isNotEmpty, isTrue);
+      expect(world.floatingTexts.first.text, '+Rs 10');
+    });
 
-      test(
-        'Collecting cash from right-side cash towers vacuums into wallet',
-        () {
-          final world = GameWorld(initialRupees: 0.0);
-          world.counter.cashBundleCount = 2;
+    test('Player can deposit food from the left flank of the counter', () {
+      final world = GameWorld();
+      world.player.addItem(ItemType.chai);
+      expect(world.player.carriedCount, 1);
+      expect(world.counter.totalFoodCount, 0);
 
-          // Stand in cash collection zone (right side behind counter)
-          world.player.position.x = world.counter.cashCollectionZoneCenter.x;
-          world.player.position.y = world.counter.cashCollectionZoneCenter.y;
+      // Stand at the left side (flank) of the counter
+      world.player.position.x = 270.0;
+      world.player.position.y = 720.0;
 
-          world.tick(0.05);
-          // 1 cash bundle launched as flying bundle
-          expect(world.counter.cashBundleCount, 1);
-          expect(world.cashBundles.length, 1);
-
-          // Tick world until cash reaches player and gets absorbed into wallet
-          for (int i = 0; i < 20; i++) {
-            world.tick(0.05);
-          }
-          // Both bundles vacuumed into wallet
-          expect(world.rupees, 20.0);
-          expect(world.counter.cashBundleCount, 0);
-          expect(world.floatingTexts.isNotEmpty, isTrue);
-          expect(world.floatingTexts.first.text, '+Rs 10');
-        },
+      expect(
+        world.counter.isInsideFoodDepositZone(world.player.position),
+        isTrue,
+      );
+      expect(world.counter.isInsideCashierZone(world.player.position), isFalse);
+      expect(
+        world.counter.isInsideCashCollectionZone(world.player.position),
+        isFalse,
       );
 
-      test('Player can deposit food from the left flank of the counter', () {
-        final world = GameWorld();
-        world.player.addItem(ItemType.chai);
-        expect(world.player.carriedCount, 1);
-        expect(world.counter.totalFoodCount, 0);
+      world.tick(0.05);
+      expect(world.player.carriedCount, 0);
+      expect(world.counter.totalFoodCount, 1);
+    });
 
-        // Stand at the left side (flank) of the counter
-        world.player.position.x = 270.0;
-        world.player.position.y = 720.0;
+    test('Player can collect cash from the right flank of the counter', () {
+      final world = GameWorld(initialRupees: 0.0);
+      world.counter.cashBundleCount = 1;
 
+      // Stand at the right side (flank) of the counter
+      world.player.position.x = 630.0;
+      world.player.position.y = 720.0;
+
+      expect(
+        world.counter.isInsideCashCollectionZone(world.player.position),
+        isTrue,
+      );
+      expect(world.counter.isInsideCashierZone(world.player.position), isFalse);
+      expect(
+        world.counter.isInsideFoodDepositZone(world.player.position),
+        isFalse,
+      );
+
+      world.tick(0.05);
+      expect(world.counter.cashBundleCount, 0);
+      expect(world.cashBundles.length, 1);
+    });
+
+    test(
+      'Left Food Zone covers top (behind), left flank, and bottom (front)',
+      () {
+        final counter = ServingCounter();
+        // Top (behind left counter: x=340, y=665)
+        expect(counter.isInsideFoodDepositZone(Vector2(340.0, 665.0)), isTrue);
+        // Left flank (x=270, y=720)
+        expect(counter.isInsideFoodDepositZone(Vector2(270.0, 720.0)), isTrue);
+        // Bottom (in front of left counter: x=340, y=775)
+        expect(counter.isInsideFoodDepositZone(Vector2(340.0, 775.0)), isTrue);
+        // Right of left counter (x=410 towards cashier) -> False!
+        expect(counter.isInsideFoodDepositZone(Vector2(410.0, 720.0)), isFalse);
+      },
+    );
+
+    test(
+      'Right Cash Zone covers top (behind), right flank, and bottom (front)',
+      () {
+        final counter = ServingCounter();
+        // Top (behind right counter: x=560, y=665)
         expect(
-          world.counter.isInsideFoodDepositZone(world.player.position),
+          counter.isInsideCashCollectionZone(Vector2(560.0, 665.0)),
           isTrue,
         );
+        // Right flank (x=630, y=720)
         expect(
-          world.counter.isInsideCashierZone(world.player.position),
-          isFalse,
-        );
-        expect(
-          world.counter.isInsideCashCollectionZone(world.player.position),
-          isFalse,
-        );
-
-        world.tick(0.05);
-        expect(world.player.carriedCount, 0);
-        expect(world.counter.totalFoodCount, 1);
-      });
-
-      test('Player can collect cash from the right flank of the counter', () {
-        final world = GameWorld(initialRupees: 0.0);
-        world.counter.cashBundleCount = 1;
-
-        // Stand at the right side (flank) of the counter
-        world.player.position.x = 630.0;
-        world.player.position.y = 720.0;
-
-        expect(
-          world.counter.isInsideCashCollectionZone(world.player.position),
+          counter.isInsideCashCollectionZone(Vector2(630.0, 720.0)),
           isTrue,
         );
+        // Bottom (in front of right counter: x=560, y=775)
         expect(
-          world.counter.isInsideCashierZone(world.player.position),
+          counter.isInsideCashCollectionZone(Vector2(560.0, 775.0)),
+          isTrue,
+        );
+        // Left of right counter (x=490 towards cashier) -> False!
+        expect(
+          counter.isInsideCashCollectionZone(Vector2(490.0, 720.0)),
           isFalse,
         );
-        expect(
-          world.counter.isInsideFoodDepositZone(world.player.position),
-          isFalse,
-        );
+      },
+    );
 
-        world.tick(0.05);
-        expect(world.counter.cashBundleCount, 0);
-        expect(world.cashBundles.length, 1);
-      });
+    test(
+      'Counter zones are strictly non-overlapping across the entire map',
+      () {
+        final counter = ServingCounter();
+        // Check a 10px grid spanning across and behind the counter
+        for (double x = 200.0; x <= 700.0; x += 10.0) {
+          for (double y = 600.0; y <= 800.0; y += 10.0) {
+            final pt = Vector2(x, y);
+            int activeZones = 0;
+            if (counter.isInsideFoodDepositZone(pt)) activeZones++;
+            if (counter.isInsideCashierZone(pt)) activeZones++;
+            if (counter.isInsideCashCollectionZone(pt)) activeZones++;
 
-      test(
-        'Left Food Zone covers top (behind), left flank, and bottom (front)',
-        () {
-          final counter = ServingCounter();
-          // Top (behind left counter: x=340, y=665)
-          expect(
-            counter.isInsideFoodDepositZone(Vector2(340.0, 665.0)),
-            isTrue,
-          );
-          // Left flank (x=270, y=720)
-          expect(
-            counter.isInsideFoodDepositZone(Vector2(270.0, 720.0)),
-            isTrue,
-          );
-          // Bottom (in front of left counter: x=340, y=775)
-          expect(
-            counter.isInsideFoodDepositZone(Vector2(340.0, 775.0)),
-            isTrue,
-          );
-          // Right of left counter (x=410 towards cashier) -> False!
-          expect(
-            counter.isInsideFoodDepositZone(Vector2(410.0, 720.0)),
-            isFalse,
-          );
-        },
-      );
-
-      test(
-        'Right Cash Zone covers top (behind), right flank, and bottom (front)',
-        () {
-          final counter = ServingCounter();
-          // Top (behind right counter: x=560, y=665)
-          expect(
-            counter.isInsideCashCollectionZone(Vector2(560.0, 665.0)),
-            isTrue,
-          );
-          // Right flank (x=630, y=720)
-          expect(
-            counter.isInsideCashCollectionZone(Vector2(630.0, 720.0)),
-            isTrue,
-          );
-          // Bottom (in front of right counter: x=560, y=775)
-          expect(
-            counter.isInsideCashCollectionZone(Vector2(560.0, 775.0)),
-            isTrue,
-          );
-          // Left of right counter (x=490 towards cashier) -> False!
-          expect(
-            counter.isInsideCashCollectionZone(Vector2(490.0, 720.0)),
-            isFalse,
-          );
-        },
-      );
-
-      test(
-        'Counter zones are strictly non-overlapping across the entire map',
-        () {
-          final counter = ServingCounter();
-          // Check a 10px grid spanning across and behind the counter
-          for (double x = 200.0; x <= 700.0; x += 10.0) {
-            for (double y = 600.0; y <= 800.0; y += 10.0) {
-              final pt = Vector2(x, y);
-              int activeZones = 0;
-              if (counter.isInsideFoodDepositZone(pt)) activeZones++;
-              if (counter.isInsideCashierZone(pt)) activeZones++;
-              if (counter.isInsideCashCollectionZone(pt)) activeZones++;
-
-              expect(
-                activeZones,
-                lessThanOrEqualTo(1),
-                reason: 'Point ($x, $y) overlapped multiple zones!',
-              );
-            }
+            expect(
+              activeZones,
+              lessThanOrEqualTo(1),
+              reason: 'Point ($x, $y) overlapped multiple zones!',
+            );
           }
-        },
-      );
+        }
+      },
+    );
 
-      test('Trash bin discards unwanted items from player stack', () {
-        final world = GameWorld();
-        world.player.addItem(ItemType.chai);
-        expect(world.player.carriedCount, 1);
+    test('Trash bin discards unwanted items from player stack', () {
+      final world = GameWorld();
+      world.player.addItem(ItemType.chai);
+      expect(world.player.carriedCount, 1);
 
-        // Walk to trash bin
-        world.player.position.x = world.trashBin.position.x;
-        world.player.position.y = world.trashBin.position.y;
+      // Walk to trash bin
+      world.player.position.x = world.trashBin.position.x;
+      world.player.position.y = world.trashBin.position.y;
 
-        world.tick(0.05);
-        expect(world.player.carriedCount, 0);
-      });
+      world.tick(0.05);
+      expect(world.player.carriedCount, 0);
+    });
 
-      test('Counter collision stops player from passing through', () {
-        final world = GameWorld();
-        final counterCenter = world.counter.position;
+    test('Counter collision stops player from passing through', () {
+      final world = GameWorld();
+      final counterCenter = world.counter.position;
 
-        // Try placing player at center of serving counter
-        world.player.position.x = counterCenter.x;
-        world.player.position.y = counterCenter.y;
+      // Try placing player at center of serving counter
+      world.player.position.x = counterCenter.x;
+      world.player.position.y = counterCenter.y;
 
-        world.tick(0.01);
+      world.tick(0.01);
 
-        final halfW = world.counter.width / 2;
-        final halfH = world.counter.height / 2;
-        final isOutside =
-            (world.player.position.x < counterCenter.x - halfW) ||
-            (world.player.position.x > counterCenter.x + halfW) ||
-            (world.player.position.y < counterCenter.y - halfH) ||
-            (world.player.position.y > counterCenter.y + halfH);
+      final halfW = world.counter.width / 2;
+      final halfH = world.counter.height / 2;
+      final isOutside =
+          (world.player.position.x < counterCenter.x - halfW) ||
+          (world.player.position.x > counterCenter.x + halfW) ||
+          (world.player.position.y < counterCenter.y - halfH) ||
+          (world.player.position.y > counterCenter.y + halfH);
 
-        expect(isOutside, isTrue);
-      });
-    },
-  );
+      expect(isOutside, isTrue);
+    });
+  });
 }
