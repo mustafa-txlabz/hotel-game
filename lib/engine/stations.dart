@@ -1,6 +1,6 @@
 import 'entities.dart';
 
-enum ItemType { chai, burger }
+enum ItemType { chai, burger, samosa }
 
 /// Kitchen Chai Brewing Kettle station producing hot chai cups onto an output shelf.
 class ChaiStation {
@@ -79,54 +79,169 @@ class ChaiStation {
   }
 }
 
-/// Front Serving Counter where player/workers deliver food to drop cash bundles.
+/// A single item tower on the counter holding only one type of item.
+class CounterItemTower {
+  final ItemType itemType;
+  int count;
+  final int maxPerTower;
+
+  CounterItemTower({
+    required this.itemType,
+    this.count = 0,
+    this.maxPerTower = 10,
+  });
+
+  bool get isFull => count >= maxPerTower;
+  bool get isEmpty => count <= 0;
+}
+
+/// Enhanced Three-Part Front Serving Counter:
+/// - Left Section: Food deposit zone & single-item towers
+/// - Center Section: Cashier station (green zone) where Owner/Cashier must stand to serve
+/// - Right Section: Money tower grid & collection zone
 class ServingCounter {
   final Vector2 position;
   final double width;
   final double height;
 
-  // Delivery drop zone behind counter where staff stands
-  final Vector2 staffDropZoneCenter;
-  final double staffDropZoneRadius;
+  // 1. Left Section: Food Deposit
+  final Vector2 foodDepositZoneCenter;
+  final double foodDepositZoneRadius;
+  final List<CounterItemTower> foodTowers;
+  double depositTimer;
+  final double depositInterval;
 
-  // Location where cash piles drop
-  final Vector2 cashDropPosition;
+  // 2. Center Section: Cashier
+  final Vector2 cashierZoneCenter;
+  final double cashierZoneRadius;
+  bool isCashierPresent;
+  double serviceTimer;
+  final double serviceInterval;
 
-  // Delivery interval cooldown
-  double serveInterval;
-  double serveTimer;
+  // 3. Right Section: Money Towers & Cash Collection
+  final Vector2 cashCollectionZoneCenter;
+  final double cashCollectionZoneRadius;
+  int cashBundleCount; // Number of cash bundles on counter
+  double cashCollectTimer;
+  final double cashCollectInterval;
 
   ServingCounter({
     Vector2? position,
-    this.width = 240.0,
-    this.height = 54.0,
-    this.serveInterval = 0.16,
+    this.width = 300.0,
+    this.height = 56.0,
+    this.depositInterval = 0.14,
+    this.serviceInterval = 0.32,
+    this.cashCollectInterval = 0.08,
   }) : position = position ?? Vector2(450.0, 720.0),
-       staffDropZoneCenter = Vector2(
+       // Food deposit is behind the left portion of the counter
+       foodDepositZoneCenter = Vector2(
+         (position?.x ?? 450.0) - 85.0,
+         (position?.y ?? 720.0) - 52.0,
+       ),
+       foodDepositZoneRadius = 40.0,
+       foodTowers = [CounterItemTower(itemType: ItemType.chai, count: 0)],
+       depositTimer = 0.0,
+
+       // Cashier station is behind the center of the counter
+       cashierZoneCenter = Vector2(
          (position?.x ?? 450.0),
-         (position?.y ?? 720.0) - 56.0,
+         (position?.y ?? 720.0) - 52.0,
        ),
-       staffDropZoneRadius = 46.0,
-       cashDropPosition = Vector2(
-         (position?.x ?? 450.0) - 70.0,
-         (position?.y ?? 720.0) - 56.0,
+       cashierZoneRadius = 36.0,
+       isCashierPresent = false,
+       serviceTimer = 0.0,
+
+       // Cash collection is behind/around the right portion of the counter
+       cashCollectionZoneCenter = Vector2(
+         (position?.x ?? 450.0) + 85.0,
+         (position?.y ?? 720.0) - 52.0,
        ),
-       serveTimer = 0.0;
+       cashCollectionZoneRadius = 42.0,
+       cashBundleCount = 0,
+       cashCollectTimer = 0.0;
+
+  int get totalFoodCount {
+    int sum = 0;
+    for (final tower in foodTowers) {
+      sum += tower.count;
+    }
+    return sum;
+  }
 
   void update(double dt) {
-    if (serveTimer > 0.0) {
-      serveTimer -= dt;
+    if (depositTimer > 0.0) depositTimer -= dt;
+    if (serviceTimer > 0.0) serviceTimer -= dt;
+    if (cashCollectTimer > 0.0) cashCollectTimer -= dt;
+  }
+
+  // --- Zone checks ---
+  bool isInsideFoodDepositZone(Vector2 pos) {
+    return pos.distanceTo(foodDepositZoneCenter) <= foodDepositZoneRadius;
+  }
+
+  bool isInsideCashierZone(Vector2 pos) {
+    return pos.distanceTo(cashierZoneCenter) <= cashierZoneRadius;
+  }
+
+  bool isInsideCashCollectionZone(Vector2 pos) {
+    return pos.distanceTo(cashCollectionZoneCenter) <= cashCollectionZoneRadius;
+  }
+
+  // --- Food Operations ---
+  bool canDepositFood() => depositTimer <= 0.0;
+
+  bool addFoodItem(ItemType item) {
+    if (!canDepositFood()) return false;
+
+    // Find existing non-full tower of the SAME item type
+    for (final tower in foodTowers) {
+      if (tower.itemType == item && !tower.isFull) {
+        tower.count++;
+        depositTimer = depositInterval;
+        return true;
+      }
     }
+
+    // Otherwise create a new tower for this item type (up to max 4 towers on counter)
+    if (foodTowers.length < 4) {
+      foodTowers.add(CounterItemTower(itemType: item, count: 1));
+      depositTimer = depositInterval;
+      return true;
+    }
+
+    return false;
   }
 
-  bool isInsideStaffZone(Vector2 pos) {
-    return pos.distanceTo(staffDropZoneCenter) <= staffDropZoneRadius;
+  ItemType? takeFoodItem(ItemType desiredType) {
+    for (int i = foodTowers.length - 1; i >= 0; i--) {
+      final tower = foodTowers[i];
+      if (tower.itemType == desiredType && tower.count > 0) {
+        tower.count--;
+        if (tower.count == 0 && foodTowers.length > 1) {
+          foodTowers.removeAt(i);
+        }
+        return desiredType;
+      }
+    }
+    return null;
   }
 
-  bool canServe() => serveTimer <= 0.0;
+  bool canServe() =>
+      isCashierPresent && serviceTimer <= 0.0 && totalFoodCount > 0;
 
-  void triggerServed() {
-    serveTimer = serveInterval;
+  void triggerService() {
+    serviceTimer = serviceInterval;
+  }
+
+  // --- Cash Operations ---
+  void addCashBundle() {
+    cashBundleCount++;
+  }
+
+  bool canCollectCash() => cashCollectTimer <= 0.0 && cashBundleCount > 0;
+
+  void triggerCashCollect() {
+    cashCollectTimer = cashCollectInterval;
   }
 }
 

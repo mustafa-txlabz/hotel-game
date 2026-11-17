@@ -10,7 +10,7 @@ Read this whole file before writing any code. Follow the milestones in order.
 - ORG_PREFIX: `com.chaidhaba`   <- Default testing prefix (change to your own reverse-domain before Play Store release).
 - APP_NAME: `Dhaba Tycoon: Arcade Idle`
 - DART_PACKAGE_NAME: `chai_dhaba_empire`
-- THEME: Pakistani Chai & Burger Dhaba Arcade Idle. Start with a humble roadside chai stall, brew chai, stack cups on your head, serve customers, collect cash piles, unlock burger grills, hire chotus (workers), expand dining tables, and scale into a mega restaurant franchise!
+- THEME: Pakistani Chai & Burger Dhaba Arcade Idle. You control the Owner / Dhaba Manager directly with a virtual joystick, brew kadak chai, stack food on your head, deposit food onto counter towers, attend the cashier station, vacuum up cash towers, upgrade machines via floor pads, hire staff (cashiers & chotus), and expand the empire!
 
 > ### Note for Owner: Testing & Self-Publishing Guide
 > 
@@ -52,9 +52,14 @@ Read this whole file before writing any code. Follow the milestones in order.
 ## 1. Project Goal & Game Overview
 
 Publish a hyper-addictive, highly polished **Arcade Idle Tycoon** game on Google Play.
-- **Genre**: Arcade Idle (Top-down character navigation, physical item stacking, customer queues, floor unlock pads, cash vacuuming, hiring workers).
-- **Core Hook**: Physical interaction! You don't just tap spreadsheet buttons. You control the Dhaba Manager / Chotu directly with a virtual joystick, physically walking to the kitchen, stacking towering piles of steaming chai cups and burgers above your head, running to serve hungry customers, vacuuming up stacks of rupee notes, and standing on glowing floor unlock pads to pop new tables and grills into existence!
-- **Monetization**: 100% AdMob (Rewarded ads for speed boosts, extra capacity, free instant workers, and 2x offline earnings). No forced paywalls, works fully offline.
+- **Genre**: Arcade Idle (Top-down character navigation, physical item stacking, multi-part service counters, customer queues, floor unlock/upgrade pads, cash vacuuming, hiring staff).
+- **Core Hook**: Physical interaction! You control the Owner / Dhaba Manager directly with a virtual joystick:
+  - Physically walk to kitchen machines to pick up items onto your head stack.
+  - Unload food onto the **Counter Food Storage** forming tall item towers.
+  - Stand in the **Center Cashier Green Zone** to actively serve queued customers (or hire a permanent Cashier).
+  - Customers pay money that stacks into neat **Cash Towers** on the right side of the counter.
+  - Step onto the cash area to vacuum piles of green Rupee bundles into your wallet!
+  - Step on in-place machine pads to pour cash and upgrade capacity/speed or unlock new stations.
 
 ---
 
@@ -62,7 +67,7 @@ Publish a hyper-addictive, highly polished **Arcade Idle Tycoon** game on Google
 
 - Windows 10, VS Code, Flutter stable, Android SDK (NDK `27.1.12297006`), Git.
 - Android only (`--platforms=android`, portrait orientation locked).
-- High-Performance Flutter Rendering: `CustomPainter` with 60 FPS `TickerProvider` / `AnimationController` for silky smooth character movement, camera tracking, and entity rendering.
+- High-Performance Flutter Rendering: `CustomPainter` with 60 FPS `TickerProvider` for silky smooth character movement, camera tracking, and entity rendering.
 - State management: `provider` with `ChangeNotifier`.
 - Allowed packages:
   - `provider`
@@ -73,57 +78,60 @@ Publish a hyper-addictive, highly polished **Arcade Idle Tycoon** game on Google
 
 ---
 
-## 3. Game Design & Core Mechanics
+## 3. Game Design & Detailed Architecture
 
 ### 3.1 Movement & Controls
-- **Virtual Joystick**: Touch and drag anywhere on the bottom half of the screen to move the player character in 360 degrees.
-- **Smooth Physics**: Velocity, acceleration, and crisp collision against walls and counters.
-- **Camera Follow**: Smooth camera interpolating towards the player position as the dhaba expands.
+- **Virtual Joystick**: Touch and drag anywhere on the screen to move the Owner character in 360 degrees.
+- **Smooth Physics**: Velocity, acceleration, and crisp sliding collision against walls, counters, and stations.
+- **Camera Follow**: Smooth camera interpolating towards the Owner position as the dhaba expands.
 
-### 3.2 Kitchen Preparation Stations
-1. **Kadak Chai Kettle**: Produces steaming hot chai cups automatically every $T_{\text{brew}}$ seconds onto an output shelf (up to max shelf capacity).
-2. **Burger & Shami Grill**: Unlocked later; sizzles and cooks delicious burgers/bun-kababs onto its output shelf.
-- Each station has an interactive pickup zone marked on the floor.
+### 3.2 Kitchen Preparation Machines & In-Place Ground Pads
+1. **Kadak Chai Kettle**: Produces steaming hot chai cups automatically onto its output shelf (up to max shelf capacity, e.g. 8 base).
+2. **Burger Grill & Samosa Fryer**: Unlocked later for food variety.
+- **In-Place Floor Pads**: Next to each kitchen machine, a rectangle ground pad with a cash icon and price amount:
+  - **Locked State (Unlock Pad)**: Shows remaining cost. Standing on it drains money from the Owner's wallet into the pad (e.g. 50 Rs/sec), reducing the displayed price. If money runs out, it stops and preserves the partial progress. When it reaches 0: **BOOM!** The machine unlocks!
+  - **Unlocked State (Upgrade Pad)**: The pad remains active to upgrade that machine! Upgrading increases storage capacity ($+1$ or $+2$ items per level) and speeds up preparation time up to max level.
 
 ### 3.3 Towering Item Stacks (Above-Head Carrying)
-- Walking into a station's pickup zone transfers items to the character.
-- Items stack vertically on top of the character's head with a slight cartoon wobble physics effect as the player walks and turns!
+- Walking into a machine's pickup zone transfers items to the Owner's head stack.
+- Items stack vertically on top of the character's head with cartoon wobble physics as the player turns and runs.
 - **Carry Capacity**: Limits how many items can be carried at once (base 3 items; upgradable in HR to 5, 8, 12, 16+).
-- If capacity is full, a bouncy `"MAX"` badge appears above the stack.
+- When full, a bouncy `"MAX"` badge appears above the stack.
 
-### 3.4 Customer AI & Serving System
-- **Customer Spawning**: Diverse cartoon characters (Office Babus, Students, Rickshaw Walas, Families) enter through the entrance.
-- **Queuing**: Customers line up behind order spots at the front counter.
-- **Order Speech Bubbles**: Above each customer's head, an order bubble displays what they want (e.g. ☕ Chai $\times 1$, or 🍔 Burger $\times 2$).
-- **Serving**: When the player or an AI worker stands behind the counter adjacent to a customer, items transfer from the head stack into the customer's hands with a satisfying pop sound.
-- **Cash Dropping**: Once served, customers drop green bundles of Rupee notes on the counter, take their order, and either exit (takeaway) or proceed to a dining table.
+### 3.4 Three-Part Front Serving Counter
+The front counter is split into three dedicated functional areas:
+1. **Left Section (Food Deposit & Item Towers)**:
+   - When the Owner stands in the drop zone behind this section, carried items unload onto the counter.
+   - On the counter, items form **Towers**! (Each tower has a max capacity, e.g. 10 items, and subsequent items start the next tower in a neat grid).
+   - **Strict Single-Item Rule**: Each tower contains ONLY ONE type of item (Chai tower holds only Chai cups; Samosa tower holds only Samosas).
+2. **Center Section (Cashier Station - Green Zone)**:
+   - Features the cash register and a green designated standing zone behind the counter.
+   - **Crucial Rule**: Customers are **ONLY served if someone is standing in this green cashier spot** (either the Owner or a hired Cashier worker)!
+   - If nobody is in the cashier zone, customers wait in line. The first customer has a background patience timer. If unattended for too long, they leave disappointed, and the next customer moves up.
+3. **Right Section (Money Stacking Grid & Cash Towers)**:
+   - When customers are served at the cashier station, they leave their payment on the right section of the counter.
+   - Cash forms neat **3D Cash Towers** in a grid (stacks of green rupee notes).
+   - Stepping on the collection zone vacuums cash bundles into the Owner's wallet with flying animations and floating `+Rs X` popups!
 
-### 3.5 Cash Collection (Magnet Vacuum)
-- Customers leave stacks of green rupee cash bundles on the counter and dining tables.
-- Walking close to cash triggers a magnetic suction effect: rupee bundles fly into the player's wallet accompanied by snappy coin sounds, light haptics, and floating `+Rs X` numbers.
+### 3.5 Customer AI & Queue System
+- **Spawning**: Diverse cartoon characters enter through the dhaba entrance door.
+- **Queuing**: Customers form a queue in front of the counter with order speech bubbles (e.g. `☕ x1`, or `🍔 x2`).
+- **Transaction**: When cashier zone is occupied and required items are in the counter food towers, items transfer to the customer, cash drops onto the right cash towers, and the customer leaves happily or walks to a dining table.
 
-### 3.6 Ground Unlock Pads (Physical Upgrades)
-- Stations, dining tables, trash bins, and new zones are locked behind circular glowing pads painted on the dhaba floor (e.g., `[ 100 Rs : Table 1 ]`, `[ 350 Rs : Burger Grill ]`, `[ 500 Rs : Hire Chotu ]`).
-- **Interactive Pour Mechanic**: Walking onto the pad smoothly drains cash from the player's wallet into the pad counter (e.g. 50 Rs / sec).
-- When the required amount is reached: **BOOM!** The pad disappears, and the new table/station bursts into existence with celebratory confetti and haptic feedback!
+### 3.6 Dine-In Tables & Cleaning
+- Unlocked dining tables where customers sit down to enjoy their food.
+- Customers leave larger cash payments/tips and dirty trays.
+- Cleaning up trays frees up tables for new customers.
 
-### 3.7 Dine-In Tables & Cleaning
-- Unlocked tables have seats where customers sit down to enjoy their chai and burgers.
-- When done, customers leave larger cash payments (including tips!) and dirty trays.
-- Cleaning up dirty trays returns plates to the washing sink and frees up the table for new paying customers.
+### 3.7 Staff & Workers (Cashier & Chotus)
+- **Cashier**: Can be hired to permanently occupy the green cashier spot so the Owner is free to manage and run the dhaba.
+- **Chotus (Waiters/Runners)**: Autonomous helpers who carry items from kitchen machines to counter towers and clean tables.
+- **HR Desk**: Upgrades Owner/Worker move speed and carry capacity.
 
-### 3.8 HR Office & Automated Helpers (Chotus)
-- An in-game HR Desk / Clipboard allows upgrading stats:
-  - **Player Move Speed**: Increase player walk velocity by $+15\%$ per level.
-  - **Player Capacity**: Increase max carried stack $+2$ items per level.
-  - **Hire Workers (Chotu 1, Chotu 2, Waiter)**: Autonomous AI helpers who carry items from kitchen to counter/tables and clean up dirty trays automatically!
-  - **Worker Speed & Capacity**: Upgrade worker efficiency.
-  - **Kitchen Cooking Speed**: Reduces brew/cook time by $-15\%$ per level.
-
-### 3.9 Rewarded Ad Power-Ups
-- **Chai Rush (2x Speed & 2x Cash)**: 3 minutes of blazing fast turbo speed and double cash drops.
-- **VIP Chotu**: Hires a super-fast temporary helper for 5 minutes.
-- **Offline Earnings 2x**: Doubles the money collected while away.
+### 3.8 Rewarded Ad Power-Ups & Offline Earnings
+- **Chai Rush (2x Speed & 2x Cash)**: 3 minutes of turbo speed and double cash drops.
+- **VIP Cashier / Helper**: Temporary helper for 5 minutes.
+- **Offline Earnings 2x**: Doubles money collected while away.
 
 ---
 
@@ -141,7 +149,7 @@ lib/
     balance.dart            # Prices, speeds, capacities, upgrade curves
   engine/                   # Pure Dart simulation (zero Flutter imports)
     entities.dart           # Player, Customer, Worker, Item, CashBundle
-    stations.dart           # Station, Table, UnlockPad definitions
+    stations.dart           # ChaiStation, ServingCounter (3-part), TrashBin, InPlacePad
     customer_ai.dart        # State machine: Arrive -> Queue -> Order -> Eat -> Pay -> Leave
     game_world.dart         # Full world simulation, collisions, tick logic
   services/
@@ -178,44 +186,51 @@ test/
    - Give the owner a short summary and exact steps to test on their phone/emulator.
    - **Stop and wait** for the owner to say "next".
 2. Do not start features from later milestones early.
-3. Keep art stylized, clean, vibrant, and fun using high-performance vector rendering on the Canvas before custom sprite assets.
+3. Keep art stylized, clean, vibrant, and fun using high-performance vector rendering on the Canvas.
 4. AdMob test IDs only during testing.
 
 ---
 
 ## 6. Implementation Milestones
 
-### **M0 — Arcade Engine & Canvas Loop**
+### **M0 — Arcade Engine & Canvas Loop** *(Completed)*
 Set up the 60 FPS CustomPainter game loop, coordinate space, camera follow system, Dhaba tiled floor arena with boundary walls, and floating virtual joystick touch controls.
-*Done when: Player character moves smoothly around the Dhaba floor in 360 degrees using the joystick.*
 
-### **M1 — Kitchen Station & Item Stacking Physics**
-Add the Chai Brewing Kettle station producing hot chai cups onto an output shelf. When the player steps into the pickup zone, cups stack vertically above the player's head with wobble physics and capacity limit (with `"MAX"` badge when full).
-*Done when: Player can walk to the kettle, watch cups brew, and carry a towering stack of chai cups above their head.*
+### **M1 — Kitchen Station & Item Stacking Physics** *(Completed)*
+Add the Chai Brewing Kettle station producing hot chai cups onto an output shelf. When the Owner steps into the pickup zone, cups stack vertically above the head with wobble physics and capacity limit (with `"MAX"` badge when full).
 
-### **M2 — Counter Service, Cash Drops & Magnet Vacuum**
-Add the Front Serving Counter and Trash Bin. Player can stand at the counter to deliver chai from their head stack. Served items drop 3D green Rupee cash bundles onto the floor/counter. Walking near cash magnets it into the player's wallet with haptics and floating `+Rs X` numbers.
-*Done when: Player can deliver chai to the counter, generate cash bundles, and vacuum them up to grow their wallet.*
+### **M2 — Three-Part Counter Architecture, Food Towers & Cash Towers** *(Current Milestone - In Progress)*
+Transform the Front Serving Counter into a full 3-part arcade counter:
+1. **Left Section**: Food deposit zone where Owner unloads carried items onto the counter into neat single-item food towers.
+2. **Center Section**: Cashier station with green zone where Owner must stand to activate service.
+3. **Right Section**: Money stacking grid where cash bundles form neat 3D towers; stepping on the collection area vacuums the cash into wallet with flying animation.
+4. **Trash Bin**: For discarding unwanted items.
+*Done when: Owner can carry chai from kettle, stack it on the counter's left food towers, stand at cashier to trigger cash to right-side money towers, and collect cash towers.*
 
-### **M3 — Customer AI & Queue System**
-Implement full Customer AI: Customers spawn outside, walk in through the entrance, queue up in line at the counter with order speech bubbles (`☕ x1`), wait for their order, receive chai, drop cash, and exit.
-*Done when: A continuous flow of customers queues up, gets served, pays cash, and leaves happily.*
+### **M3 — Customer AI, Orders & Queue Wait System**
+Implement full Customer AI: Customers enter from the entrance, queue up at the counter with order speech bubbles (`☕ x1`), wait for cashier attendance (with background patience timer). If cashier is present and food is on counter towers, food is handed to customer and cash is placed on the right cash towers; if unattended, customer leaves disappointed.
+*Done when: Continuous customer flow lines up, requires cashier presence to be served, and pays cash onto counter cash towers.*
 
-### **M4 — Ground Unlock Pads & Dynamic Shop Expansion**
-Implement interactive circular ground pads (e.g. `[ Rs 50 : Table 1 ]`, `[ Rs 250 : Unlock Burger Grill ]`). Standing on a pad smoothly pours cash from the player's wallet into the pad until complete, popping the new station/table into existence with confetti and bounce animation!
-*Done when: Player uses earned cash to physically unlock new tables and kitchen stations on the floor.*
+### **M4 — In-Place Machine Upgrade & Floor Unlock Pads**
+Add interactive ground rectangle pads with cash icon and pour mechanic:
+1. **Machine In-Place Upgrade Pad**: Standing on the pad next to the kettle pours cash to upgrade storage capacity and brewing speed.
+2. **Unlock Pads**: Pour cash to unlock dining tables and new zones with partial progress memory (stops if player runs out of cash).
+*Done when: Owner can stand on pads to smoothly pour cash and upgrade machines or unlock new items.*
 
 ### **M5 — Dine-In Dining Tables & Cleaning**
-Add customer dine-in behavior: Customers can choose to sit at unlocked dining tables, enjoy their meal, leave bigger cash tips on the table, and leave dirty trays. Player cleans trays to keep tables open for new customers.
+Add customer dine-in behavior: Customers can choose to sit at unlocked dining tables, enjoy their meal, leave larger cash tips on the table, and leave dirty trays. Owner cleans trays to keep tables open for new customers.
 *Done when: Customers sit at tables, eat, tip, and tables require cleaning.*
 
-### **M6 — HR Office & Autonomous Workers (Chotus)**
-Add the HR Clipboard upgrade zone. Player can open the HR menu to upgrade Player Move Speed, Player Carry Capacity, Kitchen Brew Speed, and **Hire Workers (Chotus)**. Hired workers move autonomously to brew chai, serve customers, and clean tables!
-*Done when: You can hire a worker who serves customers automatically while you manage and expand.*
+### **M6 — Staff Hiring & Cashier Faculty**
+Add hiring and staff management:
+1. **Hire Cashier**: Stands permanently in the center green cashier spot so the Owner is free to manage the dhaba.
+2. **Hire Chotus (Waiters)**: Autonomous AI helpers who carry items from kitchen to counter towers and clean tables.
+3. **HR Upgrades**: Upgrade Owner and Worker speed and carry capacity.
+*Done when: A hired cashier serves customers automatically without the Owner having to stand at the counter.*
 
-### **M7 — Food Variety (Burger Station) & Audio Polish**
-Unlock the Burger Grill station producing delicious burgers. Customers place mixed orders (`☕ + 🍔`). Add truck-art decorative elements, lively sound effects (sizzling grill, pouring tea, cha-ching cash pickup), and haptic vibrations.
-*Done when: Both Chai and Burgers are in full production with rich sound effects and Pakistani Dhaba aesthetic.*
+### **M7 — Food Variety (Burger Grill / Samosa) & Audio Polish**
+Unlock additional food machines (Burger Grill / Samosa Fryer) with separate, dedicated food towers on the counter. Customers place mixed orders (`☕ + 🍔`). Add lively sound effects, sizzling audio, and haptic polish.
+*Done when: Multiple food types are brewed, stacked in distinct counter towers, and sold to customers.*
 
 ### **M8 — AdMob Rewarded Power-Ups, Offline Earnings & Release Prep**
 Add AdMob Rewarded Ads for instant boosts (Chai Rush 2x Speed, Free VIP Helper, 2x Offline Earnings on game launch), full SharedPreferences persistence (save & load), and final Google Play release readiness.
@@ -223,6 +238,6 @@ Add AdMob Rewarded Ads for instant boosts (Chai Rush 2x Speed, Free VIP Helper, 
 
 ---
 
-## 7. Start Here
+## 7. Current Step
 
-Milestone **M0 — Arcade Engine & Canvas Loop** is the immediate next step. Proceed when approved.
+Milestone **M2 — Three-Part Counter Architecture, Food Towers & Cash Towers** is the active step being implemented and enhanced.

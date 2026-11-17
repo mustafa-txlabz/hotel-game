@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'stations.dart';
 
 /// Simple 2D vector for pure Dart physics simulation.
@@ -46,8 +47,8 @@ class FloatingTextEntity {
     required Vector2 position,
     required this.text,
     this.lifeTime = 1.2,
-  })  : position = position.copy(),
-        maxLifeTime = lifeTime;
+  }) : position = position.copy(),
+       maxLifeTime = lifeTime;
 
   bool get isExpired => lifeTime <= 0.0;
 
@@ -65,13 +66,11 @@ class CashBundleEntity {
   double flySpeed;
   double spawnBounceTimer;
 
-  CashBundleEntity({
-    required Vector2 position,
-    required this.value,
-  })  : position = position.copy(),
-        isFlying = false,
-        flySpeed = 180.0,
-        spawnBounceTimer = 0.2;
+  CashBundleEntity({required Vector2 position, required this.value})
+    : position = position.copy(),
+      isFlying = false,
+      flySpeed = 180.0,
+      spawnBounceTimer = 0.2;
 
   /// Progresses vacuum suction towards target (player).
   /// Returns true when absorbed into the player's wallet.
@@ -121,14 +120,14 @@ class PlayerEntity {
     this.speed = 220.0,
     this.radius = 20.0,
     this.carryCapacity = 3,
-  })  : position = startPosition ?? Vector2(450.0, 600.0),
-        velocity = Vector2(0.0, 0.0),
-        angle = math.pi / 2, // Default facing forward/down
-        isMoving = false,
-        walkCycle = 0.0,
-        carriedItems = [],
-        wobbleAngle = 0.0,
-        wobbleVelocity = 0.0;
+  }) : position = startPosition ?? Vector2(450.0, 600.0),
+       velocity = Vector2(0.0, 0.0),
+       angle = math.pi / 2, // Default facing forward/down
+       isMoving = false,
+       walkCycle = 0.0,
+       carriedItems = [],
+       wobbleAngle = 0.0,
+       wobbleVelocity = 0.0;
 
   int get carriedCount => carriedItems.length;
   bool get isFull => carriedCount >= carryCapacity;

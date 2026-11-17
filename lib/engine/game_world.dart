@@ -10,16 +10,13 @@ class GameWorld {
   final double worldHeight;
   final double wallThickness;
 
-  // Magnet suction radius for collecting cash bundles
-  final double cashMagnetRadius;
-
   // Entities & Stations
   final PlayerEntity player;
   final ChaiStation chaiStation;
   final ServingCounter counter;
   final TrashBin trashBin;
 
-  // Active ground cash and floating text popups
+  // Flying cash bundles and floating text popups
   final List<CashBundleEntity> cashBundles;
   final List<FloatingTextEntity> floatingTexts;
 
@@ -29,6 +26,7 @@ class GameWorld {
 
   // Callbacks for sound & haptics
   void Function(ItemType item)? onItemPickedUp;
+  void Function(ItemType item)? onItemDeposited;
   void Function(ItemType item)? onItemServed;
   void Function(double amount)? onCashCollected;
   void Function()? onItemDiscarded;
@@ -37,7 +35,6 @@ class GameWorld {
     this.worldWidth = 900.0,
     this.worldHeight = 1200.0,
     this.wallThickness = 32.0,
-    this.cashMagnetRadius = 85.0,
     double initialRupees = 0.0,
     ChaiStation? station,
     ServingCounter? servingCounter,
@@ -81,7 +78,7 @@ class GameWorld {
     // 3. Collision against perimeter boundary walls
     _clampPlayerToWorldBounds();
 
-    // 4. Solid counter collisions (kitchen counter and serving counter)
+    // 4. Solid counter collisions (kitchen kettle and serving counter)
     _resolveBoxCollision(
       chaiStation.position,
       chaiStation.width,
@@ -89,19 +86,25 @@ class GameWorld {
     );
     _resolveBoxCollision(counter.position, counter.width, counter.height);
 
-    // 5. Item pickup zone detection (Chai Kettle)
-    _checkItemPickup();
+    // 5. Kitchen Pickup Zone detection (Chai Kettle)
+    _checkKettlePickup();
 
-    // 6. Item serving delivery detection (Serving Counter)
-    _checkItemServing();
+    // 6. Food Deposit Zone detection (Left Section of Counter)
+    _checkFoodDeposit();
 
-    // 7. Trash bin discard detection
+    // 7. Cashier Service detection (Center Section of Counter)
+    _checkCashierService();
+
+    // 8. Cash Collection detection (Right Section of Counter)
+    _checkCashCollection();
+
+    // 9. Trash bin discard detection
     _checkTrashDiscard();
 
-    // 8. Cash magnet vacuum & collection
+    // 10. Flying cash bundles & absorption
     _updateCashBundles(dt);
 
-    // 9. Floating text popups
+    // 11. Floating text popups
     _updateFloatingTexts(dt);
   }
 
@@ -160,7 +163,7 @@ class GameWorld {
     }
   }
 
-  void _checkItemPickup() {
+  void _checkKettlePickup() {
     if (player.isFull) return;
 
     if (chaiStation.isInsidePickupZone(player.position)) {
@@ -171,25 +174,52 @@ class GameWorld {
     }
   }
 
-  void _checkItemServing() {
+  void _checkFoodDeposit() {
     if (player.carriedCount == 0) return;
 
-    if (counter.isInsideStaffZone(player.position) && counter.canServe()) {
-      final item = player.removeItem();
-      if (item != null) {
-        counter.triggerServed();
-
-        // Spawn a cash bundle on the counter
-        final scatterX = (cashBundles.length % 4) * 16.0 - 24.0;
-        final scatterY = (cashBundles.length ~/ 4) * 12.0 - 10.0;
-        final dropPos = Vector2(
-          counter.cashDropPosition.x + scatterX,
-          counter.cashDropPosition.y + scatterY,
-        );
-
-        cashBundles.add(CashBundleEntity(position: dropPos, value: 10.0));
-        onItemServed?.call(item);
+    if (counter.isInsideFoodDepositZone(player.position) &&
+        counter.canDepositFood()) {
+      final topItem = player.carriedItems.last;
+      if (counter.addFoodItem(topItem)) {
+        player.removeItem();
+        onItemDeposited?.call(topItem);
       }
+    }
+  }
+
+  void _checkCashierService() {
+    // Cashier presence check (Owner standing in center green circle)
+    final isOwnerAtCashier = counter.isInsideCashierZone(player.position);
+    counter.isCashierPresent = isOwnerAtCashier;
+
+    // Service ONLY happens if someone is in the cashier zone!
+    if (counter.canServe()) {
+      final servedItem = counter.takeFoodItem(ItemType.chai);
+      if (servedItem != null) {
+        counter.triggerService();
+        // Payment drops onto the right counter cash towers!
+        counter.addCashBundle();
+        onItemServed?.call(servedItem);
+      }
+    }
+  }
+
+  void _checkCashCollection() {
+    if (counter.isInsideCashCollectionZone(player.position) &&
+        counter.canCollectCash()) {
+      counter.cashBundleCount--;
+      counter.triggerCashCollect();
+
+      // Launch a flying cash bundle from the right counter surface towards player
+      final spawnX = counter.position.x + 85.0;
+      final spawnY = counter.position.y;
+      final bundle = CashBundleEntity(
+        position: Vector2(spawnX, spawnY),
+        value: 10.0,
+      );
+      bundle.isFlying = true;
+      bundle.spawnBounceTimer = 0.0;
+      cashBundles.add(bundle);
     }
   }
 
@@ -209,12 +239,6 @@ class GameWorld {
     final collected = <CashBundleEntity>[];
 
     for (final bundle in cashBundles) {
-      // Activate vacuum magnet when near player
-      final dist = bundle.position.distanceTo(player.position);
-      if (dist <= cashMagnetRadius) {
-        bundle.isFlying = true;
-      }
-
       if (bundle.updateTowards(player.position, dt)) {
         collected.add(bundle);
         rupees += bundle.value;

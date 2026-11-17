@@ -183,7 +183,10 @@ class SpriteRenderer {
     }
   }
 
-  static void _drawChaiCup(Canvas canvas) {
+  static void _drawChaiCup(Canvas canvas, [double scale = 1.0]) {
+    canvas.save();
+    if (scale != 1.0) canvas.scale(scale, scale);
+
     final shadowPaint = Paint()..color = const Color(0x33000000);
     canvas.drawOval(
       Rect.fromCenter(center: const Offset(0, 6), width: 22, height: 8),
@@ -241,6 +244,8 @@ class SpriteRenderer {
       Offset(-steamX + 2, -14),
       steamPaint,
     );
+
+    canvas.restore();
   }
 
   /// Draws the Chai Brewing Kettle station.
@@ -384,8 +389,7 @@ class SpriteRenderer {
 
       canvas.save();
       canvas.translate(cupPos.dx, cupPos.dy);
-      canvas.scale(0.75, 0.75);
-      _drawChaiCup(canvas);
+      _drawChaiCup(canvas, 0.75);
       canvas.restore();
     }
 
@@ -420,58 +424,77 @@ class SpriteRenderer {
     );
   }
 
-  /// Draws the Front Serving Counter with staff delivery zone and cash drop area.
+  /// Draws the Three-Part Front Serving Counter with Left Food Towers, Center Cashier,
+  /// and Right 3D Money Towers.
   static void drawServingCounter(Canvas canvas, ServingCounter counter) {
-    // 1. Staff Delivery Zone (dashed zone behind counter)
-    final dzCenter = counter.staffDropZoneCenter;
-    final dzRadius = counter.staffDropZoneRadius;
+    // -------------------------------------------------------------
+    // 1. Floor Interactive Zones Behind Counter
+    // -------------------------------------------------------------
 
-    final zoneFill = Paint()
-      ..color = AppTheme.truckArtGreen.withValues(alpha: 0.15);
-    canvas.drawCircle(Offset(dzCenter.x, dzCenter.y), dzRadius, zoneFill);
-
-    final zoneBorder = Paint()
-      ..color = AppTheme.truckArtGreen
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
-
-    const dashCount = 20;
-    for (int i = 0; i < dashCount; i += 2) {
-      final startAngle = (i / dashCount) * (math.pi * 2);
-      final sweepAngle = (1 / dashCount) * (math.pi * 2);
-      canvas.drawArc(
-        Rect.fromCircle(
-          center: Offset(dzCenter.x, dzCenter.y),
-          radius: dzRadius,
-        ),
-        startAngle,
-        sweepAngle,
-        false,
-        zoneBorder,
-      );
-    }
-
-    final serveText = TextPainter(
-      text: const TextSpan(
-        text: 'SERVE',
-        style: TextStyle(
-          color: AppTheme.truckArtGreen,
-          fontWeight: FontWeight.w900,
-          fontSize: 10,
-          letterSpacing: 0.5,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    serveText.paint(
+    // Left: Food Deposit Zone
+    final fz = counter.foodDepositZoneCenter;
+    final fzRadius = counter.foodDepositZoneRadius;
+    final fzFill = Paint()
+      ..color = AppTheme.saffronOrange.withValues(alpha: 0.15);
+    canvas.drawCircle(Offset(fz.x, fz.y), fzRadius, fzFill);
+    _drawDashedCircle(
       canvas,
-      Offset(
-        dzCenter.x - serveText.width / 2,
-        dzCenter.y - serveText.height / 2,
-      ),
+      Offset(fz.x, fz.y),
+      fzRadius,
+      AppTheme.saffronOrange,
+    );
+    _drawZoneText(
+      canvas,
+      Offset(fz.x, fz.y),
+      'DEPOSIT',
+      AppTheme.saffronOrange,
     );
 
-    // 2. Physical Serving Counter Structure
+    // Center: Cashier Standing Station (Green Zone)
+    final cz = counter.cashierZoneCenter;
+    final czRadius = counter.cashierZoneRadius;
+    final isPresent = counter.isCashierPresent;
+    final czFill = Paint()
+      ..color = (isPresent
+          ? AppTheme.truckArtGreen.withValues(alpha: 0.4)
+          : AppTheme.truckArtGreen.withValues(alpha: 0.15));
+    canvas.drawCircle(Offset(cz.x, cz.y), czRadius, czFill);
+    _drawDashedCircle(
+      canvas,
+      Offset(cz.x, cz.y),
+      czRadius,
+      isPresent
+          ? AppTheme.truckArtGreen
+          : AppTheme.truckArtGreen.withValues(alpha: 0.7),
+    );
+    _drawZoneText(
+      canvas,
+      Offset(cz.x, cz.y),
+      'CASHIER',
+      isPresent ? Colors.white : AppTheme.truckArtGreen,
+    );
+
+    // Right: Cash Collection Zone
+    final rz = counter.cashCollectionZoneCenter;
+    final rzRadius = counter.cashCollectionZoneRadius;
+    final rzFill = Paint()..color = AppTheme.goldYellow.withValues(alpha: 0.15);
+    canvas.drawCircle(Offset(rz.x, rz.y), rzRadius, rzFill);
+    _drawDashedCircle(
+      canvas,
+      Offset(rz.x, rz.y),
+      rzRadius,
+      AppTheme.goldYellow,
+    );
+    _drawZoneText(
+      canvas,
+      Offset(rz.x, rz.y),
+      'COLLECT',
+      AppTheme.chaiDarkBrown,
+    );
+
+    // -------------------------------------------------------------
+    // 2. Physical Three-Part Counter Structure
+    // -------------------------------------------------------------
     final left = counter.position.x - counter.width / 2;
     final top = counter.position.y - counter.height / 2;
 
@@ -485,10 +508,10 @@ class SpriteRenderer {
       counterShadow,
     );
 
-    // Counter wood body
-    final woodPaint = Paint()..color = const Color(0xFF5D4037);
+    // Counter mahogany base
+    final woodPaint = Paint()..color = const Color(0xFF4E342E);
     final woodBorder = Paint()
-      ..color = const Color(0xFF3E2723)
+      ..color = const Color(0xFF271510)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
@@ -499,59 +522,248 @@ class SpriteRenderer {
     canvas.drawRRect(counterRRect, woodPaint);
     canvas.drawRRect(counterRRect, woodBorder);
 
-    // Counter top polish surface
-    final topSurfacePaint = Paint()..color = const Color(0xFF8D6E63);
-    final topSurfaceRRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(left + 6, top + 6, counter.width - 12, counter.height - 12),
+    // -------------------------------------------------------------
+    // 3. Counter Surfaces (Left: Food, Center: Register, Right: Money)
+    // -------------------------------------------------------------
+
+    // Left Surface: Food Storage Tray
+    final foodTrayRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(left + 8, top + 6, 90, counter.height - 12),
       const Radius.circular(6),
     );
-    canvas.drawRRect(topSurfaceRRect, topSurfacePaint);
+    canvas.drawRRect(foodTrayRect, Paint()..color = const Color(0xFF795548));
 
-    // Cash register / order machine in middle
-    final registerPaint = Paint()..color = const Color(0xFF37474F);
-    final regRect = RRect.fromRectAndRadius(
+    // Center Surface: Cashier Till & Bell
+    final centerTrayRect = RRect.fromRectAndRadius(
       Rect.fromCenter(
         center: Offset(counter.position.x, counter.position.y),
-        width: 36,
-        height: 26,
+        width: 80,
+        height: counter.height - 12,
+      ),
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(centerTrayRect, Paint()..color = const Color(0xFF3E2723));
+
+    // Cash Register
+    final registerPaint = Paint()..color = const Color(0xFF263238);
+    final regRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(counter.position.x - 8, counter.position.y),
+        width: 32,
+        height: 24,
       ),
       const Radius.circular(4),
     );
     canvas.drawRRect(regRect, registerPaint);
 
-    // Service Bell (brass bell)
+    // Service Bell
     final bellPaint = Paint()..color = AppTheme.goldYellow;
     canvas.drawCircle(
-      Offset(counter.position.x + 36, counter.position.y),
+      Offset(counter.position.x + 22, counter.position.y),
       6,
       bellPaint,
     );
 
-    // Order Counter Banner
-    final bannerPainter = TextPainter(
-      text: const TextSpan(
-        text: 'COUNTER',
+    // Right Surface: Cash Tray
+    final cashTrayRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        left + counter.width - 98,
+        top + 6,
+        90,
+        counter.height - 12,
+      ),
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(
+      cashTrayRect,
+      Paint()..color = const Color(0xFF1B5E20).withValues(alpha: 0.6),
+    );
+
+    // -------------------------------------------------------------
+    // 4. Render Left Counter Food Towers (Single-Item Towers!)
+    // -------------------------------------------------------------
+    for (int tIdx = 0; tIdx < counter.foodTowers.length; tIdx++) {
+      final tower = counter.foodTowers[tIdx];
+      if (tower.count > 0) {
+        final towerBaseX = left + 28.0 + (tIdx * 24.0);
+        final towerBaseY = top + counter.height / 2 + 6.0;
+
+        // Draw items in vertical stack
+        for (int i = 0; i < tower.count; i++) {
+          final itemY = towerBaseY - (i * 6.5);
+          canvas.save();
+          canvas.translate(towerBaseX, itemY);
+          _drawChaiCup(canvas, 0.65);
+          canvas.restore();
+        }
+
+        // Tower Count Badge above the stack
+        final topY = towerBaseY - (tower.count * 6.5) - 14.0;
+        _drawMiniCountBadge(
+          canvas,
+          Offset(towerBaseX, topY),
+          '☕ ${tower.count}',
+        );
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 5. Render Right Counter 3D Cash Towers (Grid of Cash Stacks!)
+    // -------------------------------------------------------------
+    if (counter.cashBundleCount > 0) {
+      final totalBundles = counter.cashBundleCount;
+      final cashBaseX = left + counter.width - 70.0;
+      final cashBaseY = top + counter.height / 2 + 4.0;
+
+      // Draw up to 4 towers in a 2x2 grid
+      const maxPerStack = 6;
+      for (int i = 0; i < totalBundles; i++) {
+        final stackIdx = (i ~/ maxPerStack) % 4;
+        final heightIdx = i % maxPerStack;
+
+        final col = stackIdx % 2;
+        final row = stackIdx ~/ 2;
+
+        final bundleX = cashBaseX + (col * 24.0) - 12.0;
+        final bundleY = cashBaseY + (row * 6.0) - (heightIdx * 5.0);
+
+        _drawStaticCashBundle(canvas, Offset(bundleX, bundleY));
+      }
+
+      // Cash Total Badge above towers
+      final totalCash = totalBundles * 10;
+      _drawMiniCountBadge(
+        canvas,
+        Offset(cashBaseX, top - 8),
+        'Rs $totalCash',
+        AppTheme.truckArtGreen,
+      );
+    }
+  }
+
+  static void _drawDashedCircle(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Color color,
+  ) {
+    final border = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+
+    const dashCount = 20;
+    for (int i = 0; i < dashCount; i += 2) {
+      final startAngle = (i / dashCount) * (math.pi * 2);
+      final sweepAngle = (1 / dashCount) * (math.pi * 2);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        sweepAngle,
+        false,
+        border,
+      );
+    }
+  }
+
+  static void _drawZoneText(
+    Canvas canvas,
+    Offset center,
+    String text,
+    Color color,
+  ) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
         style: TextStyle(
-          color: Colors.white,
+          color: color,
           fontWeight: FontWeight.w900,
           fontSize: 9,
-          letterSpacing: 1.0,
+          letterSpacing: 0.5,
         ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    bannerPainter.paint(
+
+    painter.paint(
+      canvas,
+      Offset(center.dx - painter.width / 2, center.dy - painter.height / 2),
+    );
+  }
+
+  static void _drawMiniCountBadge(
+    Canvas canvas,
+    Offset center,
+    String text, [
+    Color bgColor = AppTheme.chaiDarkBrown,
+  ]) {
+    final countPainter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 9,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final tagBg = Paint()..color = bgColor;
+    final tagRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: center,
+        width: countPainter.width + 10,
+        height: countPainter.height + 4,
+      ),
+      const Radius.circular(5),
+    );
+    canvas.drawRRect(tagRect, tagBg);
+    countPainter.paint(
       canvas,
       Offset(
-        counter.position.x - bannerPainter.width / 2,
-        top + counter.height - 13,
+        center.dx - countPainter.width / 2,
+        center.dy - countPainter.height / 2,
       ),
     );
   }
 
+  /// Draws a single static 3D isometric cash bundle in a counter tower.
+  static void _drawStaticCashBundle(Canvas canvas, Offset pos) {
+    canvas.save();
+    canvas.translate(pos.dx, pos.dy);
+
+    // Shadow
+    final shadowPaint = Paint()..color = const Color(0x2A000000);
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(0, 5), width: 18, height: 8),
+      shadowPaint,
+    );
+
+    // Isometric green cash block
+    final sidePaint = Paint()..color = const Color(0xFF2E7D32);
+    final sideRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: const Offset(0, 2), width: 18, height: 10),
+      const Radius.circular(2),
+    );
+    canvas.drawRRect(sideRect, sidePaint);
+
+    final topPaint = Paint()..color = const Color(0xFF4CAF50);
+    final topRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: const Offset(0, 0), width: 18, height: 8),
+      const Radius.circular(2),
+    );
+    canvas.drawRRect(topRect, topPaint);
+
+    // Golden strap
+    final bandPaint = Paint()..color = AppTheme.goldYellow;
+    canvas.drawRect(Rect.fromLTWH(-2.5, -4, 5, 8), bandPaint);
+
+    canvas.restore();
+  }
+
   /// Draws the Trash Bin.
   static void drawTrashBin(Canvas canvas, TrashBin trashBin) {
-    // Floor discard zone
     final zonePaint = Paint()..color = const Color(0x22D32F2F);
     canvas.drawCircle(
       Offset(trashBin.position.x, trashBin.position.y),
@@ -569,7 +781,6 @@ class SpriteRenderer {
       zoneBorder,
     );
 
-    // Metal Trash Can
     final canShadow = Paint()..color = const Color(0x33000000);
     canvas.drawOval(
       Rect.fromCenter(
@@ -597,7 +808,6 @@ class SpriteRenderer {
       canBorder,
     );
 
-    // Trash Can Lid
     final lidPaint = Paint()..color = const Color(0xFF455A64);
     canvas.drawCircle(
       Offset(trashBin.position.x, trashBin.position.y),
@@ -605,7 +815,6 @@ class SpriteRenderer {
       lidPaint,
     );
 
-    // Label
     final trashText = TextPainter(
       text: const TextSpan(
         text: 'TRASH',
@@ -626,26 +835,22 @@ class SpriteRenderer {
     );
   }
 
-  /// Draws a 3D isometric green Rupee cash bundle with golden strap.
+  /// Draws a flying 3D isometric green Rupee cash bundle.
   static void drawCashBundle(Canvas canvas, CashBundleEntity bundle) {
     canvas.save();
     canvas.translate(bundle.position.x, bundle.position.y);
 
-    // Initial spawn pop bounce
     if (bundle.spawnBounceTimer > 0.0) {
       final s = 1.0 + (bundle.spawnBounceTimer * 0.8);
       canvas.scale(s, s);
     }
 
-    // Shadow
     final shadowPaint = Paint()..color = const Color(0x2E000000);
     canvas.drawOval(
       Rect.fromCenter(center: const Offset(0, 8), width: 22, height: 10),
       shadowPaint,
     );
 
-    // Isometric green cash block
-    // 1. Dark green base/side
     final sidePaint = Paint()..color = const Color(0xFF2E7D32);
     final sideRect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: const Offset(0, 3), width: 20, height: 12),
@@ -653,7 +858,6 @@ class SpriteRenderer {
     );
     canvas.drawRRect(sideRect, sidePaint);
 
-    // 2. Bright green top face
     final topPaint = Paint()..color = const Color(0xFF4CAF50);
     final topRect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: const Offset(0, 0), width: 20, height: 10),
@@ -661,11 +865,9 @@ class SpriteRenderer {
     );
     canvas.drawRRect(topRect, topPaint);
 
-    // 3. Golden paper currency band/strap around center
     final bandPaint = Paint()..color = AppTheme.goldYellow;
     canvas.drawRect(Rect.fromLTWH(-3, -5, 6, 10), bandPaint);
 
-    // 4. White currency mark
     final textPainter = TextPainter(
       text: const TextSpan(
         text: '₹',
