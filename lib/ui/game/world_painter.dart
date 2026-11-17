@@ -29,7 +29,17 @@ class WorldPainter extends CustomPainter {
       world.wallThickness,
     );
 
-    // 3. Draw Boundary Walls
+    // 3. Draw In-Place Machine Upgrade & Floor Unlock Pads (M4)
+    for (final pad in world.groundPads) {
+      SpriteRenderer.drawGroundPad(canvas, pad);
+    }
+
+    // 4. Draw Unlocked Dining Tables (M4)
+    for (final table in world.diningTables) {
+      SpriteRenderer.drawDiningTable(canvas, table);
+    }
+
+    // 5. Draw Boundary Walls
     SpriteRenderer.drawWalls(
       canvas,
       world.worldWidth,
@@ -37,17 +47,17 @@ class WorldPainter extends CustomPainter {
       world.wallThickness,
     );
 
-    // 4. Draw Stations (Chai Kettle, Serving Counter, Trash Bin)
+    // 6. Draw Stations (Chai Kettle, Serving Counter, Trash Bin)
     SpriteRenderer.drawChaiStation(canvas, world.chaiStation);
     SpriteRenderer.drawServingCounter(canvas, world.counter);
     SpriteRenderer.drawTrashBin(canvas, world.trashBin);
 
-    // 5. Draw Ground Cash Bundles
+    // 7. Draw Ground Cash Bundles
     for (final bundle in world.cashBundles) {
       SpriteRenderer.drawCashBundle(canvas, bundle);
     }
 
-    // 6. Draw Characters (Player and Customers) sorted by Y-depth
+    // 8. Draw Characters (Player and Customers) sorted by Y-depth
     final characters = <dynamic>[
       world.player,
       ...world.customerSystem.activeCustomers,
@@ -61,7 +71,7 @@ class WorldPainter extends CustomPainter {
       }
     }
 
-    // 7. Draw Floating "+Rs X" popups
+    // 9. Draw Floating "+Rs X" popups
     SpriteRenderer.drawFloatingTexts(canvas, world.floatingTexts);
 
     canvas.restore();

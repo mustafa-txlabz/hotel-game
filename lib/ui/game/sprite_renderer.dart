@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/theme.dart';
 import '../../engine/customer_ai.dart';
 import '../../engine/entities.dart';
+import '../../engine/ground_pad.dart';
 import '../../engine/stations.dart';
 
 /// Vector-based high-performance sprite and character renderer for Dhaba Arcade Tycoon.
@@ -1296,6 +1297,206 @@ class SpriteRenderer {
     canvas.drawRRect(
       RRect.fromRectAndRadius(matRect, const Radius.circular(6)),
       matBorder,
+    );
+  }
+
+  /// Draws an interactive floor rectangle pad for in-place machine upgrades or floor unlocks.
+  static void drawGroundPad(Canvas canvas, GroundPad pad) {
+    if (pad.type == PadType.floorUnlock && pad.isCompleted) return;
+
+    final rect = Rect.fromCenter(
+      center: Offset(pad.position.x, pad.position.y),
+      width: pad.width,
+      height: pad.height,
+    );
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(10));
+
+    // Pad Background Fill
+    final isUpgrade = pad.type == PadType.machineUpgrade;
+    final baseColor = isUpgrade ? AppTheme.goldYellow : AppTheme.truckArtGreen;
+    final fillPaint = Paint()..color = baseColor.withValues(alpha: 0.18);
+    canvas.drawRRect(rrect, fillPaint);
+
+    // Dashed or Solid Border
+    final borderPaint = Paint()
+      ..color = baseColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawRRect(rrect, borderPaint);
+
+    if (pad.isCompleted && pad.isMaxLevel) {
+      // Golden MAX badge
+      final maxPainter = TextPainter(
+        text: const TextSpan(
+          text: 'MAX',
+          style: TextStyle(
+            color: Color(0xFFD84315),
+            fontWeight: FontWeight.w900,
+            fontSize: 12,
+            letterSpacing: 1.0,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      maxPainter.paint(
+        canvas,
+        Offset(
+          pad.position.x - maxPainter.width / 2,
+          pad.position.y - maxPainter.height / 2,
+        ),
+      );
+      return;
+    }
+
+    // Title text at top of pad
+    final titlePainter = TextPainter(
+      text: TextSpan(
+        text: pad.title,
+        style: const TextStyle(
+          color: AppTheme.chaiDarkBrown,
+          fontWeight: FontWeight.w900,
+          fontSize: 8.5,
+          letterSpacing: 0.3,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    titlePainter.paint(
+      canvas,
+      Offset(
+        pad.position.x - titlePainter.width / 2,
+        pad.position.y - pad.height / 2 + 6,
+      ),
+    );
+
+    // Cash Icon & Remaining Amount
+    final costPainter = TextPainter(
+      text: TextSpan(
+        text: '💵 Rs ${pad.remainingCost.ceil()}',
+        style: const TextStyle(
+          color: Color(0xFF1B5E20),
+          fontWeight: FontWeight.w900,
+          fontSize: 10,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    costPainter.paint(
+      canvas,
+      Offset(pad.position.x - costPainter.width / 2, pad.position.y - 2),
+    );
+
+    // Progress bar along bottom of pad
+    const barWidth = 56.0;
+    const barHeight = 4.0;
+    final barY = pad.position.y + pad.height / 2 - 8;
+    final barBg = Rect.fromCenter(
+      center: Offset(pad.position.x, barY),
+      width: barWidth,
+      height: barHeight,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(barBg, const Radius.circular(2)),
+      Paint()..color = const Color(0x33000000),
+    );
+
+    if (pad.progress > 0.0) {
+      final fillWidth = barWidth * pad.progress;
+      final fillRect = Rect.fromLTWH(
+        pad.position.x - barWidth / 2,
+        barY - barHeight / 2,
+        fillWidth,
+        barHeight,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(fillRect, const Radius.circular(2)),
+        Paint()..color = const Color(0xFF2E7D32),
+      );
+    }
+  }
+
+  /// Draws an unlocked wooden Dhaba dining table with chairs and charpai styling.
+  static void drawDiningTable(Canvas canvas, DiningTable table) {
+    if (!table.isUnlocked) return;
+
+    final left = table.position.x - table.width / 2;
+    final top = table.position.y - table.height / 2;
+
+    // Drop shadow
+    final shadowPaint = Paint()..color = const Color(0x2E000000);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(left - 2, top + 4, table.width + 4, table.height + 4),
+        const Radius.circular(8),
+      ),
+      shadowPaint,
+    );
+
+    // Wooden Table Top (Mahogany / Rich Teak)
+    final woodPaint = Paint()..color = const Color(0xFF5D4037);
+    final borderPaint = Paint()
+      ..color = const Color(0xFF3E2723)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    final tableRRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(left, top, table.width, table.height),
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(tableRRect, woodPaint);
+    canvas.drawRRect(tableRRect, borderPaint);
+
+    // Truck Art Table Runner in center
+    final runnerRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(table.position.x, table.position.y),
+        width: table.width - 24,
+        height: table.height - 16,
+      ),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(runnerRect, Paint()..color = AppTheme.saffronOrange);
+    canvas.drawRRect(
+      runnerRect,
+      Paint()
+        ..color = AppTheme.goldYellow
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+
+    // Stools around the table (Top, Bottom)
+    final stoolPaint = Paint()..color = const Color(0xFF8D6E63);
+    final stoolBorder = Paint()
+      ..color = const Color(0xFF4E342E)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+
+    // Top stools
+    canvas.drawCircle(Offset(table.position.x - 20, top - 12), 7, stoolPaint);
+    canvas.drawCircle(Offset(table.position.x - 20, top - 12), 7, stoolBorder);
+    canvas.drawCircle(Offset(table.position.x + 20, top - 12), 7, stoolPaint);
+    canvas.drawCircle(Offset(table.position.x + 20, top - 12), 7, stoolBorder);
+
+    // Bottom stools
+    canvas.drawCircle(
+      Offset(table.position.x - 20, top + table.height + 12),
+      7,
+      stoolPaint,
+    );
+    canvas.drawCircle(
+      Offset(table.position.x - 20, top + table.height + 12),
+      7,
+      stoolBorder,
+    );
+    canvas.drawCircle(
+      Offset(table.position.x + 20, top + table.height + 12),
+      7,
+      stoolPaint,
+    );
+    canvas.drawCircle(
+      Offset(table.position.x + 20, top + table.height + 12),
+      7,
+      stoolBorder,
     );
   }
 }

@@ -20,6 +20,8 @@ class ChaiStation {
   double brewTimer;
   int shelfCapacity;
   int shelfCount;
+  int level;
+  final int maxLevel;
 
   // Transfer cooldown to make picking up items feel tactile (pop-pop-pop)
   double pickupInterval;
@@ -33,6 +35,8 @@ class ChaiStation {
     this.shelfCapacity = 8,
     this.pickupInterval = 0.14,
     this.pickupReach = 55.0,
+    this.level = 1,
+    this.maxLevel = 5,
   }) : position = position ?? Vector2(240.0, 240.0),
        pickupZoneCenter = Vector2(
          (position?.x ?? 240.0),
@@ -42,6 +46,16 @@ class ChaiStation {
        brewTimer = 0.0,
        shelfCount = 3, // Start with a few cups ready
        pickupTimer = 0.0;
+
+  /// Upgrades brewing kettle capacity and preparation speed.
+  void upgradeTo(int newLevel) {
+    level = newLevel;
+    shelfCapacity = 8 + (newLevel - 1) * 2; // 8, 10, 12, 14, 16
+    brewTime = math.max(
+      0.40,
+      1.0 - (newLevel - 1) * 0.15,
+    ); // 1.0s, 0.85s, 0.70s, 0.55s, 0.40s
+  }
 
   double get brewProgress => (brewTimer / brewTime).clamp(0.0, 1.0);
 
@@ -329,4 +343,24 @@ class TrashBin {
   void triggerDiscarded() {
     discardTimer = discardInterval;
   }
+}
+
+/// A dining table where customers sit down to eat, leave tips, and leave dirty trays.
+class DiningTable {
+  final int id;
+  final Vector2 position;
+  final double width;
+  final double height;
+  bool isUnlocked;
+  bool isOccupied;
+  bool hasDirtyTray;
+
+  DiningTable({
+    required this.id,
+    required this.position,
+    this.width = 90.0,
+    this.height = 64.0,
+    this.isUnlocked = false,
+  }) : isOccupied = false,
+       hasDirtyTray = false;
 }

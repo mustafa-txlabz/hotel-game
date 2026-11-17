@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'customer_ai.dart';
 import 'entities.dart';
+import 'ground_pad.dart';
 import 'stations.dart';
 
 /// Pure Dart world simulation managing physical bounds, entities, stations, and collisions.
@@ -20,6 +21,10 @@ class GameWorld {
   // Customer AI & Queue System (M3)
   final CustomerSystem customerSystem;
 
+  // In-Place Machine Upgrade & Floor Unlock Pads (M4)
+  final List<GroundPad> groundPads;
+  final List<DiningTable> diningTables;
+
   // Flying cash bundles and floating text popups
   final List<CashBundleEntity> cashBundles;
   final List<FloatingTextEntity> floatingTexts;
@@ -33,6 +38,7 @@ class GameWorld {
   void Function(ItemType item)? onItemDeposited;
   void Function(ItemType item)? onItemServed;
   void Function(double amount)? onCashCollected;
+  void Function(double amount)? onCashPoured;
   void Function()? onItemDiscarded;
 
   GameWorld({
@@ -44,6 +50,8 @@ class GameWorld {
     ServingCounter? servingCounter,
     TrashBin? trash,
     CustomerSystem? customers,
+    List<GroundPad>? pads,
+    List<DiningTable>? tables,
   }) : player = PlayerEntity(startPosition: Vector2(450.0, 600.0)),
        chaiStation = station ?? ChaiStation(position: Vector2(260.0, 260.0)),
        counter =
@@ -58,11 +66,65 @@ class GameWorld {
        cashBundles = [],
        floatingTexts = [],
        rupees = initialRupees,
-       lifetimeRupees = initialRupees {
+       lifetimeRupees = initialRupees,
+       diningTables =
+           tables ??
+           [
+             DiningTable(
+               id: 1,
+               position: Vector2(200.0, 950.0),
+               isUnlocked: false,
+             ),
+           ],
+       groundPads = pads ?? [] {
     // Forward customer served events to sound/haptic callback
     customerSystem.onCustomerServed = (customer, item) {
       onItemServed?.call(item);
     };
+
+    // Initialize default ground pads if not supplied
+    if (groundPads.isEmpty) {
+      final kettlePad = GroundPad(
+        id: 'kettle_upgrade',
+        type: PadType.machineUpgrade,
+        position: Vector2(375.0, 260.0),
+        title: 'UPGRADE L2',
+        totalCost: 50.0,
+        currentLevel: 1,
+        maxLevel: 5,
+        costForLevel: (targetLevel) {
+          switch (targetLevel) {
+            case 2:
+              return 50.0;
+            case 3:
+              return 100.0;
+            case 4:
+              return 180.0;
+            case 5:
+              return 300.0;
+            default:
+              return 50.0;
+          }
+        },
+        titleForLevel: (targetLevel) => 'UPGRADE L$targetLevel',
+        onLevelUp: (newLevel) {
+          chaiStation.upgradeTo(newLevel);
+        },
+      );
+
+      final tablePad = GroundPad(
+        id: 'table_1_unlock',
+        type: PadType.floorUnlock,
+        position: Vector2(200.0, 950.0),
+        title: 'TABLE 1',
+        totalCost: 80.0,
+        onUnlocked: () {
+          diningTables.first.isUnlocked = true;
+        },
+      );
+
+      groundPads.addAll([kettlePad, tablePad]);
+    }
   }
 
   /// Sets joystick input vector normalized (-1.0 to 1.0).
@@ -94,13 +156,18 @@ class GameWorld {
     // 3. Collision against perimeter boundary walls
     _clampPlayerToWorldBounds();
 
-    // 4. Solid counter collisions (kitchen kettle and serving counter)
+    // 4. Solid collisions (kitchen kettle, serving counter, unlocked dining tables)
     _resolveBoxCollision(
       chaiStation.position,
       chaiStation.width,
       chaiStation.height,
     );
     _resolveBoxCollision(counter.position, counter.width, counter.height);
+    for (final table in diningTables) {
+      if (table.isUnlocked) {
+        _resolveBoxCollision(table.position, table.width, table.height);
+      }
+    }
 
     // 5. Kitchen Pickup Zone detection (Chai Kettle)
     _checkKettlePickup();
@@ -120,11 +187,26 @@ class GameWorld {
     // 10. Trash bin discard detection
     _checkTrashDiscard();
 
-    // 11. Flying cash bundles & absorption
+    // 11. Ground Upgrade & Unlock Pads (M4)
+    _checkGroundPads(dt);
+
+    // 12. Flying cash bundles & absorption
     _updateCashBundles(dt);
 
-    // 12. Floating text popups
+    // 13. Floating text popups
     _updateFloatingTexts(dt);
+  }
+
+  void _checkGroundPads(double dt) {
+    for (final pad in groundPads) {
+      if (pad.isInside(player.position) && !pad.isCompleted) {
+        final poured = pad.pourCash(rupees, dt);
+        if (poured > 0.0) {
+          rupees -= poured;
+          onCashPoured?.call(poured);
+        }
+      }
+    }
   }
 
   void _clampPlayerToWorldBounds() {
