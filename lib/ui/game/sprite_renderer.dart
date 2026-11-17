@@ -428,13 +428,13 @@ class SpriteRenderer {
     // 1. Floor Interactive Zones Around Counter
     // -------------------------------------------------------------
 
-    // Left: Food Deposit Zone Pad (wraps top/behind, left flank, and bottom/front)
+    // Left: Food Deposit Zone Pad (compact wrap top/behind, left flank, and bottom/front)
     final leftPadRect = RRect.fromRectAndCorners(
-      const Rect.fromLTRB(242.0, 634.0, 398.0, 806.0),
-      topLeft: const Radius.circular(18),
-      bottomLeft: const Radius.circular(18),
-      topRight: const Radius.circular(8),
-      bottomRight: const Radius.circular(8),
+      const Rect.fromLTRB(265.0, 660.0, 396.0, 780.0),
+      topLeft: const Radius.circular(14),
+      bottomLeft: const Radius.circular(14),
+      topRight: const Radius.circular(6),
+      bottomRight: const Radius.circular(6),
     );
     final leftPadFill = Paint()
       ..color = AppTheme.saffronOrange.withValues(alpha: 0.14);
@@ -445,26 +445,15 @@ class SpriteRenderer {
       ..strokeWidth = 2.0;
     canvas.drawRRect(leftPadRect, leftPadBorder);
 
+    // Single clean label for left food zone
     _drawZoneText(
       canvas,
-      const Offset(320.0, 660.0),
+      const Offset(330.0, 646.0),
       'DEPOSIT',
       AppTheme.saffronOrange,
     );
-    _drawZoneText(
-      canvas,
-      const Offset(270.0, 720.0),
-      'DROP',
-      AppTheme.saffronOrange,
-    );
-    _drawZoneText(
-      canvas,
-      const Offset(320.0, 780.0),
-      'DROP',
-      AppTheme.saffronOrange,
-    );
 
-    // Center: Cashier Standing Station (Comfortable Enlarged Green Center Circle)
+    // Center: Cashier Standing Station (Comfortable Green Center Circle)
     final cz = counter.cashierZoneCenter;
     final czRadius = counter.cashierZoneRadius;
     final isPresent = counter.isCashierPresent;
@@ -488,13 +477,13 @@ class SpriteRenderer {
       isPresent ? Colors.white : AppTheme.truckArtGreen,
     );
 
-    // Right: Cash Collection Zone Pad (wraps top/behind, right flank, and bottom/front)
+    // Right: Cash Collection Zone Pad (compact wrap top/behind, right flank, and bottom/front)
     final rightPadRect = RRect.fromRectAndCorners(
-      const Rect.fromLTRB(502.0, 634.0, 658.0, 806.0),
-      topRight: const Radius.circular(18),
-      bottomRight: const Radius.circular(18),
-      topLeft: const Radius.circular(8),
-      bottomLeft: const Radius.circular(8),
+      const Rect.fromLTRB(504.0, 660.0, 635.0, 780.0),
+      topRight: const Radius.circular(14),
+      bottomRight: const Radius.circular(14),
+      topLeft: const Radius.circular(6),
+      bottomLeft: const Radius.circular(6),
     );
     final rightPadFill = Paint()
       ..color = AppTheme.goldYellow.withValues(alpha: 0.14);
@@ -505,22 +494,11 @@ class SpriteRenderer {
       ..strokeWidth = 2.0;
     canvas.drawRRect(rightPadRect, rightPadBorder);
 
+    // Single clean label for right cash zone
     _drawZoneText(
       canvas,
-      const Offset(580.0, 660.0),
+      const Offset(570.0, 646.0),
       'COLLECT',
-      AppTheme.chaiDarkBrown,
-    );
-    _drawZoneText(
-      canvas,
-      const Offset(630.0, 720.0),
-      'CASH',
-      AppTheme.chaiDarkBrown,
-    );
-    _drawZoneText(
-      canvas,
-      const Offset(580.0, 780.0),
-      'CASH',
       AppTheme.chaiDarkBrown,
     );
 

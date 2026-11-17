@@ -167,9 +167,9 @@ class ServingCounter {
        // Cashier station is strictly behind the center of the counter
        cashierZoneCenter = Vector2(
          (position?.x ?? 450.0),
-         (position?.y ?? 720.0) - 56.0,
+         (position?.y ?? 720.0) - 52.0,
        ),
-       cashierZoneRadius = 46.0,
+       cashierZoneRadius = 44.0,
        isCashierPresent = false,
        serviceTimer = 0.0,
 
@@ -178,7 +178,7 @@ class ServingCounter {
          (position?.x ?? 450.0) + 90.0,
          (position?.y ?? 720.0) - 52.0,
        ),
-       cashCollectionZoneRadius = 46.0,
+       cashCollectionZoneRadius = 44.0,
        cashBundleCount = 0,
        cashCollectTimer = 0.0;
 
@@ -198,17 +198,17 @@ class ServingCounter {
 
   // --- Strictly Non-Overlapping Zone Checks ---
 
-  /// Food deposit: wraps around the left section of counter on top (behind),
+  /// Food deposit: compact wrap around the left section of counter on top (behind),
   /// left flank, and bottom (front), stopping strictly before the center cashier zone.
-  /// Hard partition: pos.x <= 398.0 (Cashier starts at >= 404.0)
+  /// Hard partition: pos.x <= 396.0 (Cashier starts at >= 406.0)
   bool isInsideFoodDepositZone(Vector2 pos) {
-    if (pos.x > 398.0) return false;
+    if (pos.x > 396.0) return false;
 
     final counterLeft = position.x - width / 2; // 300.0
-    final leftBound = counterLeft - 60.0; // 240.0
-    final rightBound = position.x - 52.0; // 398.0
-    final topBound = position.y - height / 2 - 58.0; // 634.0
-    final bottomBound = position.y + height / 2 + 58.0; // 806.0
+    final leftBound = counterLeft - 35.0; // 265.0
+    final rightBound = position.x - 54.0; // 396.0
+    final topBound = position.y - height / 2 - 32.0; // 660.0
+    final bottomBound = position.y + height / 2 + 32.0; // 780.0
 
     return pos.x >= leftBound &&
         pos.x <= rightBound &&
@@ -217,22 +217,22 @@ class ServingCounter {
   }
 
   /// Cashier station: comfortable enlarged circle strictly centered behind the counter.
-  /// Radius 46px from (450, 664) covers x in [404, 496].
+  /// Radius 44px from (450, 668) covers x in [406, 494].
   bool isInsideCashierZone(Vector2 pos) {
     return pos.distanceTo(cashierZoneCenter) <= cashierZoneRadius;
   }
 
-  /// Cash collection: wraps around the right section of counter on top (behind),
+  /// Cash collection: compact wrap around the right section of counter on top (behind),
   /// right flank, and bottom (front), stopping strictly before the center cashier zone.
-  /// Hard partition: pos.x >= 502.0 (Cashier ends at <= 496.0)
+  /// Hard partition: pos.x >= 504.0 (Cashier ends at <= 494.0)
   bool isInsideCashCollectionZone(Vector2 pos) {
-    if (pos.x < 502.0) return false;
+    if (pos.x < 504.0) return false;
 
     final counterRight = position.x + width / 2; // 600.0
-    final leftBound = position.x + 52.0; // 502.0
-    final rightBound = counterRight + 60.0; // 660.0
-    final topBound = position.y - height / 2 - 58.0; // 634.0
-    final bottomBound = position.y + height / 2 + 58.0; // 806.0
+    final leftBound = position.x + 54.0; // 504.0
+    final rightBound = counterRight + 35.0; // 635.0
+    final topBound = position.y - height / 2 - 32.0; // 660.0
+    final bottomBound = position.y + height / 2 + 32.0; // 780.0
 
     return pos.x >= leftBound &&
         pos.x <= rightBound &&
