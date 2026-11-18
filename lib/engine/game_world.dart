@@ -834,8 +834,8 @@ class GameWorld {
     }
 
     // 4. Counter needs restocking: fetch chai from Chai Kettle!
-    // Any free worker (Runner or Busboy when tables are clean) actively helps restock chai!
-    final needsRestock = counter.totalFoodCount < 10;
+    // Any free worker actively helps restock chai as long as counter has room (up to 30 items)!
+    final needsRestock = counter.hasFoodRoom;
     final canHelpRestock = needsRestock;
 
     if (canHelpRestock && !chotu.isFull) {

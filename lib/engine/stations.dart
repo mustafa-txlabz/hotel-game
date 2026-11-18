@@ -144,6 +144,8 @@ class ServingCounter {
   final Vector2 foodDepositZoneCenter;
   final double foodDepositZoneRadius;
   final List<CounterItemTower> foodTowers;
+  final int maxColumns;
+  final int maxPerTower;
   double depositTimer;
   final double depositInterval;
 
@@ -168,6 +170,8 @@ class ServingCounter {
     this.depositInterval = 0.14,
     this.serviceInterval = 0.32,
     this.cashCollectInterval = 0.08,
+    this.maxColumns = 3,
+    this.maxPerTower = 10,
   }) : position = position ?? Vector2(450.0, 720.0),
        // Food deposit is behind the left portion of the counter
        foodDepositZoneCenter = Vector2(
@@ -203,6 +207,10 @@ class ServingCounter {
     }
     return sum;
   }
+
+  int get maxFoodCapacity => maxColumns * maxPerTower;
+  bool get isFoodFull => totalFoodCount >= maxFoodCapacity;
+  bool get hasFoodRoom => totalFoodCount < maxFoodCapacity;
 
   void update(double dt) {
     if (depositTimer > 0.0) depositTimer -= dt;
@@ -261,6 +269,7 @@ class ServingCounter {
     // Dirty trays must NEVER be deposited on the food counter!
     if (item == ItemType.dirtyTray) return false;
     if (!canDepositFood()) return false;
+    if (isFoodFull) return false;
 
     // Find existing non-full tower of the SAME item type
     for (final tower in foodTowers) {
@@ -271,9 +280,15 @@ class ServingCounter {
       }
     }
 
-    // Otherwise create a new tower for this item type (up to max 4 towers on counter)
-    if (foodTowers.length < 4) {
-      foodTowers.add(CounterItemTower(itemType: item, count: 1));
+    // Otherwise create a new tower for this item type (up to maxColumns)
+    if (foodTowers.length < maxColumns) {
+      foodTowers.add(
+        CounterItemTower(
+          itemType: item,
+          count: 1,
+          maxPerTower: maxPerTower,
+        ),
+      );
       depositTimer = depositInterval;
       return true;
     }

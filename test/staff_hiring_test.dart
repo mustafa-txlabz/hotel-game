@@ -295,6 +295,86 @@ void main() {
       expect(depositedCount, 2);
       expect(world.counter.totalFoodCount, 2);
     });
+
+    test('Counter supports 3 columns x 10 items = 30 max items, workers restock past 10', () {
+      final world = GameWorld(initialRupees: 0.0);
+      expect(world.counter.maxColumns, 3);
+      expect(world.counter.maxFoodCapacity, 30);
+
+      // Fill first column completely (10 items)
+      world.counter.foodTowers.first.count = 10;
+      expect(world.counter.totalFoodCount, 10);
+      expect(world.counter.hasFoodRoom, isTrue); // Has room for columns 2 & 3!
+
+      world.hireChotu(free: true);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.chotu);
+
+      // Kettle has brewed cups
+      world.chaiStation.shelfCount = 5;
+
+      // Position Chotu at kettle
+      chotu.position.x = world.chaiStation.pickupZoneCenter.x;
+      chotu.position.y = world.chaiStation.pickupZoneCenter.y;
+
+      world.tick(0.1);
+
+      // Worker actively picks up chai to fill column 2 (does NOT stop because column 1 was 10!)
+      expect(chotu.carriedCount, greaterThan(0));
+      expect(chotu.taskState, ChotuTaskState.deliveringChai);
+
+      // Teleport Chotu to counter
+      chotu.position.x = world.counter.foodDepositZoneCenter.x;
+      chotu.position.y = world.counter.foodDepositZoneCenter.y;
+
+      for (int i = 0; i < 15; i++) {
+        world.tick(0.15);
+      }
+
+      // Tower 2 is created and contains items! Total food count > 10!
+      expect(world.counter.foodTowers.length, 2);
+      expect(world.counter.totalFoodCount, greaterThan(10));
+    });
+
+    test('Worker with overflow item waits at counter when 30 items full and deposits when space opens', () {
+      final world = GameWorld(initialRupees: 0.0);
+      world.hireChotu(free: true);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.chotu);
+
+      // Fill counter to 29 items (1 item room left to reach 30)
+      world.counter.foodTowers.clear();
+      world.counter.foodTowers.add(CounterItemTower(itemType: ItemType.chai, count: 10));
+      world.counter.foodTowers.add(CounterItemTower(itemType: ItemType.chai, count: 10));
+      world.counter.foodTowers.add(CounterItemTower(itemType: ItemType.chai, count: 9));
+      expect(world.counter.totalFoodCount, 29);
+
+      // Chotu carries 2 cups
+      chotu.addItem(ItemType.chai);
+      chotu.addItem(ItemType.chai);
+      chotu.taskState = ChotuTaskState.deliveringChai;
+
+      // Position Chotu at food deposit zone
+      chotu.position.x = world.counter.foodDepositZoneCenter.x;
+      chotu.position.y = world.counter.foodDepositZoneCenter.y;
+
+      world.tick(0.1); // Deposits 1st cup, counter becomes 30/30 (FULL!)
+
+      expect(world.counter.totalFoodCount, 30);
+      expect(world.counter.isFoodFull, isTrue);
+      expect(chotu.carriedCount, 1); // 1 cup remains in hands!
+      expect(chotu.taskState, ChotuTaskState.deliveringChai); // Waiting at counter holding it!
+
+      // Customer takes 1 cup from counter
+      final taken = world.counter.takeFoodItem(ItemType.chai);
+      expect(taken, ItemType.chai);
+      expect(world.counter.totalFoodCount, 29); // Space opened!
+
+      world.counter.depositTimer = 0.0;
+      world.tick(0.1); // Chotu immediately deposits the remaining cup!
+
+      expect(chotu.carriedCount, 0); // Hands now empty!
+      expect(world.counter.totalFoodCount, 30); // Counter back to 30!
+      expect(chotu.taskState, ChotuTaskState.idle);
+    });
   });
 
   group('HR Upgrades System (M6)', () {
