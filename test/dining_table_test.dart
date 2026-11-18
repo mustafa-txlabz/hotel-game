@@ -168,6 +168,8 @@ void main() {
       customer.update(2.0);
       expect(customer.isMoving, isTrue);
       expect(customer.state, CustomerState.walkingToTable);
+      expect(seat.isOccupied, isTrue);
+      expect(seat.isSeated, isFalse); // Item not shown on table while customer is walking!
 
       // Arrive at stool seat
       customer.position.x = seat.position.x;
@@ -178,20 +180,24 @@ void main() {
       expect(customer.isMoving, isFalse);
       expect(customer.eatTimer, 0.0);
       expect(customer.angle, seat.facingAngle); // Faces table!
+      expect(seat.isSeated, isTrue); // Item now appears on table once customer is seated!
 
       // Simulate eating for 3 seconds
       system.update(3.0, ServingCounter());
       expect(customer.state, CustomerState.eating);
       expect(seat.hasDirtyTray, isFalse);
       expect(seat.cashTip, 0.0);
+      expect(seat.isSeated, isTrue);
 
       // Finish eating
       system.update(1.5, ServingCounter());
 
       expect(customer.state, CustomerState.leavingHappy);
+      expect(customer.hasDinedIn, isTrue);
       expect(customer.assignedTable, isNull);
       expect(customer.assignedSeat, isNull);
       expect(seat.isOccupied, isFalse);
+      expect(seat.isSeated, isFalse);
       expect(seat.hasDirtyTray, isTrue);
       expect(seat.cashTip, GameBalance.dineInTip); // Rs 25 tip!
       expect(seat.isAvailable, isFalse);

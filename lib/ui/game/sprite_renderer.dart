@@ -348,9 +348,9 @@ class SpriteRenderer {
     canvas.drawCircle(const Offset(-13, 2), 4.5, handPaint);
     canvas.drawCircle(const Offset(13, 2), 4.5, handPaint);
 
-    // If leaving happy or walking to table, carry a cup of chai in hand!
-    if (customer.state == CustomerState.leavingHappy ||
-        customer.state == CustomerState.walkingToTable) {
+    // If walking to table or leaving happy from takeaway (not after dine-in meal), carry a cup of chai in hand!
+    if (customer.state == CustomerState.walkingToTable ||
+        (customer.state == CustomerState.leavingHappy && !customer.hasDinedIn)) {
       canvas.save();
       canvas.translate(0, 12);
       _drawChaiCup(canvas, 0.65);
@@ -1621,8 +1621,8 @@ class SpriteRenderer {
       final surfaceY =
           seat.facingAngle > 0 ? (table.position.y - 14.0) : (table.position.y + 14.0);
 
-      // Active diner eating chai at this seat
-      if (seat.isOccupied) {
+      // Active diner eating chai at this seat (only visible once diner has reached and sat at the table!)
+      if (seat.isOccupied && seat.isSeated) {
         canvas.save();
         canvas.translate(surfaceX, surfaceY);
         _drawChaiCup(canvas, 0.65);

@@ -368,6 +368,7 @@ class TableSeat {
   final Vector2 position;
   final double facingAngle;
   bool isOccupied;
+  bool isSeated;
   bool hasDirtyTray;
   double cashTip;
 
@@ -376,6 +377,7 @@ class TableSeat {
     required this.position,
     required this.facingAngle,
     this.isOccupied = false,
+    this.isSeated = false,
     this.hasDirtyTray = false,
     this.cashTip = 0.0,
   });
@@ -433,6 +435,7 @@ class DiningTable {
 
     if (isOccupied) {
       seats.first.isOccupied = true;
+      seats.first.isSeated = true;
     }
     if (hasDirtyTray) {
       seats.first.hasDirtyTray = true;
@@ -482,6 +485,7 @@ class DiningTable {
   set isOccupied(bool value) {
     for (final s in seats) {
       s.isOccupied = value;
+      s.isSeated = value;
     }
   }
 

@@ -44,6 +44,7 @@ class CustomerEntity {
   TableSeat? assignedSeat;
   double eatTimer;
   final double eatDuration;
+  bool hasDinedIn;
 
   CustomerEntity({
     required this.id,
@@ -65,7 +66,8 @@ class CustomerEntity {
        isMoving = false,
        eatTimer = 0.0,
        assignedTable = null,
-       assignedSeat = null;
+       assignedSeat = null,
+       hasDinedIn = false;
 
   bool get isOrderComplete => receivedCount >= desiredCount;
   bool get isLeaving =>
@@ -101,6 +103,7 @@ class CustomerEntity {
         state = CustomerState.eating;
         eatTimer = 0.0;
         angle = assignedSeat?.facingAngle ?? -math.pi / 2;
+        assignedSeat?.isSeated = true;
       }
     } else {
       isMoving = true;
@@ -261,6 +264,7 @@ class CustomerSystem {
           final seat = customer.assignedSeat;
           if (seat != null) {
             seat.isOccupied = false;
+            seat.isSeated = false;
             seat.hasDirtyTray = true;
             seat.cashTip = GameBalance.dineInTip; // Leave Rs 25 tip at this seat!
           }
@@ -269,6 +273,7 @@ class CustomerSystem {
           }
           customer.assignedSeat = null;
           customer.assignedTable = null;
+          customer.hasDinedIn = true;
           customer.state = CustomerState.leavingHappy;
           customer.targetPosition = entrancePosition.copy();
         }
@@ -325,6 +330,7 @@ class CustomerSystem {
                 if (targetSeat != null && targetTable != null) {
                   // Customer claims specific seat and walks to sit down
                   targetSeat.isOccupied = true;
+                  targetSeat.isSeated = false;
                   headCustomer.assignedTable = targetTable;
                   headCustomer.assignedSeat = targetSeat;
                   headCustomer.state = CustomerState.walkingToTable;
