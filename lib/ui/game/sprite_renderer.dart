@@ -1997,13 +1997,11 @@ class SpriteRenderer {
     // Body: White shalwar kameez
     canvas.drawCircle(const Offset(0, 2), 14, Paint()..color = const Color(0xFFF5F5F5));
 
-    // Distinct Apron & Vest styling based on duty (Runner vs Busboy)
-    final isRunner = chotu.duty == ChotuDuty.runner;
-    final apronColor = isRunner ? Colors.deepOrange : const Color(0xFF00897B);
-    final pocketColor = isRunner ? const Color(0xFFBF360C) : const Color(0xFF004D40);
-    final bandColor = isRunner ? const Color(0xFFD32F2F) : const Color(0xFF00695C);
-    final badgeBgColor = isRunner ? Colors.deepOrange.shade800 : const Color(0xFF00695C);
-    final dutyEmoji = isRunner ? '☕' : '🧹';
+    // Cohesive Vibrant Yellow Uniform for all Dhaba workers (Chotus)
+    const apronColor = Color(0xFFFFB300); // Warm Golden Yellow
+    const pocketColor = Color(0xFFF57F17); // Rich Amber Pocket Accent
+    const bandColor = Color(0xFFE65100); // Deep Amber / Dhaba Runner Headband
+    const badgeBgColor = Color(0xFFE65100); // Deep Amber Badge
 
     final apronRect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: const Offset(0, 3), width: 19, height: 14),
@@ -2045,17 +2043,17 @@ class SpriteRenderer {
     // 5. Name badge above head (if not carrying items)
     if (chotu.carriedCount == 0) {
       final nameBadge = RRect.fromRectAndRadius(
-        Rect.fromCenter(center: const Offset(0, -25), width: 48, height: 14),
+        Rect.fromCenter(center: const Offset(0, -25), width: 44, height: 14),
         const Radius.circular(4),
       );
       canvas.drawRRect(nameBadge, Paint()..color = badgeBgColor);
       final nameText = TextPainter(
         text: TextSpan(
-          text: '${chotu.name} $dutyEmoji',
+          text: chotu.name,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w900,
-            fontSize: 7.0,
+            fontSize: 7.5,
           ),
         ),
         textDirection: TextDirection.ltr,

@@ -834,9 +834,9 @@ class GameWorld {
     }
 
     // 4. Counter needs restocking: fetch chai from Chai Kettle!
+    // Any free worker (Runner or Busboy when tables are clean) actively helps restock chai!
     final needsRestock = counter.totalFoodCount < 10;
-    final canHelpRestock = needsRestock &&
-        (chotu.duty == ChotuDuty.runner || chaiStation.shelfCount > 0);
+    final canHelpRestock = needsRestock;
 
     if (canHelpRestock && !chotu.isFull) {
       chotu.assignedTableId = null;
@@ -861,24 +861,14 @@ class GameWorld {
       return;
     }
 
-    // 5. Idle / Standby at designated staff stations (NOT running to HR desk!)
+    // 5. Idle / Standby near kitchen prep area (NOT standing idle by tables or HR desk!)
     chotu.taskState = ChotuTaskState.idle;
     chotu.assignedTableId = null;
 
-    if (chotu.duty == ChotuDuty.runner) {
-      // Runner stands near the kitchen prep counter facing the dhaba
-      chotu.targetPosition.x = chaiStation.pickupZoneCenter.x + laneOffset;
-      chotu.targetPosition.y = chaiStation.pickupZoneCenter.y + 12.0;
-      if (!chotu.isMoving) {
-        chotu.angle = math.pi / 2; // Facing down towards dhaba
-      }
-    } else {
-      // Busboy stands in dining hall buffer zone ready for customers
-      chotu.targetPosition.x = 450.0 + laneOffset;
-      chotu.targetPosition.y = 880.0;
-      if (!chotu.isMoving) {
-        chotu.angle = math.pi / 2; // Facing south towards dining tables
-      }
+    chotu.targetPosition.x = chaiStation.pickupZoneCenter.x + laneOffset;
+    chotu.targetPosition.y = chaiStation.pickupZoneCenter.y + 12.0;
+    if (!chotu.isMoving) {
+      chotu.angle = math.pi / 2; // Facing down towards dhaba
     }
   }
 }
