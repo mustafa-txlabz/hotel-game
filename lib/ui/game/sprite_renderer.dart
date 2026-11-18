@@ -1997,12 +1997,19 @@ class SpriteRenderer {
     // Body: White shalwar kameez
     canvas.drawCircle(const Offset(0, 2), 14, Paint()..color = const Color(0xFFF5F5F5));
 
-    // Vibrant Orange Runner Vest / Apron
+    // Distinct Apron & Vest styling based on duty (Runner vs Busboy)
+    final isRunner = chotu.duty == ChotuDuty.runner;
+    final apronColor = isRunner ? Colors.deepOrange : const Color(0xFF00897B);
+    final pocketColor = isRunner ? const Color(0xFFBF360C) : const Color(0xFF004D40);
+    final bandColor = isRunner ? const Color(0xFFD32F2F) : const Color(0xFF00695C);
+    final badgeBgColor = isRunner ? Colors.deepOrange.shade800 : const Color(0xFF00695C);
+    final dutyEmoji = isRunner ? '☕' : '🧹';
+
     final apronRect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: const Offset(0, 3), width: 19, height: 14),
       const Radius.circular(4),
     );
-    canvas.drawRRect(apronRect, Paint()..color = Colors.deepOrange);
+    canvas.drawRRect(apronRect, Paint()..color = apronColor);
 
     // Apron Pocket
     canvas.drawRRect(
@@ -2010,14 +2017,14 @@ class SpriteRenderer {
         Rect.fromCenter(center: const Offset(0, 6), width: 9, height: 5),
         const Radius.circular(2),
       ),
-      Paint()..color = const Color(0xFFBF360C),
+      Paint()..color = pocketColor,
     );
 
     // Head
     canvas.drawCircle(const Offset(0, -6), 12, Paint()..color = AppTheme.characterSkin);
 
-    // Red Headband / Kerchief
-    final bandPaint = Paint()..color = const Color(0xFFD32F2F);
+    // Headband / Kerchief
+    final bandPaint = Paint()..color = bandColor;
     canvas.drawCircle(const Offset(0, -7), 10, bandPaint);
     canvas.drawRect(
       Rect.fromCenter(center: const Offset(0, -6), width: 18, height: 4),
@@ -2038,17 +2045,17 @@ class SpriteRenderer {
     // 5. Name badge above head (if not carrying items)
     if (chotu.carriedCount == 0) {
       final nameBadge = RRect.fromRectAndRadius(
-        Rect.fromCenter(center: const Offset(0, -25), width: 44, height: 14),
+        Rect.fromCenter(center: const Offset(0, -25), width: 48, height: 14),
         const Radius.circular(4),
       );
-      canvas.drawRRect(nameBadge, Paint()..color = Colors.deepOrange.shade800);
+      canvas.drawRRect(nameBadge, Paint()..color = badgeBgColor);
       final nameText = TextPainter(
         text: TextSpan(
-          text: chotu.name,
+          text: '${chotu.name} $dutyEmoji',
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w900,
-            fontSize: 7.5,
+            fontSize: 7.0,
           ),
         ),
         textDirection: TextDirection.ltr,

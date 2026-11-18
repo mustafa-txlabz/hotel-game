@@ -10,6 +10,12 @@ enum StaffRole {
   chotu, // Waiter / Runner
 }
 
+/// Preferred duty specialization for Chotu workers.
+enum ChotuDuty {
+  runner, // Focuses on Chai kettle -> Counter restocking
+  busboy, // Focuses on Dining table cleaning & tips -> Trash bin
+}
+
 /// AI Task states for autonomous Chotus (Waiters).
 enum ChotuTaskState {
   idle,
@@ -35,8 +41,10 @@ class StaffEntity {
   final List<ItemType> carriedItems;
   double wobbleAngle;
 
-  // AI Task tracking for Chotus
+  // AI Task & duty tracking for Chotus
   ChotuTaskState taskState;
+  ChotuDuty duty;
+  int? assignedTableId;
   double stateTimer;
 
   StaffEntity({
@@ -47,6 +55,8 @@ class StaffEntity {
     this.speed = GameBalance.workerBaseSpeed,
     this.radius = 18.0,
     this.carryCapacity = GameBalance.workerBaseCapacity,
+    this.duty = ChotuDuty.runner,
+    this.assignedTableId,
   }) : position = startPosition.copy(),
        targetPosition = startPosition.copy(),
        angle = math.pi / 2, // Facing down

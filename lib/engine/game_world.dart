@@ -551,13 +551,20 @@ class GameWorld {
     if (!free && rupees < cost) return false;
     if (!free) rupees -= cost;
 
+    // Alternate duties: 1st is Runner (Chai restock), 2nd is Busboy (table cleaning), etc.
+    final duty = (chotuCount % 2 == 0) ? ChotuDuty.runner : ChotuDuty.busboy;
+    final startPos = duty == ChotuDuty.runner
+        ? Vector2(chaiStation.pickupZoneCenter.x, chaiStation.pickupZoneCenter.y + 12.0)
+        : Vector2(450.0, 880.0);
+
     final chotu = StaffEntity(
       id: nextStaffId++,
       name: 'Chotu ${chotuCount + 1}',
       role: StaffRole.chotu,
-      startPosition: Vector2(660.0, 380.0),
+      startPosition: startPos,
       speed: currentWorkerSpeed,
       carryCapacity: currentWorkerCapacity,
+      duty: duty,
     );
     staff.add(chotu);
 
@@ -687,16 +694,31 @@ class GameWorld {
     return true;
   }
 
+  bool _isTableClaimedByOther(int tableId, int currentWorkerId) {
+    for (final s in staff) {
+      if (s.role == StaffRole.chotu &&
+          s.id != currentWorkerId &&
+          s.assignedTableId == tableId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   // --- Autonomous Chotu AI Logic (M6) ---
 
   void _updateChotuAI(StaffEntity chotu, double dt) {
     chotu.updateMovement(dt);
 
+    // Natural lane offset based on worker ID so multiple Chotus never overlap on identical tracks
+    final laneOffset = ((chotu.id % 3) - 1) * 20.0;
+
     // 1. If carrying dirty trays, primary objective is to dump them at Trash Bin!
     if (chotu.carriedItems.contains(ItemType.dirtyTray)) {
       chotu.targetPosition.x = trashBin.position.x + 25.0;
-      chotu.targetPosition.y = trashBin.position.y;
+      chotu.targetPosition.y = trashBin.position.y + laneOffset * 0.5;
       chotu.taskState = ChotuTaskState.dumpingTrash;
+      chotu.assignedTableId = null;
 
       if (trashBin.isInsideZone(chotu.position) && trashBin.canDiscard()) {
         final idx = chotu.carriedItems.indexOf(ItemType.dirtyTray);
@@ -718,9 +740,10 @@ class GameWorld {
     // 2. If carrying chai cups, deliver them to the Serving Counter food towers!
     if (chotu.taskState == ChotuTaskState.deliveringChai ||
         chotu.carriedItems.contains(ItemType.chai)) {
-      chotu.targetPosition.x = counter.position.x - 70.0;
+      chotu.targetPosition.x = counter.position.x - 70.0 + laneOffset;
       chotu.targetPosition.y = counter.position.y - 45.0;
       chotu.taskState = ChotuTaskState.deliveringChai;
+      chotu.assignedTableId = null;
 
       if (counter.isInsideFoodDepositZone(chotu.position)) {
         if (counter.canDepositFood()) {
@@ -739,23 +762,38 @@ class GameWorld {
       return;
     }
 
-    // 3. Not carrying items: check if any unlocked dining table has dirty trays or cash tips!
-    DiningTable? dirtyTable;
+    // 3. Hands are empty: Check for unclaimed dirty dining tables
+    DiningTable? unclaimedDirtyTable;
     for (final table in diningTables) {
       if (table.isUnlocked && (table.hasDirtyTray || table.cashTip > 0.0)) {
-        dirtyTable = table;
-        break;
+        if (!_isTableClaimedByOther(table.id, chotu.id)) {
+          unclaimedDirtyTable = table;
+          break;
+        }
       }
     }
 
-    if (dirtyTable != null && !chotu.isFull) {
-      chotu.targetPosition.x = dirtyTable.position.x;
-      chotu.targetPosition.y = dirtyTable.position.y + 40.0;
+    // Busboys prioritize table cleaning. Solo worker balances both. Runners focus on restocking unless counter is full or already in clean zone.
+    final isInsideTableZone = unclaimedDirtyTable != null &&
+        unclaimedDirtyTable.isInsideCleanZone(chotu.position);
+
+    final wantsToClean = unclaimedDirtyTable != null &&
+        !chotu.isFull &&
+        (isInsideTableZone ||
+            chotu.duty == ChotuDuty.busboy ||
+            (chotuCount == 1 &&
+                (counter.totalFoodCount >= 2 || chaiStation.shelfCount == 0)) ||
+            counter.totalFoodCount >= 10);
+
+    if (wantsToClean) {
+      chotu.assignedTableId = unclaimedDirtyTable.id;
+      chotu.targetPosition.x = unclaimedDirtyTable.position.x;
+      chotu.targetPosition.y = unclaimedDirtyTable.position.y + 40.0;
       chotu.taskState = ChotuTaskState.cleaningTable;
 
-      if (dirtyTable.isInsideCleanZone(chotu.position)) {
+      if (unclaimedDirtyTable.isInsideCleanZone(chotu.position)) {
         // Collect tips
-        for (final seat in dirtyTable.seats) {
+        for (final seat in unclaimedDirtyTable.seats) {
           if (seat.cashTip > 0.0) {
             final tip = seat.cashTip;
             seat.cashTip = 0.0;
@@ -763,7 +801,7 @@ class GameWorld {
             lifetimeRupees += tip;
             floatingTexts.add(
               FloatingTextEntity(
-                position: Vector2(seat.position.x, dirtyTable.position.y - 20.0),
+                position: Vector2(seat.position.x, unclaimedDirtyTable.position.y - 20.0),
                 text: '+Rs ${tip.toInt()}',
               ),
             );
@@ -772,7 +810,7 @@ class GameWorld {
         }
 
         // Pick up dirty trays
-        for (final seat in dirtyTable.seats) {
+        for (final seat in unclaimedDirtyTable.seats) {
           if (seat.hasDirtyTray && !chotu.isFull) {
             chotu.addItem(ItemType.dirtyTray);
             seat.hasDirtyTray = false;
@@ -781,16 +819,20 @@ class GameWorld {
         }
         if (chotu.carriedItems.contains(ItemType.dirtyTray)) {
           chotu.taskState = ChotuTaskState.dumpingTrash;
+          chotu.assignedTableId = null;
         }
       }
       return;
     }
 
     // 4. Counter needs restocking: fetch chai from Chai Kettle!
-    if (counter.totalFoodCount < 10 &&
-        chaiStation.shelfCount > 0 &&
-        !chotu.isFull) {
-      chotu.targetPosition.x = chaiStation.pickupZoneCenter.x;
+    final needsRestock = counter.totalFoodCount < 10;
+    final canHelpRestock = needsRestock &&
+        (chotu.duty == ChotuDuty.runner || chaiStation.shelfCount > 0);
+
+    if (canHelpRestock && !chotu.isFull) {
+      chotu.assignedTableId = null;
+      chotu.targetPosition.x = chaiStation.pickupZoneCenter.x + laneOffset;
       chotu.targetPosition.y = chaiStation.pickupZoneCenter.y;
       chotu.taskState = ChotuTaskState.fetchingChai;
 
@@ -803,19 +845,32 @@ class GameWorld {
         }
         if (chotu.carriedCount > 0) {
           chotu.taskState = ChotuTaskState.deliveringChai;
+        } else {
+          // Kettle is currently brewing: wait at pickup zone facing the kettle (no sprint to HR desk!)
+          chotu.angle = -math.pi / 2;
         }
       }
       return;
     }
 
-    // 5. Idle / Standby near Dhaba staff rest area (near HR desk)
+    // 5. Idle / Standby at designated staff stations (NOT running to HR desk!)
     chotu.taskState = ChotuTaskState.idle;
-    final restX = 660.0 + (chotu.id % 3) * 35.0;
-    final restY = 380.0 + ((chotu.id ~/ 3) % 2) * 35.0;
-    chotu.targetPosition.x = restX;
-    chotu.targetPosition.y = restY;
-    if (!chotu.isMoving) {
-      chotu.angle = math.pi / 2; // Face forward
+    chotu.assignedTableId = null;
+
+    if (chotu.duty == ChotuDuty.runner) {
+      // Runner stands near the kitchen prep counter facing the dhaba
+      chotu.targetPosition.x = chaiStation.pickupZoneCenter.x + laneOffset;
+      chotu.targetPosition.y = chaiStation.pickupZoneCenter.y + 12.0;
+      if (!chotu.isMoving) {
+        chotu.angle = math.pi / 2; // Facing down towards dhaba
+      }
+    } else {
+      // Busboy stands in dining hall buffer zone ready for customers
+      chotu.targetPosition.x = 450.0 + laneOffset;
+      chotu.targetPosition.y = 880.0;
+      if (!chotu.isMoving) {
+        chotu.angle = math.pi / 2; // Facing south towards dining tables
+      }
     }
   }
 }

@@ -206,6 +206,64 @@ void main() {
       // Dirty tray dumped in trash!
       expect(chotu.carriedCount, 0);
     });
+
+    test('Chotu Runner waits near kettle and does NOT run to HR desk when kettle is brewing', () {
+      final world = GameWorld(initialRupees: 0.0);
+      world.hireChotu(free: true);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.chotu);
+      expect(chotu.duty, ChotuDuty.runner);
+
+      // Counter is not full, but kettle has 0 cups ready (currently brewing)
+      world.counter.foodTowers.first.count = 2;
+      world.chaiStation.shelfCount = 0;
+
+      // Position Chotu near kettle
+      chotu.position.x = world.chaiStation.pickupZoneCenter.x;
+      chotu.position.y = world.chaiStation.pickupZoneCenter.y;
+
+      world.tick(0.1);
+
+      // Chotu must remain in kitchen / near kettle, NOT sprint towards HR desk (750, 260)!
+      expect(chotu.targetPosition.x, closeTo(world.chaiStation.pickupZoneCenter.x, 25.0));
+      expect(chotu.targetPosition.y, closeTo(world.chaiStation.pickupZoneCenter.y, 25.0));
+      expect(chotu.taskState, ChotuTaskState.fetchingChai);
+    });
+
+    test('Multiple Chotus have distinct duties (Runner vs Busboy) and never swarm same table', () {
+      final world = GameWorld(initialRupees: 0.0);
+      world.hireChotu(free: true); // Chotu 1 -> Runner
+      world.hireChotu(free: true); // Chotu 2 -> Busboy
+
+      final chotu1 = world.staff[0];
+      final chotu2 = world.staff[1];
+
+      expect(chotu1.duty, ChotuDuty.runner);
+      expect(chotu2.duty, ChotuDuty.busboy);
+
+      // Table 1 unlocked with dirty tray
+      final table1 = world.diningTables.first;
+      table1.isUnlocked = true;
+      table1.seats.first.hasDirtyTray = true;
+
+      // Counter has 0 cups, kettle has 2 cups
+      world.counter.foodTowers.first.count = 0;
+      world.chaiStation.shelfCount = 2;
+
+      world.tick(0.1);
+
+      // Chotu 2 (Busboy) claims and targets Table 1
+      expect(chotu2.taskState, ChotuTaskState.cleaningTable);
+      expect(chotu2.assignedTableId, table1.id);
+      expect(chotu2.targetPosition.x, table1.position.x);
+
+      // Chotu 1 (Runner) does NOT target Table 1; instead focuses on restocking chai!
+      expect(chotu1.assignedTableId, isNull);
+      expect(
+        chotu1.taskState == ChotuTaskState.fetchingChai ||
+            chotu1.taskState == ChotuTaskState.deliveringChai,
+        isTrue,
+      );
+    });
   });
 
   group('HR Upgrades System (M6)', () {
