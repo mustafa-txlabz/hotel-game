@@ -126,10 +126,10 @@ void main() {
       expect(chotu.taskState, ChotuTaskState.deliveringChai);
 
       // Teleport Chotu to counter food deposit zone
-      chotu.position.x = world.counter.position.x - 70.0;
-      chotu.position.y = world.counter.position.y - 45.0;
-      chotu.targetPosition.x = world.counter.position.x - 70.0;
-      chotu.targetPosition.y = world.counter.position.y - 45.0;
+      chotu.position.x = world.counter.foodDepositZoneCenter.x;
+      chotu.position.y = world.counter.foodDepositZoneCenter.y;
+      chotu.targetPosition.x = world.counter.foodDepositZoneCenter.x;
+      chotu.targetPosition.y = world.counter.foodDepositZoneCenter.y;
 
       // Tick world until all carried items are deposited
       for (int i = 0; i < 5; i++) {
@@ -263,6 +263,37 @@ void main() {
             chotu1.taskState == ChotuTaskState.deliveringChai,
         isTrue,
       );
+    });
+
+    test('Chotu with id=2 delivers chai without getting stuck near cashier boundary', () {
+      final world = GameWorld(initialRupees: 0.0);
+      world.hireCashier(free: true); // id = 1 (Cashier)
+      world.hireChotu(free: true); // id = 2 (Chotu)
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.chotu);
+      expect(chotu.id, 2);
+
+      int depositedCount = 0;
+      world.onItemDeposited = (item) {
+        if (item == ItemType.chai) depositedCount++;
+      };
+
+      // Chotu carries 2 cups of chai
+      chotu.addItem(ItemType.chai);
+      chotu.addItem(ItemType.chai);
+      chotu.taskState = ChotuTaskState.deliveringChai;
+
+      // Position Chotu at the food deposit zone
+      chotu.position.x = world.counter.foodDepositZoneCenter.x;
+      chotu.position.y = world.counter.foodDepositZoneCenter.y;
+
+      // Tick world until deposited
+      for (int i = 0; i < 10; i++) {
+        world.tick(0.1);
+      }
+
+      // Chai deposited onto counter, Chotu NOT stuck!
+      expect(depositedCount, 2);
+      expect(world.counter.totalFoodCount, 2);
     });
   });
 

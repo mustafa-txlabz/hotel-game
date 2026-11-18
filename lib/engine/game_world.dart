@@ -740,12 +740,20 @@ class GameWorld {
     // 2. If carrying chai cups, deliver them to the Serving Counter food towers!
     if (chotu.taskState == ChotuTaskState.deliveringChai ||
         chotu.carriedItems.contains(ItemType.chai)) {
-      chotu.targetPosition.x = counter.position.x - 70.0 + laneOffset;
-      chotu.targetPosition.y = counter.position.y - 45.0;
+      // Target the food deposit zone center (360, 668), safe from cashier boundary (396)
+      final depositOffset = (chotu.id % 2 == 0 ? -10.0 : 10.0);
+      chotu.targetPosition.x = counter.foodDepositZoneCenter.x + depositOffset;
+      chotu.targetPosition.y = counter.foodDepositZoneCenter.y + 4.0;
       chotu.taskState = ChotuTaskState.deliveringChai;
       chotu.assignedTableId = null;
 
-      if (counter.isInsideFoodDepositZone(chotu.position)) {
+      final isAtDeposit = counter.isInsideFoodDepositZone(chotu.position) ||
+          chotu.position.distanceTo(counter.foodDepositZoneCenter) <= 50.0;
+
+      if (isAtDeposit) {
+        if (!chotu.isMoving) {
+          chotu.angle = math.pi / 2; // Facing down towards counter
+        }
         if (counter.canDepositFood()) {
           final idx = chotu.carriedItems.indexOf(ItemType.chai);
           if (idx != -1) {
