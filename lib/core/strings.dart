@@ -5,7 +5,7 @@ class AppStrings {
   static const String currencySymbol = 'Rs ';
 
   // Joystick & Tutorial
-  static const String dragToMove = 'Drag anywhere to move Chotu';
+  static const String dragToMove = 'Drag anywhere to move';
 
   // HUD
   static const String cashLabel = 'Paisa:';

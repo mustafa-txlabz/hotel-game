@@ -97,7 +97,7 @@ void main() {
       final success = world.hireChotu();
       expect(success, isTrue);
       expect(world.chotuCount, 1);
-      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.chotu);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.helper);
       expect(chotu.speed, GameBalance.workerBaseSpeed);
       expect(chotu.carryCapacity, GameBalance.workerBaseCapacity);
       expect(world.rupees, 300.0 - GameBalance.hireChotuBaseCost);
@@ -106,7 +106,7 @@ void main() {
     test('Chotu automatically fetches chai from kettle and delivers to counter', () {
       final world = GameWorld(initialRupees: 0.0);
       world.hireChotu(free: true);
-      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.chotu);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.helper);
 
       // Kettle has brewed cups
       world.chaiStation.shelfCount = 4;
@@ -144,7 +144,7 @@ void main() {
     test('Chotu picks up multiple chai cups matching upgraded carry capacity', () {
       final world = GameWorld(initialRupees: 500.0);
       world.hireChotu(free: true);
-      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.chotu);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.helper);
 
       // Upgrade Worker Capacity twice: Lvl 1 (2) -> Lvl 2 (3) -> Lvl 3 (5)
       world.upgradeWorkerCapacity(); // now 3
@@ -173,7 +173,7 @@ void main() {
     test('Chotu automatically cleans dirty tables and dumps trays in trash bin', () {
       final world = GameWorld(initialRupees: 0.0);
       world.hireChotu(free: true);
-      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.chotu);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.helper);
 
       // Table 1 unlocked with dirty tray and tip on seat 0
       final table = world.diningTables.first;
@@ -210,7 +210,7 @@ void main() {
     test('Chotu Runner waits near kettle and does NOT run to HR desk when kettle is brewing', () {
       final world = GameWorld(initialRupees: 0.0);
       world.hireChotu(free: true);
-      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.chotu);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.helper);
       expect(chotu.duty, ChotuDuty.runner);
 
       // Counter is not full, but kettle has 0 cups ready (currently brewing)
@@ -269,7 +269,7 @@ void main() {
       final world = GameWorld(initialRupees: 0.0);
       world.hireCashier(free: true); // id = 1 (Cashier)
       world.hireChotu(free: true); // id = 2 (Chotu)
-      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.chotu);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.helper);
       expect(chotu.id, 2);
 
       int depositedCount = 0;
@@ -307,7 +307,7 @@ void main() {
       expect(world.counter.hasFoodRoom, isTrue); // Has room for columns 2 & 3!
 
       world.hireChotu(free: true);
-      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.chotu);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.helper);
 
       // Kettle has brewed cups
       world.chaiStation.shelfCount = 5;
@@ -338,7 +338,7 @@ void main() {
     test('Worker with overflow item waits at counter when 30 items full and deposits when space opens', () {
       final world = GameWorld(initialRupees: 0.0);
       world.hireChotu(free: true);
-      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.chotu);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.helper);
 
       // Fill counter to 29 items (1 item room left to reach 30)
       world.counter.foodTowers.clear();
@@ -402,7 +402,7 @@ void main() {
     test('Worker Speed and Capacity upgrades update existing and future Chotus', () {
       final world = GameWorld(initialRupees: 500.0);
       world.hireChotu(free: true);
-      final chotu1 = world.staff.firstWhere((s) => s.role == StaffRole.chotu);
+      final chotu1 = world.staff.firstWhere((s) => s.role == StaffRole.helper);
 
       expect(chotu1.speed, GameBalance.workerSpeedLevels[0]);
       expect(chotu1.carryCapacity, GameBalance.workerCapacityLevels[0]);

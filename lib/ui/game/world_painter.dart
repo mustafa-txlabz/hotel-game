@@ -74,7 +74,7 @@ class WorldPainter extends CustomPainter {
         if (char.role == StaffRole.cashier) {
           SpriteRenderer.drawCashier(canvas, char);
         } else {
-          SpriteRenderer.drawChotu(canvas, char);
+          SpriteRenderer.drawHelper(canvas, char);
         }
       }
     }

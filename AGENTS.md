@@ -10,7 +10,7 @@ Read this whole file before writing any code. Follow the milestones in order.
 - ORG_PREFIX: `com.chaidhaba`   <- Default testing prefix (change to your own reverse-domain before Play Store release).
 - APP_NAME: `Dhaba Tycoon: Arcade Idle`
 - DART_PACKAGE_NAME: `chai_dhaba_empire`
-- THEME: Pakistani Chai & Burger Dhaba Arcade Idle. You control the Owner / Dhaba Manager directly with a virtual joystick, brew kadak chai, stack food on your head, deposit food onto counter towers, attend the cashier station, vacuum up cash towers, upgrade machines via floor pads, hire staff (cashiers & chotus), and expand the empire!
+- THEME: Pakistani Chai & Burger Dhaba Arcade Idle. You control the Owner / Dhaba Manager directly with a virtual joystick, brew kadak chai, stack food on your head, deposit food onto counter towers, attend the cashier station, vacuum up cash towers, upgrade machines via floor pads, hire staff (cashiers & helpers/waiters), and expand the empire!
 
 > ### Note for Owner: Testing & Self-Publishing Guide
 > 
@@ -123,10 +123,10 @@ The front counter is split into three dedicated functional areas:
 - Customers leave larger cash payments/tips and dirty trays.
 - Cleaning up trays frees up tables for new customers.
 
-### 3.7 Staff & Workers (Cashier & Chotus)
+### 3.7 Staff & Workers (Cashier & Helpers/Waiters)
 - **Cashier**: Can be hired to permanently occupy the green cashier spot so the Owner is free to manage and run the dhaba.
-- **Chotus (Waiters/Runners)**: Autonomous helpers who carry items from kitchen machines to counter towers and clean tables.
-- **HR Desk**: Upgrades Owner/Worker move speed and carry capacity.
+- **Helpers / Waiters (Runners & Busboys)**: Autonomous helpers who carry items from kitchen machines to counter towers and clean tables.
+- **HR & Upgrades**: Upgrades Owner/Worker move speed and carry capacity.
 
 ### 3.8 Rewarded Ad Power-Ups & Offline Earnings
 - **Chai Rush (2x Speed & 2x Cash)**: 3 minutes of turbo speed and double cash drops.
@@ -221,18 +221,25 @@ Add interactive ground rectangle pads with cash icon and pour mechanic:
 Add customer dine-in behavior: Customers can choose to sit at unlocked dining tables, enjoy their meal, leave larger cash tips on the table, and leave dirty trays. Owner cleans trays to keep tables open for new customers.
 *Done when: Customers sit at tables, eat, tip, and tables require cleaning.*
 
-### **M6 — Staff Hiring & Cashier Faculty** *(Current Milestone - Up Next)*
+### **M6 — Staff Hiring & Cashier Faculty** *(Completed)*
 Add hiring and staff management:
 1. **Hire Cashier**: Stands permanently in the center green cashier spot so the Owner is free to manage the dhaba.
-2. **Hire Chotus (Waiters)**: Autonomous AI helpers who carry items from kitchen to counter towers and clean tables.
-3. **HR Upgrades**: Upgrade Owner and Worker speed and carry capacity.
-*Done when: A hired cashier serves customers automatically without the Owner having to stand at the counter.*
+2. **Hire Helpers (Waiters/Runners)**: Autonomous AI helpers who carry items from kitchen to counter towers and clean tables with specialized duties.
+3. **HR Upgrades**: Upgrade Owner and Worker speed and carry capacity via left HUD glass badge.
+*Done when: A hired cashier serves customers automatically, and autonomous helpers restock counter and clean tables.*
 
-### **M7 — Food Variety (Burger Grill / Samosa) & Audio Polish**
+### **M7 — Food Variety (Burger Grill / Samosa) & Audio Polish** *(Up Next)*
 Unlock additional food machines (Burger Grill / Samosa Fryer) with separate, dedicated food towers on the counter. Customers place mixed orders (`☕ + 🍔`). Add lively sound effects, sizzling audio, and haptic polish.
 *Done when: Multiple food types are brewed, stacked in distinct counter towers, and sold to customers.*
 
-### **M8 — AdMob Rewarded Power-Ups, Offline Earnings & Release Prep**
+### **M8 — Goals, Level Progression & Multi-Town Expansion (New Shops / Locations)**
+Add full Goal/Mission system driven by the HUD Trophy button:
+1. **Shop Milestones & Level Objectives**: Clear targets to complete the level (e.g., Serve X customers, Reach max kettle level, Unlock all dining tables, Hire full staff, Earn Y total rupees).
+2. **Level Complete Celebration**: Fireworks, confetti, and big reward bonus upon clearing all location goals.
+3. **Multi-Town Location Travel**: Unlock the next city/town location (e.g. Highway Dhaba -> City Food Street -> Mall Bistro), pack up earnings, and open a brand-new, grander shop with new layouts and higher profits!
+*Done when: Players can view and track goals via HUD Trophy button, achieve level completion, and progress to new town locations with expanded shops.*
+
+### **M9 — AdMob Rewarded Power-Ups, Offline Earnings & Release Prep**
 Add AdMob Rewarded Ads for instant boosts (Chai Rush 2x Speed, Free VIP Helper, 2x Offline Earnings on game launch), full SharedPreferences persistence (save & load), and final Google Play release readiness.
 *Done when: Full game saves/resumes, rewarded ads trigger power-ups, and the release build is ready.*
 
@@ -240,4 +247,4 @@ Add AdMob Rewarded Ads for instant boosts (Chai Rush 2x Speed, Free VIP Helper, 
 
 ## 7. Current Step
 
-Milestone **M5 — Dine-In Dining Tables & Cleaning** has been completed and fully verified with unit and simulation tests. Milestone **M6 — Staff Hiring & Cashier Faculty** is up next upon user approval.
+Milestone **M6 — Staff Hiring & Cashier Faculty** has been completed and fully verified with unit and simulation tests. Milestone **M7 — Food Variety (Burger Grill / Samosa) & Audio Polish** is up next upon user approval.

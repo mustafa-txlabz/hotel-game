@@ -158,14 +158,14 @@ class GameWorld {
         },
       );
 
-      final chotuPad = GroundPad(
-        id: 'hire_chotu',
+      final helperPad = GroundPad(
+        id: 'hire_helper',
         type: PadType.floorUnlock,
         position: Vector2(660.0, 480.0),
-        title: 'CHOTU',
-        totalCost: GameBalance.hireChotuBaseCost,
+        title: 'HELPER',
+        totalCost: GameBalance.hireHelperBaseCost,
         onUnlocked: () {
-          hireChotu(free: true);
+          hireHelper(free: true);
         },
       );
 
@@ -193,7 +193,7 @@ class GameWorld {
         },
       );
 
-      groundPads.addAll([kettlePad, cashierPad, chotuPad, table1Pad, table2Pad]);
+      groundPads.addAll([kettlePad, cashierPad, helperPad, table1Pad, table2Pad]);
     }
   }
 
@@ -248,10 +248,10 @@ class GameWorld {
     // 7. Cashier Presence check (Center Section of Counter)
     _checkCashierPresence();
 
-    // 8. Staff AI Updates (Cashier & Chotus) (M6)
+    // 8. Staff AI Updates (Cashier & Helpers) (M6)
     for (final member in staff) {
-      if (member.role == StaffRole.chotu) {
-        _updateChotuAI(member, dt);
+      if (member.role == StaffRole.helper || member.role == StaffRole.chotu) {
+        _updateHelperAI(member, dt);
       }
     }
 
@@ -499,7 +499,11 @@ class GameWorld {
   // --- Staff & HR Upgrades Methods (M6) ---
 
   bool get hasCashier => staff.any((s) => s.role == StaffRole.cashier);
-  int get chotuCount => staff.where((s) => s.role == StaffRole.chotu).length;
+  int get helperCount => staff
+      .where((s) => s.role == StaffRole.helper || s.role == StaffRole.chotu)
+      .length;
+  int get workerCount => helperCount;
+  int get chotuCount => helperCount;
 
   double get currentWorkerSpeed =>
       GameBalance.workerSpeedLevels[workerSpeedLevel - 1];
@@ -541,36 +545,37 @@ class GameWorld {
     return true;
   }
 
-  double get nextChotuCost =>
-      GameBalance.hireChotuBaseCost *
-      math.pow(GameBalance.hireChotuCostMultiplier, chotuCount);
+  double get nextHelperCost =>
+      GameBalance.hireHelperBaseCost *
+      math.pow(GameBalance.hireHelperCostMultiplier, helperCount);
+  double get nextChotuCost => nextHelperCost;
 
-  bool hireChotu({bool free = false}) {
-    final cost = nextChotuCost;
+  bool hireHelper({bool free = false}) {
+    final cost = nextHelperCost;
     if (!free && rupees < cost) return false;
     if (!free) rupees -= cost;
 
     // Alternate duties: 1st is Runner (Chai restock), 2nd is Busboy (table cleaning), etc.
-    final duty = (chotuCount % 2 == 0) ? ChotuDuty.runner : ChotuDuty.busboy;
-    final startPos = duty == ChotuDuty.runner
+    final duty = (helperCount % 2 == 0) ? HelperDuty.runner : HelperDuty.busboy;
+    final startPos = duty == HelperDuty.runner
         ? Vector2(chaiStation.pickupZoneCenter.x, chaiStation.pickupZoneCenter.y + 12.0)
         : Vector2(450.0, 880.0);
 
-    final chotu = StaffEntity(
+    final helper = StaffEntity(
       id: nextStaffId++,
-      name: 'Chotu ${chotuCount + 1}',
-      role: StaffRole.chotu,
+      name: 'Helper ${helperCount + 1}',
+      role: StaffRole.helper,
       startPosition: startPos,
       speed: currentWorkerSpeed,
       carryCapacity: currentWorkerCapacity,
       duty: duty,
     );
-    staff.add(chotu);
+    staff.add(helper);
 
-    // If first chotu and floor pad exists, complete it
-    if (chotuCount == 1) {
+    // If first helper and floor pad exists, complete it
+    if (helperCount == 1) {
       for (final pad in groundPads) {
-        if (pad.id == 'hire_chotu' && !pad.isCompleted) {
+        if ((pad.id == 'hire_helper' || pad.id == 'hire_chotu') && !pad.isCompleted) {
           pad.remainingCost = 0.0;
           pad.isCompleted = true;
         }
@@ -579,12 +584,14 @@ class GameWorld {
 
     floatingTexts.add(
       FloatingTextEntity(
-        position: Vector2(chotu.position.x, chotu.position.y - 25.0),
-        text: 'CHOTU HIRED! 🏃',
+        position: Vector2(helper.position.x, helper.position.y - 25.0),
+        text: 'HELPER HIRED! 🏃',
       ),
     );
     return true;
   }
+
+  bool hireChotu({bool free = false}) => hireHelper(free: free);
 
   bool get canUpgradePlayerSpeed =>
       playerSpeedLevel < GameBalance.playerSpeedLevels.length &&
@@ -651,7 +658,7 @@ class GameWorld {
     workerSpeedLevel++;
     final newSpeed = currentWorkerSpeed;
     for (final s in staff) {
-      if (s.role == StaffRole.chotu) {
+      if (s.role == StaffRole.helper || s.role == StaffRole.chotu) {
         s.speed = newSpeed;
       }
     }
@@ -680,7 +687,7 @@ class GameWorld {
     workerCapacityLevel++;
     final newCap = currentWorkerCapacity;
     for (final s in staff) {
-      if (s.role == StaffRole.chotu) {
+      if (s.role == StaffRole.helper || s.role == StaffRole.chotu) {
         s.carryCapacity = newCap;
       }
     }
@@ -695,7 +702,7 @@ class GameWorld {
 
   bool _isTableClaimedByOther(int tableId, int currentWorkerId) {
     for (final s in staff) {
-      if (s.role == StaffRole.chotu &&
+      if ((s.role == StaffRole.helper || s.role == StaffRole.chotu) &&
           s.id != currentWorkerId &&
           s.assignedTableId == tableId) {
         return true;
@@ -704,25 +711,25 @@ class GameWorld {
     return false;
   }
 
-  // --- Autonomous Chotu AI Logic (M6) ---
+  // --- Autonomous Helper / Waiter AI Logic (M6) ---
 
-  void _updateChotuAI(StaffEntity chotu, double dt) {
-    chotu.updateMovement(dt);
+  void _updateHelperAI(StaffEntity helper, double dt) {
+    helper.updateMovement(dt);
 
-    // Natural lane offset based on worker ID so multiple Chotus never overlap on identical tracks
-    final laneOffset = ((chotu.id % 3) - 1) * 20.0;
+    // Natural lane offset based on worker ID so multiple helpers never overlap on identical tracks
+    final laneOffset = ((helper.id % 3) - 1) * 20.0;
 
     // 1. If carrying dirty trays, primary objective is to dump them at Trash Bin!
-    if (chotu.carriedItems.contains(ItemType.dirtyTray)) {
-      chotu.targetPosition.x = trashBin.position.x + 25.0;
-      chotu.targetPosition.y = trashBin.position.y + laneOffset * 0.5;
-      chotu.taskState = ChotuTaskState.dumpingTrash;
-      chotu.assignedTableId = null;
+    if (helper.carriedItems.contains(ItemType.dirtyTray)) {
+      helper.targetPosition.x = trashBin.position.x + 25.0;
+      helper.targetPosition.y = trashBin.position.y + laneOffset * 0.5;
+      helper.taskState = HelperTaskState.dumpingTrash;
+      helper.assignedTableId = null;
 
-      if (trashBin.isInsideZone(chotu.position) && trashBin.canDiscard()) {
-        final idx = chotu.carriedItems.indexOf(ItemType.dirtyTray);
+      if (trashBin.isInsideZone(helper.position) && trashBin.canDiscard()) {
+        final idx = helper.carriedItems.indexOf(ItemType.dirtyTray);
         if (idx != -1) {
-          chotu.carriedItems.removeAt(idx);
+          helper.carriedItems.removeAt(idx);
           trashBin.triggerDiscarded();
           onItemDiscarded?.call();
           floatingTexts.add(
@@ -737,33 +744,33 @@ class GameWorld {
     }
 
     // 2. If carrying chai cups, deliver them to the Serving Counter food towers!
-    if (chotu.taskState == ChotuTaskState.deliveringChai ||
-        chotu.carriedItems.contains(ItemType.chai)) {
+    if (helper.taskState == HelperTaskState.deliveringChai ||
+        helper.carriedItems.contains(ItemType.chai)) {
       // Target the food deposit zone center (360, 668), safe from cashier boundary (396)
-      final depositOffset = (chotu.id % 2 == 0 ? -10.0 : 10.0);
-      chotu.targetPosition.x = counter.foodDepositZoneCenter.x + depositOffset;
-      chotu.targetPosition.y = counter.foodDepositZoneCenter.y + 4.0;
-      chotu.taskState = ChotuTaskState.deliveringChai;
-      chotu.assignedTableId = null;
+      final depositOffset = (helper.id % 2 == 0 ? -10.0 : 10.0);
+      helper.targetPosition.x = counter.foodDepositZoneCenter.x + depositOffset;
+      helper.targetPosition.y = counter.foodDepositZoneCenter.y + 4.0;
+      helper.taskState = HelperTaskState.deliveringChai;
+      helper.assignedTableId = null;
 
-      final isAtDeposit = counter.isInsideFoodDepositZone(chotu.position) ||
-          chotu.position.distanceTo(counter.foodDepositZoneCenter) <= 50.0;
+      final isAtDeposit = counter.isInsideFoodDepositZone(helper.position) ||
+          helper.position.distanceTo(counter.foodDepositZoneCenter) <= 50.0;
 
       if (isAtDeposit) {
-        if (!chotu.isMoving) {
-          chotu.angle = math.pi / 2; // Facing down towards counter
+        if (!helper.isMoving) {
+          helper.angle = math.pi / 2; // Facing down towards counter
         }
         if (counter.canDepositFood()) {
-          final idx = chotu.carriedItems.indexOf(ItemType.chai);
+          final idx = helper.carriedItems.indexOf(ItemType.chai);
           if (idx != -1) {
             if (counter.addFoodItem(ItemType.chai)) {
-              chotu.carriedItems.removeAt(idx);
+              helper.carriedItems.removeAt(idx);
               onItemDeposited?.call(ItemType.chai);
             }
           }
         }
-        if (!chotu.carriedItems.contains(ItemType.chai)) {
-          chotu.taskState = ChotuTaskState.idle;
+        if (!helper.carriedItems.contains(ItemType.chai)) {
+          helper.taskState = HelperTaskState.idle;
         }
       }
       return;
@@ -773,7 +780,7 @@ class GameWorld {
     DiningTable? unclaimedDirtyTable;
     for (final table in diningTables) {
       if (table.isUnlocked && (table.hasDirtyTray || table.cashTip > 0.0)) {
-        if (!_isTableClaimedByOther(table.id, chotu.id)) {
+        if (!_isTableClaimedByOther(table.id, helper.id)) {
           unclaimedDirtyTable = table;
           break;
         }
@@ -782,23 +789,23 @@ class GameWorld {
 
     // Busboys prioritize table cleaning. Solo worker balances both. Runners focus on restocking unless counter is full or already in clean zone.
     final isInsideTableZone = unclaimedDirtyTable != null &&
-        unclaimedDirtyTable.isInsideCleanZone(chotu.position);
+        unclaimedDirtyTable.isInsideCleanZone(helper.position);
 
     final wantsToClean = unclaimedDirtyTable != null &&
-        !chotu.isFull &&
+        !helper.isFull &&
         (isInsideTableZone ||
-            chotu.duty == ChotuDuty.busboy ||
-            (chotuCount == 1 &&
+            helper.duty == HelperDuty.busboy ||
+            (helperCount == 1 &&
                 (counter.totalFoodCount >= 2 || chaiStation.shelfCount == 0)) ||
             counter.totalFoodCount >= 10);
 
     if (wantsToClean) {
-      chotu.assignedTableId = unclaimedDirtyTable.id;
-      chotu.targetPosition.x = unclaimedDirtyTable.position.x;
-      chotu.targetPosition.y = unclaimedDirtyTable.position.y + 40.0;
-      chotu.taskState = ChotuTaskState.cleaningTable;
+      helper.assignedTableId = unclaimedDirtyTable.id;
+      helper.targetPosition.x = unclaimedDirtyTable.position.x;
+      helper.targetPosition.y = unclaimedDirtyTable.position.y + 40.0;
+      helper.taskState = HelperTaskState.cleaningTable;
 
-      if (unclaimedDirtyTable.isInsideCleanZone(chotu.position)) {
+      if (unclaimedDirtyTable.isInsideCleanZone(helper.position)) {
         // Collect tips
         for (final seat in unclaimedDirtyTable.seats) {
           if (seat.cashTip > 0.0) {
@@ -818,15 +825,15 @@ class GameWorld {
 
         // Pick up dirty trays
         for (final seat in unclaimedDirtyTable.seats) {
-          if (seat.hasDirtyTray && !chotu.isFull) {
-            chotu.addItem(ItemType.dirtyTray);
+          if (seat.hasDirtyTray && !helper.isFull) {
+            helper.addItem(ItemType.dirtyTray);
             seat.hasDirtyTray = false;
             onItemPickedUp?.call(ItemType.dirtyTray);
           }
         }
-        if (chotu.carriedItems.contains(ItemType.dirtyTray)) {
-          chotu.taskState = ChotuTaskState.dumpingTrash;
-          chotu.assignedTableId = null;
+        if (helper.carriedItems.contains(ItemType.dirtyTray)) {
+          helper.taskState = HelperTaskState.dumpingTrash;
+          helper.assignedTableId = null;
         }
       }
       return;
@@ -837,37 +844,37 @@ class GameWorld {
     final needsRestock = counter.hasFoodRoom;
     final canHelpRestock = needsRestock;
 
-    if (canHelpRestock && !chotu.isFull) {
-      chotu.assignedTableId = null;
-      chotu.targetPosition.x = chaiStation.pickupZoneCenter.x + laneOffset;
-      chotu.targetPosition.y = chaiStation.pickupZoneCenter.y;
-      chotu.taskState = ChotuTaskState.fetchingChai;
+    if (canHelpRestock && !helper.isFull) {
+      helper.assignedTableId = null;
+      helper.targetPosition.x = chaiStation.pickupZoneCenter.x + laneOffset;
+      helper.targetPosition.y = chaiStation.pickupZoneCenter.y;
+      helper.taskState = HelperTaskState.fetchingChai;
 
-      if (chaiStation.isInsidePickupZone(chotu.position)) {
-        // Pick up chai cups up to Chotu's full upgraded capacity!
-        while (!chotu.isFull && chaiStation.shelfCount > 0) {
+      if (chaiStation.isInsidePickupZone(helper.position)) {
+        // Pick up chai cups up to Helper's full upgraded capacity!
+        while (!helper.isFull && chaiStation.shelfCount > 0) {
           chaiStation.shelfCount--;
-          chotu.addItem(ItemType.chai);
+          helper.addItem(ItemType.chai);
           onItemPickedUp?.call(ItemType.chai);
         }
-        if (chotu.carriedCount > 0) {
-          chotu.taskState = ChotuTaskState.deliveringChai;
+        if (helper.carriedCount > 0) {
+          helper.taskState = HelperTaskState.deliveringChai;
         } else {
-          // Kettle is currently brewing: wait at pickup zone facing the kettle (no sprint to HR desk!)
-          chotu.angle = -math.pi / 2;
+          // Kettle is currently brewing: wait at pickup zone facing the kettle
+          helper.angle = -math.pi / 2;
         }
       }
       return;
     }
 
-    // 5. Idle / Standby near kitchen prep area (NOT standing idle by tables or HR desk!)
-    chotu.taskState = ChotuTaskState.idle;
-    chotu.assignedTableId = null;
+    // 5. Idle / Standby near kitchen prep area
+    helper.taskState = HelperTaskState.idle;
+    helper.assignedTableId = null;
 
-    chotu.targetPosition.x = chaiStation.pickupZoneCenter.x + laneOffset;
-    chotu.targetPosition.y = chaiStation.pickupZoneCenter.y + 12.0;
-    if (!chotu.isMoving) {
-      chotu.angle = math.pi / 2; // Facing down towards dhaba
+    helper.targetPosition.x = chaiStation.pickupZoneCenter.x + laneOffset;
+    helper.targetPosition.y = chaiStation.pickupZoneCenter.y + 12.0;
+    if (!helper.isMoving) {
+      helper.angle = math.pi / 2; // Facing down
     }
   }
 }

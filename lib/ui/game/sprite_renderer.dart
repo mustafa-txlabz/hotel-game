@@ -1942,15 +1942,15 @@ class SpriteRenderer {
     canvas.restore();
   }
 
-  /// Draws the autonomous Chotu Waiter running around, with walking physics,
-  /// orange apron, head stack wobble, and MAX badge.
-  static void drawChotu(Canvas canvas, StaffEntity chotu) {
+  /// Draws the autonomous Helper / Waiter running around, with walking physics,
+  /// yellow uniform, head stack wobble, and MAX badge.
+  static void drawHelper(Canvas canvas, StaffEntity helper) {
     canvas.save();
-    canvas.translate(chotu.position.x, chotu.position.y);
+    canvas.translate(helper.position.x, helper.position.y);
 
     // 1. Drop shadow (scales slightly while running)
     final shadowScale =
-        1.0 + (chotu.isMoving ? math.sin(chotu.walkCycle * 2) * 0.08 : 0.0);
+        1.0 + (helper.isMoving ? math.sin(helper.walkCycle * 2) * 0.08 : 0.0);
     final shadowPaint = Paint()..color = AppTheme.characterShadow;
     canvas.drawOval(
       Rect.fromCenter(
@@ -1962,21 +1962,21 @@ class SpriteRenderer {
     );
 
     // 2. Walking bob
-    final bobOffset = chotu.isMoving
-        ? math.sin(chotu.walkCycle * 2).abs() * -3.5
+    final bobOffset = helper.isMoving
+        ? math.sin(helper.walkCycle * 2).abs() * -3.5
         : 0.0;
     canvas.translate(0, bobOffset);
 
     // 3. Rotate towards heading
     canvas.save();
-    canvas.rotate(chotu.angle - math.pi / 2);
+    canvas.rotate(helper.angle - math.pi / 2);
 
     // Feet animation
-    final leftFootOffset = chotu.isMoving
-        ? math.sin(chotu.walkCycle) * 6.0
+    final leftFootOffset = helper.isMoving
+        ? math.sin(helper.walkCycle) * 6.0
         : 0.0;
-    final rightFootOffset = chotu.isMoving
-        ? -math.sin(chotu.walkCycle) * 6.0
+    final rightFootOffset = helper.isMoving
+        ? -math.sin(helper.walkCycle) * 6.0
         : 0.0;
     final shoePaint = Paint()..color = const Color(0xFF4E342E);
     canvas.drawRRect(
@@ -1997,10 +1997,10 @@ class SpriteRenderer {
     // Body: White shalwar kameez
     canvas.drawCircle(const Offset(0, 2), 14, Paint()..color = const Color(0xFFF5F5F5));
 
-    // Cohesive Vibrant Yellow Uniform for all Dhaba workers (Chotus)
+    // Cohesive Vibrant Yellow Uniform for all shop workers (Helpers)
     const apronColor = Color(0xFFFFB300); // Warm Golden Yellow
     const pocketColor = Color(0xFFF57F17); // Rich Amber Pocket Accent
-    const bandColor = Color(0xFFE65100); // Deep Amber / Dhaba Runner Headband
+    const bandColor = Color(0xFFE65100); // Deep Amber / Runner Headband
     const badgeBgColor = Color(0xFFE65100); // Deep Amber Badge
 
     final apronRect = RRect.fromRectAndRadius(
@@ -2036,12 +2036,12 @@ class SpriteRenderer {
     canvas.restore(); // Restore body rotation
 
     // 4. Carried Item Stack above head
-    if (chotu.carriedCount > 0) {
-      _drawWorkerCarriedStack(canvas, chotu);
+    if (helper.carriedCount > 0) {
+      _drawWorkerCarriedStack(canvas, helper);
     }
 
     // 5. Name badge above head (if not carrying items)
-    if (chotu.carriedCount == 0) {
+    if (helper.carriedCount == 0) {
       final nameBadge = RRect.fromRectAndRadius(
         Rect.fromCenter(center: const Offset(0, -25), width: 44, height: 14),
         const Radius.circular(4),
@@ -2049,7 +2049,7 @@ class SpriteRenderer {
       canvas.drawRRect(nameBadge, Paint()..color = badgeBgColor);
       final nameText = TextPainter(
         text: TextSpan(
-          text: chotu.name,
+          text: helper.name,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w900,
@@ -2066,6 +2066,9 @@ class SpriteRenderer {
 
     canvas.restore();
   }
+
+  /// Alias for backward compatibility
+  static void drawChotu(Canvas canvas, StaffEntity chotu) => drawHelper(canvas, chotu);
 
   static void _drawWorkerCarriedStack(Canvas canvas, StaffEntity staff) {
     const baseSpacing = 16.0;

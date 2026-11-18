@@ -170,7 +170,7 @@ class _GameViewportState extends State<GameViewport>
               ),
             ),
 
-            // Left-Side Action Badges (HR & Upgrades, Settings)
+            // Left-Side Action Badges (HR & Upgrades, Goals, Settings)
             Positioned(
               left: 16,
               top: 0,
@@ -185,6 +185,31 @@ class _GameViewportState extends State<GameViewport>
                       tooltip: 'HR & Upgrades',
                       onTap: () {
                         HrUpgradeSheet.show(context, controller);
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    _buildGlassIconButton(
+                      icon: Icons.emoji_events_rounded,
+                      iconColor: const Color(0xFF00E676),
+                      tooltip: 'Goals & Expansion',
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text(
+                              'Goals & New Locations coming soon! 🏆',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            backgroundColor: AppTheme.chaiDarkBrown,
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(height: 14),

@@ -27,8 +27,10 @@ class GameBalance {
 
   // Staff Hiring & HR Upgrades (M6)
   static const double hireCashierCost = 150.0;
-  static const double hireChotuBaseCost = 200.0;
-  static const double hireChotuCostMultiplier = 1.6;
+  static const double hireHelperBaseCost = 200.0;
+  static const double hireHelperCostMultiplier = 1.6;
+  static const double hireChotuBaseCost = hireHelperBaseCost;
+  static const double hireChotuCostMultiplier = hireHelperCostMultiplier;
 
   // Owner Upgrades
   static const List<double> playerSpeedLevels = [220.0, 255.0, 290.0, 330.0, 370.0];
@@ -37,7 +39,7 @@ class GameBalance {
   static const List<int> playerCapacityLevels = [3, 5, 8, 12, 16];
   static const List<double> playerCapacityUpgradeCosts = [80.0, 150.0, 250.0, 400.0];
 
-  // Worker (Chotu) Stats & Upgrades
+  // Worker / Helper Stats & Upgrades
   static const double workerBaseSpeed = 150.0;
   static const int workerBaseCapacity = 2;
 

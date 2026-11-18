@@ -184,20 +184,20 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Chotu Waiters Card
+                  // Waiter / Helpers Card
                   _buildStaffCard(
-                    title: 'Chotu Helpers',
+                    title: 'Helpers / Waiters',
                     subtitle: 'Carries chai & cleans dirty tables',
                     icon: Icons.directions_run_rounded,
                     iconColor: Colors.deepOrange,
                     isHired: false,
-                    hiredLabel: '${world.chotuCount} Hired',
-                    cost: world.nextChotuCost,
-                    canAfford: world.rupees >= world.nextChotuCost,
-                    hireButtonLabel: world.chotuCount == 0 ? 'HIRE CHOTU' : 'HIRE +1 CHOTU',
-                    badge: world.chotuCount > 0 ? '${world.chotuCount} Active' : null,
+                    hiredLabel: '${world.helperCount} Hired',
+                    cost: world.nextHelperCost,
+                    canAfford: world.rupees >= world.nextHelperCost,
+                    hireButtonLabel: world.helperCount == 0 ? 'HIRE HELPER' : 'HIRE +1 HELPER',
+                    badge: world.helperCount > 0 ? '${world.helperCount} Active' : null,
                     onHire: () {
-                      if (world.hireChotu()) {
+                      if (world.hireHelper()) {
                         widget.controller.tick(0.0);
                         setState(() {});
                       }

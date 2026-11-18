@@ -4,20 +4,23 @@ import '../data/balance.dart';
 import 'entities.dart';
 import 'stations.dart';
 
-/// Roles of hired workers in the Dhaba.
+/// Roles of hired workers in the shop.
 enum StaffRole {
   cashier,
-  chotu, // Waiter / Runner
+  helper, // Waiter / Runner / Helper
+  chotu, // Alias for backward compatibility
 }
 
-/// Preferred duty specialization for Chotu workers.
-enum ChotuDuty {
+/// Preferred duty specialization for Helper workers.
+enum HelperDuty {
   runner, // Focuses on Chai kettle -> Counter restocking
   busboy, // Focuses on Dining table cleaning & tips -> Trash bin
 }
 
-/// AI Task states for autonomous Chotus (Waiters).
-enum ChotuTaskState {
+typedef ChotuDuty = HelperDuty;
+
+/// AI Task states for autonomous Helpers (Waiters).
+enum HelperTaskState {
   idle,
   fetchingChai,
   deliveringChai,
@@ -25,7 +28,9 @@ enum ChotuTaskState {
   dumpingTrash,
 }
 
-/// Represents a hired worker (Cashier or Chotu Waiter).
+typedef ChotuTaskState = HelperTaskState;
+
+/// Represents a hired worker (Cashier or Helper Waiter).
 class StaffEntity {
   final int id;
   final String name;
@@ -41,9 +46,9 @@ class StaffEntity {
   final List<ItemType> carriedItems;
   double wobbleAngle;
 
-  // AI Task & duty tracking for Chotus
-  ChotuTaskState taskState;
-  ChotuDuty duty;
+  // AI Task & duty tracking for Helpers
+  HelperTaskState taskState;
+  HelperDuty duty;
   int? assignedTableId;
   double stateTimer;
 
@@ -55,7 +60,7 @@ class StaffEntity {
     this.speed = GameBalance.workerBaseSpeed,
     this.radius = 18.0,
     this.carryCapacity = GameBalance.workerBaseCapacity,
-    this.duty = ChotuDuty.runner,
+    this.duty = HelperDuty.runner,
     this.assignedTableId,
   }) : position = startPosition.copy(),
        targetPosition = startPosition.copy(),
@@ -64,7 +69,7 @@ class StaffEntity {
        walkCycle = 0.0,
        carriedItems = [],
        wobbleAngle = 0.0,
-       taskState = ChotuTaskState.idle,
+       taskState = HelperTaskState.idle,
        stateTimer = 0.0;
 
   int get carriedCount => carriedItems.length;
