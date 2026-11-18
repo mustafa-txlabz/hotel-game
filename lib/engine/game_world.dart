@@ -517,7 +517,7 @@ class GameWorld {
 
     final cashier = StaffEntity(
       id: nextStaffId++,
-      name: 'Mian Ji (Cashier)',
+      name: 'Cashier',
       role: StaffRole.cashier,
       startPosition: counter.cashierZoneCenter,
     );

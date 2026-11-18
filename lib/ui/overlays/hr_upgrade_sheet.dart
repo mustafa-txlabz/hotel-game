@@ -167,7 +167,7 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
 
                   // Cashier Card
                   _buildStaffCard(
-                    title: 'Cashier (Mian Ji)',
+                    title: 'Cashier',
                     subtitle: 'Permanently attends counter register',
                     icon: Icons.point_of_sale_rounded,
                     iconColor: AppTheme.truckArtGreen,
