@@ -226,14 +226,13 @@ class GameWorld {
     // 3. Collision against perimeter boundary walls
     _clampPlayerToWorldBounds();
 
-    // 4. Solid collisions (kitchen kettle, serving counter, HR desk, unlocked dining tables)
+    // 4. Solid collisions (kitchen kettle, serving counter, unlocked dining tables)
     _resolveBoxCollision(
       chaiStation.position,
       chaiStation.width,
       chaiStation.height,
     );
     _resolveBoxCollision(counter.position, counter.width, counter.height);
-    _resolveBoxCollision(hrDesk.position, hrDesk.width, hrDesk.height);
     for (final table in diningTables) {
       if (table.isUnlocked) {
         _resolveBoxCollision(table.position, table.width, table.height);
@@ -658,7 +657,7 @@ class GameWorld {
     }
     floatingTexts.add(
       FloatingTextEntity(
-        position: Vector2(hrDesk.position.x, hrDesk.position.y - 25.0),
+        position: Vector2(player.position.x, player.position.y - 25.0),
         text: 'WORKER SPEED! ⚡',
       ),
     );
@@ -687,7 +686,7 @@ class GameWorld {
     }
     floatingTexts.add(
       FloatingTextEntity(
-        position: Vector2(hrDesk.position.x, hrDesk.position.y - 25.0),
+        position: Vector2(player.position.x, player.position.y - 25.0),
         text: 'WORKER CAPACITY! 🎒',
       ),
     );

@@ -170,66 +170,94 @@ class _GameViewportState extends State<GameViewport>
               ),
             ),
 
-            // Quick HR Desk & Upgrades Button
+            // Left-Side Action Badges (HR & Upgrades, Settings)
             Positioned(
-              top: 66,
-              right: 16,
-              child: GestureDetector(
-                onTap: () {
-                  HrUpgradeSheet.show(context, controller);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: controller.world.hrDesk.isInsideZone(
-                          controller.world.player.position,
-                        )
-                        ? AppTheme.saffronOrange
-                        : AppTheme.chaiDarkBrown.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppTheme.goldYellow,
-                      width: 1.5,
+              left: 16,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildGlassIconButton(
+                      icon: Icons.assignment_ind_rounded,
+                      iconColor: AppTheme.goldYellow,
+                      tooltip: 'HR & Upgrades',
+                      onTap: () {
+                        HrUpgradeSheet.show(context, controller);
+                      },
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.25),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.assignment_ind_rounded,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        controller.world.hrDesk.isInsideZone(
-                              controller.world.player.position,
-                            )
-                            ? 'OPEN HR DESK 📋'
-                            : 'HR DESK 📋',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 11,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ],
-                  ),
+                    const SizedBox(height: 14),
+                    _buildGlassIconButton(
+                      icon: Icons.settings_rounded,
+                      iconColor: Colors.white,
+                      tooltip: 'Settings',
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text(
+                              'Settings coming soon! ⚙️',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            backgroundColor: AppTheme.chaiDarkBrown,
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassIconButton({
+    required IconData icon,
+    required Color iconColor,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppTheme.chaiDarkBrown.withValues(alpha: 0.65),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: iconColor.withValues(alpha: 0.45),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: 24,
+            ),
+          ),
         ),
       ),
     );

@@ -82,7 +82,7 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'DHABA HR & UPGRADES',
+                          'HR & UPGRADES',
                           style: TextStyle(
                             color: AppTheme.chaiDarkBrown,
                             fontWeight: FontWeight.w900,

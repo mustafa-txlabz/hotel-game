@@ -48,15 +48,10 @@ class WorldPainter extends CustomPainter {
       world.wallThickness,
     );
 
-    // 6. Draw Stations (Chai Kettle, Serving Counter, Trash Bin, HR Desk)
+    // 6. Draw Stations (Chai Kettle, Serving Counter, Trash Bin)
     SpriteRenderer.drawChaiStation(canvas, world.chaiStation);
     SpriteRenderer.drawServingCounter(canvas, world.counter);
     SpriteRenderer.drawTrashBin(canvas, world.trashBin);
-    SpriteRenderer.drawHRDesk(
-      canvas,
-      world.hrDesk,
-      world.hrDesk.isInsideZone(world.player.position),
-    );
 
     // 7. Draw Ground Cash Bundles
     for (final bundle in world.cashBundles) {
