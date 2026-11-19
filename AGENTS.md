@@ -228,7 +228,26 @@ Add hiring and staff management:
 3. **HR Upgrades**: Upgrade Owner and Worker speed and carry capacity via left HUD glass badge.
 *Done when: A hired cashier serves customers automatically, and autonomous helpers restock counter and clean tables.*
 
-### **M7 — Food Variety (Burger Grill / Samosa) & Audio Polish** *(Up Next)*
+### **M6.1 — Per-Store Reputation System, Goals Overlay & Multi-Store Persistence** *(Up Next)*
+Implement per-store reputation progression, dynamic customer scaling, goal checklist, and JSON save/load:
+1. **Configurable Per-Store Reputation & XP**:
+   - Each store defines its own progression profile (`storeId`, `storeName`, `targetReputationXP`, XP gains for takeaway +2, dine-in +4, sad customer -3, upgrades +20).
+   - Higher stores scale difficulty with higher target XP and longer playtime.
+   - **100% Lock Rule**: Once 100% Reputation is reached, it locks permanently and never degrades. Below 100%, sad customers waiting too long deduct XP.
+2. **Dynamic Customer Spawning & Queue Scaling**:
+   - Customer spawn interval scales smoothly with reputation (from 4.0s down to 1.8s).
+   - Counter queue capacity expanded to 8-10 customers. If full, customers arrive, react to the long line (`"Too crowded! 😤"`), and exit, creating urgency.
+3. **Goals & Missions Sheet (HUD Trophy Button 🏆)**:
+   - Replaces placeholder with sleek modal sheet:
+     - Top Card: Store Reputation Horizontal Progress Bar (`XX% / 100%`).
+     - Dynamic per-store checklist (Hire Cashier, Hire 3 Workers, Unlock Dining Tables, Max Kettle, 100% Reputation).
+     - Completed missions tick off and reward XP; full completion triggers "Store Mastered! 🎉" state.
+4. **Multi-Store JSON Save / Load (SharedPreferences)**:
+   - Saves per-store state (independent store wallet, reputation XP, completed mission IDs, equipment levels, unlocked furniture, hired workers).
+   - Auto-saves on interval & app pause; restores exact state and customer rate on game restart.
+*Done when: Progress saves/loads seamlessly across restarts, HUD Trophy button displays live reputation bar & mission checklist, and reputation dynamically drives customer flow and difficulty.*
+
+### **M7 — Food Variety (Burger Grill / Samosa) & Audio Polish**
 Unlock additional food machines (Burger Grill / Samosa Fryer) with separate, dedicated food towers on the counter. Customers place mixed orders (`☕ + 🍔`). Add lively sound effects, sizzling audio, and haptic polish.
 *Done when: Multiple food types are brewed, stacked in distinct counter towers, and sold to customers.*
 
@@ -247,4 +266,4 @@ Add AdMob Rewarded Ads for instant boosts (Chai Rush 2x Speed, Free VIP Helper, 
 
 ## 7. Current Step
 
-Milestone **M6 — Staff Hiring & Cashier Faculty** has been completed and fully verified with unit and simulation tests. Milestone **M7 — Food Variety (Burger Grill / Samosa) & Audio Polish** is up next upon user approval.
+Milestone **M6 — Staff Hiring & Cashier Faculty** has been completed and fully verified with unit and simulation tests. Milestone **M6.1 — Per-Store Reputation System, Goals Overlay & Multi-Store Persistence** is up next upon user approval.
