@@ -1,4 +1,4 @@
-/// Data models and configurations for per-store progression, reputation XP,
+/// Data models and configurations for per-store progression, reputation percentage,
 /// and location missions/goals.
 library;
 
@@ -18,7 +18,6 @@ class StoreGoal {
   final String description;
   final GoalType type;
   final int targetValue;
-  final int rewardXP;
   final String icon;
 
   const StoreGoal({
@@ -27,21 +26,18 @@ class StoreGoal {
     required this.description,
     required this.type,
     required this.targetValue,
-    this.rewardXP = 50,
     this.icon = '🎯',
   });
 }
 
-/// Per-store progression configuration allowing unique target XP, customer flow rates,
+/// Per-store progression configuration allowing unique customer flow rates,
 /// queue capacities, and difficulty curves for every location.
 class StoreProgressionConfig {
   final String storeId;
   final String storeName;
-  final int targetReputationXP;
-  final int happyTakeawayXP;
-  final int happyDineInXP;
-  final int sadCustomerXP;
-  final int upgradeXP;
+  final double customerReputationDelta; // e.g. +0.2% per customer
+  final double sadCustomerReputationDelta; // e.g. -0.2% per sad customer
+  final double upgradeReputationDelta; // e.g. +2.0% per upgrade/unlock
   final double baseSpawnInterval;
   final double minSpawnInterval;
   final int queueCapacity;
@@ -50,11 +46,9 @@ class StoreProgressionConfig {
   const StoreProgressionConfig({
     required this.storeId,
     required this.storeName,
-    this.targetReputationXP = 1000,
-    this.happyTakeawayXP = 2,
-    this.happyDineInXP = 4,
-    this.sadCustomerXP = -3,
-    this.upgradeXP = 20,
+    this.customerReputationDelta = 0.2,
+    this.sadCustomerReputationDelta = -0.2,
+    this.upgradeReputationDelta = 2.0,
     this.baseSpawnInterval = 4.0,
     this.minSpawnInterval = 1.8,
     this.queueCapacity = 8,
@@ -65,11 +59,9 @@ class StoreProgressionConfig {
   static const StoreProgressionConfig store1 = StoreProgressionConfig(
     storeId: 'store_1',
     storeName: 'Highway Kadak Dhaba',
-    targetReputationXP: 1000,
-    happyTakeawayXP: 2,
-    happyDineInXP: 4,
-    sadCustomerXP: -3,
-    upgradeXP: 20,
+    customerReputationDelta: 0.2,
+    sadCustomerReputationDelta: -0.2,
+    upgradeReputationDelta: 2.0,
     baseSpawnInterval: 4.0,
     minSpawnInterval: 1.8,
     queueCapacity: 8,
@@ -80,7 +72,6 @@ class StoreProgressionConfig {
         description: 'Automate serving counter transactions',
         type: GoalType.hireCashier,
         targetValue: 1,
-        rewardXP: 60,
         icon: '👨‍💼',
       ),
       StoreGoal(
@@ -89,7 +80,6 @@ class StoreProgressionConfig {
         description: 'Assemble a 3-member runner & busboy crew',
         type: GoalType.hireWorkers,
         targetValue: 3,
-        rewardXP: 70,
         icon: '🏃',
       ),
       StoreGoal(
@@ -98,25 +88,22 @@ class StoreProgressionConfig {
         description: 'Expand dine-in seating for bigger tips',
         type: GoalType.unlockTables,
         targetValue: 2,
-        rewardXP: 60,
         icon: '🪑',
       ),
       StoreGoal(
         id: 'upgrade_kettle_5',
         title: 'Master Kadak Kettle',
-        description: 'Upgrade chai brewing kettle to Level 5 (MAX)',
+        description: 'Upgrade brewing kettle to Level 5 (MAX)',
         type: GoalType.upgradeKettle,
         targetValue: 5,
-        rewardXP: 80,
         icon: '☕',
       ),
       StoreGoal(
         id: 'reach_reputation_100',
         title: '100% Dhaba Reputation',
-        description: 'Earn 1000 XP and become a 5-Star Dhaba Empire',
+        description: 'Achieve 100% 5-Star Dhaba Empire status',
         type: GoalType.reachReputation,
         targetValue: 100,
-        rewardXP: 100,
         icon: '⭐',
       ),
     ],
@@ -126,11 +113,9 @@ class StoreProgressionConfig {
   static const StoreProgressionConfig store2 = StoreProgressionConfig(
     storeId: 'store_2',
     storeName: 'City Food Street',
-    targetReputationXP: 2500,
-    happyTakeawayXP: 2,
-    happyDineInXP: 4,
-    sadCustomerXP: -4,
-    upgradeXP: 30,
+    customerReputationDelta: 0.1, // Half increment for larger store
+    sadCustomerReputationDelta: -0.15,
+    upgradeReputationDelta: 1.5,
     baseSpawnInterval: 3.5,
     minSpawnInterval: 1.5,
     queueCapacity: 10,

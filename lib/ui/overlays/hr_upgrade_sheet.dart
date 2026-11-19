@@ -117,6 +117,9 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
             Flexible(
               child: ListView(
                 shrinkWrap: true,
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
                 children: [
                   // --- SECTION 1: OWNER UPGRADES ---
@@ -126,7 +129,7 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
                   // Move Speed
                   _buildUpgradeCard(
                     title: 'Move Speed',
-                    icon: Icons.bolt_rounded,
+                    emoji: '⚡',
                     iconColor: Colors.amber.shade700,
                     levelText: 'Lvl ${world.playerSpeedLevel}/${GameBalance.playerSpeedLevels.length}',
                     description: '${world.player.speed.toInt()} px/s speed',
@@ -145,7 +148,7 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
                   // Carry Capacity
                   _buildUpgradeCard(
                     title: 'Carry Capacity',
-                    icon: Icons.backpack_rounded,
+                    emoji: '🎒',
                     iconColor: AppTheme.saffronOrange,
                     levelText: 'Lvl ${world.playerCapacityLevel}/${GameBalance.playerCapacityLevels.length}',
                     description: '${world.player.carryCapacity} items max stack',
@@ -169,7 +172,7 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
                   _buildStaffCard(
                     title: 'Cashier',
                     subtitle: 'Permanently attends counter register',
-                    icon: Icons.point_of_sale_rounded,
+                    emoji: '👨‍💼',
                     iconColor: AppTheme.truckArtGreen,
                     isHired: world.hasCashier,
                     hiredLabel: 'ON DUTY ✅',
@@ -188,7 +191,7 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
                   _buildStaffCard(
                     title: 'Worker',
                     subtitle: 'Carries chai & cleans dirty tables',
-                    icon: Icons.directions_run_rounded,
+                    emoji: '🏃',
                     iconColor: Colors.deepOrange,
                     isHired: false,
                     isMax: !world.canHireWorker,
@@ -208,7 +211,7 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
                   // Worker Speed
                   _buildUpgradeCard(
                     title: 'Worker Speed',
-                    icon: Icons.speed_rounded,
+                    emoji: '⚡',
                     iconColor: Colors.blue.shade700,
                     levelText: 'Lvl ${world.workerSpeedLevel}/${GameBalance.workerSpeedLevels.length}',
                     description: '${world.currentWorkerSpeed.toInt()} px/s helper speed',
@@ -227,7 +230,7 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
                   // Worker Capacity
                   _buildUpgradeCard(
                     title: 'Worker Capacity',
-                    icon: Icons.local_cafe_rounded,
+                    emoji: '🎒',
                     iconColor: AppTheme.chaiBrown,
                     levelText: 'Lvl ${world.workerCapacityLevel}/${GameBalance.workerCapacityLevels.length}',
                     description: '${world.currentWorkerCapacity} items carry capacity',
@@ -271,7 +274,7 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
 
   Widget _buildUpgradeCard({
     required String title,
-    required IconData icon,
+    required String emoji,
     required Color iconColor,
     required String levelText,
     required String description,
@@ -297,12 +300,17 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: iconColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: iconColor, size: 24),
+            alignment: Alignment.center,
+            child: Text(
+              emoji,
+              style: const TextStyle(fontSize: 22),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -401,7 +409,7 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
   Widget _buildStaffCard({
     required String title,
     required String subtitle,
-    required IconData icon,
+    required String emoji,
     required Color iconColor,
     required bool isHired,
     required String hiredLabel,
@@ -428,12 +436,17 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: iconColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: iconColor, size: 24),
+            alignment: Alignment.center,
+            child: Text(
+              emoji,
+              style: const TextStyle(fontSize: 22),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

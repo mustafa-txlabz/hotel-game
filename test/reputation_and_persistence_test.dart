@@ -9,89 +9,92 @@ import 'package:chai_dhaba_empire/services/save_service.dart';
 
 void main() {
   group('Per-Store Reputation System (M6.1)', () {
-    test('Reputation XP increases with Takeaway customer and Dine-In customer', () {
+    test('Reputation percentage increases with customer served (+0.2%)', () {
       final world = GameWorld();
-      expect(world.reputationXP, 0);
       expect(world.reputationPercent, 0.0);
 
-      // Takeaway (+2 XP)
-      world.addReputationXP(world.progressionConfig.happyTakeawayXP);
-      expect(world.reputationXP, 2);
-      expect(world.reputationPercent, 0.2);
+      // 1 Customer (+0.2%)
+      world.addReputationPercent(world.progressionConfig.customerReputationDelta);
+      expect(world.reputationPercent, closeTo(0.2, 0.001));
 
-      // Dine-in (+4 XP)
-      world.addReputationXP(world.progressionConfig.happyDineInXP);
-      expect(world.reputationXP, 6);
-      expect(world.reputationPercent, 0.6);
+      // 4 More Customers (+0.8% -> total 1.0%)
+      for (int i = 0; i < 4; i++) {
+        world.addReputationPercent(world.progressionConfig.customerReputationDelta);
+      }
+      expect(world.reputationPercent, closeTo(1.0, 0.001));
     });
 
-    test('Sad customer deducts XP down to minimum 0', () {
-      final world = GameWorld(initialReputationXP: 5);
-      expect(world.reputationXP, 5);
+    test('Sad customer deducts 0.2% down to minimum 0.0%', () {
+      final world = GameWorld(initialReputationPercent: 0.5);
+      expect(world.reputationPercent, closeTo(0.5, 0.001));
 
-      // -3 XP
-      world.addReputationXP(world.progressionConfig.sadCustomerXP);
-      expect(world.reputationXP, 2);
+      // -0.2%
+      world.addReputationPercent(world.progressionConfig.sadCustomerReputationDelta);
+      expect(world.reputationPercent, closeTo(0.3, 0.001));
 
-      // -3 XP again (cannot drop below 0)
-      world.addReputationXP(world.progressionConfig.sadCustomerXP);
-      expect(world.reputationXP, 0);
+      // -0.2% again
+      world.addReputationPercent(world.progressionConfig.sadCustomerReputationDelta);
+      expect(world.reputationPercent, closeTo(0.1, 0.001));
+
+      // -0.2% again (cannot drop below 0.0%)
+      world.addReputationPercent(world.progressionConfig.sadCustomerReputationDelta);
+      expect(world.reputationPercent, 0.0);
     });
 
     test('100% Lock Rule: Once 100% is reached, it locks permanently and never drops', () {
-      final world = GameWorld(initialReputationXP: 998);
+      final world = GameWorld(initialReputationPercent: 99.8);
       expect(world.isReputationLocked100, isFalse);
 
-      // Push to 1000 XP (100%)
-      world.addReputationXP(10);
-      expect(world.reputationXP, 1000);
+      // Push to 100%
+      world.addReputationPercent(0.4);
       expect(world.reputationPercent, 100.0);
       expect(world.isReputationLocked100, isTrue);
 
       // Sad customers arrive: deduction must be completely blocked!
-      world.addReputationXP(-3);
-      world.addReputationXP(-50);
-      expect(world.reputationXP, 1000);
+      world.addReputationPercent(-0.2);
+      world.addReputationPercent(-5.0);
       expect(world.reputationPercent, 100.0);
       expect(world.isReputationLocked100, isTrue);
     });
 
     test('Customer spawn rate dynamically speeds up with higher reputation', () {
-      final world = GameWorld(initialReputationXP: 0);
+      final world = GameWorld(initialReputationPercent: 0.0);
       expect(world.customerSystem.spawnInterval, closeTo(4.0, 0.01));
 
-      // At 50% reputation (500 XP)
-      world.addReputationXP(500);
+      // At 50% reputation
+      world.addReputationPercent(50.0);
       expect(world.reputationPercent, 50.0);
       expect(world.customerSystem.spawnInterval, closeTo(2.9, 0.05));
 
-      // At 100% reputation (1000 XP)
-      world.addReputationXP(500);
+      // At 100% reputation
+      world.addReputationPercent(50.0);
       expect(world.reputationPercent, 100.0);
       expect(world.customerSystem.spawnInterval, closeTo(1.8, 0.01));
     });
 
-    test('Equipment and Staff upgrades reward bonus reputation XP', () {
+    test('Equipment and Staff upgrades reward +2.0% reputation each', () {
       final world = GameWorld(initialRupees: 5000.0);
-      final initialXP = world.reputationXP;
+      final initialRep = world.reputationPercent;
 
-      // Hiring Cashier gives upgrade XP (+20) + 'hire_cashier' mission reward (+60) = +80
+      // Hiring Cashier gives upgrade reputation (+2.0%)
       world.hireCashier();
-      expect(world.reputationXP, initialXP + world.progressionConfig.upgradeXP + 60);
+      expect(world.reputationPercent, closeTo(initialRep + 2.0, 0.001));
 
-      // Hiring 1st Worker gives upgrade XP (+20) (mission requires 3 workers)
-      final afterCashierXP = world.reputationXP;
+      // Hiring 1st Worker gives upgrade reputation (+2.0%)
+      final afterCashierRep = world.reputationPercent;
       world.hireWorker();
-      expect(world.reputationXP, afterCashierXP + world.progressionConfig.upgradeXP);
+      expect(world.reputationPercent, closeTo(afterCashierRep + 2.0, 0.001));
     });
 
-    test('Goal completion awards XP and marks mission completed', () {
+    test('Goal completion marks mission completed without duplicate reputation reward', () {
       final world = GameWorld(initialRupees: 5000.0);
       expect(world.completedMissionIds, isEmpty);
 
       // Hire Cashier completes 'hire_cashier' goal
       world.hireCashier();
       expect(world.completedMissionIds.contains('hire_cashier'), isTrue);
+      // Reputation should be exactly +2.0% (from the hire action), not inflated by duplicate mission XP
+      expect(world.reputationPercent, closeTo(2.0, 0.001));
     });
   });
 
@@ -150,7 +153,7 @@ void main() {
       final saveService = SaveService();
 
       final world = GameWorld(initialRupees: 1250.0);
-      world.reputationXP = 340;
+      world.reputationPercent = 34.0;
       world.hireCashier(free: true);
       world.hireWorker(free: true);
       world.diningTables[0].isUnlocked = true;
@@ -163,7 +166,7 @@ void main() {
       // Create fresh blank world
       final freshWorld = GameWorld(initialRupees: 0.0);
       expect(freshWorld.rupees, 0.0);
-      expect(freshWorld.reputationXP, 0);
+      expect(freshWorld.reputationPercent, 0.0);
       expect(freshWorld.hasCashier, isFalse);
       expect(freshWorld.workerCount, 0);
       expect(freshWorld.diningTables[0].isUnlocked, isFalse);
@@ -174,7 +177,7 @@ void main() {
 
       // Verify exact restoration
       expect(freshWorld.rupees, world.rupees);
-      expect(freshWorld.reputationXP, world.reputationXP);
+      expect(freshWorld.reputationPercent, world.reputationPercent);
       expect(freshWorld.hasCashier, isTrue);
       expect(freshWorld.workerCount, 1);
       expect(freshWorld.diningTables[0].isUnlocked, isTrue);

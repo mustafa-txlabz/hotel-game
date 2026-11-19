@@ -117,6 +117,9 @@ class _GoalsOverlayState extends State<GoalsOverlay> {
             // Content scroll area
             Flexible(
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -242,12 +245,12 @@ class _GoalsOverlayState extends State<GoalsOverlay> {
           ),
           const SizedBox(height: 10),
 
-          // Row 2: Percentage & XP details
+          // Row 2: Percentage & Target details
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${repPercent.toStringAsFixed(0)}% REPUTATION',
+                '${repPercent.toStringAsFixed(1)}% REPUTATION',
                 style: TextStyle(
                   color: isLocked
                       ? AppTheme.goldYellow
@@ -257,10 +260,12 @@ class _GoalsOverlayState extends State<GoalsOverlay> {
                 ),
               ),
               Text(
-                '${world.reputationXP} / ${config.targetReputationXP} XP',
+                isLocked
+                    ? '100% / 100%'
+                    : '${repPercent.toStringAsFixed(1)}% / 100%',
                 style: const TextStyle(
                   color: AppTheme.chaiDarkBrown,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   fontSize: 12,
                 ),
               ),
@@ -336,10 +341,10 @@ class _GoalsOverlayState extends State<GoalsOverlay> {
                 )
               else
                 Text(
-                  'Sad customers reduce XP!',
+                  'Sad customers: -0.2%',
                   style: TextStyle(
                     color: Colors.red.shade700,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     fontSize: 11,
                   ),
                 ),
@@ -393,18 +398,22 @@ class _GoalsOverlayState extends State<GoalsOverlay> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      goal.title,
-                      style: TextStyle(
-                        color: isDone
-                            ? AppTheme.truckArtGreen
-                            : AppTheme.chaiDarkBrown,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
-                        decoration: isDone ? TextDecoration.lineThrough : null,
+                    Expanded(
+                      child: Text(
+                        goal.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isDone
+                              ? AppTheme.truckArtGreen
+                              : AppTheme.chaiDarkBrown,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                          decoration: isDone ? TextDecoration.lineThrough : null,
+                        ),
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     Text(
                       progressString,
                       style: TextStyle(
@@ -449,15 +458,15 @@ class _GoalsOverlayState extends State<GoalsOverlay> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppTheme.saffronOrange.withValues(alpha: 0.12),
+                color: Colors.black.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
-                '+${goal.rewardXP} XP',
-                style: const TextStyle(
-                  color: AppTheme.saffronOrange,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 11,
+              child: const Text(
+                'IN PROGRESS',
+                style: TextStyle(
+                  color: AppTheme.chaiDarkBrown,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 10,
                 ),
               ),
             ),

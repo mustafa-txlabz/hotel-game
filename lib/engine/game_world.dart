@@ -49,7 +49,7 @@ class GameWorld {
 
   // Store Progression & Reputation System (M6.1)
   final StoreProgressionConfig progressionConfig;
-  int reputationXP;
+  double reputationPercent;
   bool isReputationLocked100;
   final Set<String> completedMissionIds;
 
@@ -66,7 +66,7 @@ class GameWorld {
     this.worldHeight = 1200.0,
     this.wallThickness = 32.0,
     double initialRupees = 0.0,
-    int initialReputationXP = 0,
+    double initialReputationPercent = 0.0,
     bool initialReputationLocked100 = false,
     Set<String>? initialCompletedMissions,
     StoreProgressionConfig? config,
@@ -79,7 +79,7 @@ class GameWorld {
     HRDesk? hr,
     List<StaffEntity>? staffMembers,
   }) : progressionConfig = config ?? StoreProgressionConfig.store1,
-       reputationXP = initialReputationXP,
+       reputationPercent = initialReputationPercent,
        isReputationLocked100 = initialReputationLocked100,
        completedMissionIds = initialCompletedMissions ?? <String>{},
        player = PlayerEntity(startPosition: Vector2(450.0, 600.0)),
@@ -136,21 +136,15 @@ class GameWorld {
     // Forward customer served events to sound/haptic callback and reputation
     customerSystem.onCustomerServed = (customer, item) {
       onItemServed?.call(item);
-      addReputationXP(progressionConfig.happyTakeawayXP);
-    };
-
-    customerSystem.onCustomerFinishedEating = (customer, table) {
-      addReputationXP(
-        progressionConfig.happyDineInXP - progressionConfig.happyTakeawayXP,
-      );
+      addReputationPercent(progressionConfig.customerReputationDelta);
     };
 
     customerSystem.onCustomerLeftUnhappy = (customer) {
-      addReputationXP(progressionConfig.sadCustomerXP);
+      addReputationPercent(progressionConfig.sadCustomerReputationDelta);
       floatingTexts.add(
         FloatingTextEntity(
           position: Vector2(customer.position.x, customer.position.y - 35.0),
-          text: '${progressionConfig.sadCustomerXP} XP 💔',
+          text: '${progressionConfig.sadCustomerReputationDelta.toStringAsFixed(1)}% 💔',
         ),
       );
     };
@@ -182,7 +176,7 @@ class GameWorld {
         titleForLevel: (targetLevel) => 'UPGRADE L$targetLevel',
         onLevelUp: (newLevel) {
           chaiStation.upgradeTo(newLevel);
-          addReputationXP(progressionConfig.upgradeXP);
+          addReputationPercent(progressionConfig.upgradeReputationDelta);
         },
       );
 
@@ -216,7 +210,7 @@ class GameWorld {
         totalCost: 80.0,
         onUnlocked: () {
           diningTables[0].isUnlocked = true;
-          addReputationXP(progressionConfig.upgradeXP);
+          addReputationPercent(progressionConfig.upgradeReputationDelta);
         },
       );
 
@@ -230,7 +224,7 @@ class GameWorld {
           if (diningTables.length > 1) {
             diningTables[1].isUnlocked = true;
           }
-          addReputationXP(progressionConfig.upgradeXP);
+          addReputationPercent(progressionConfig.upgradeReputationDelta);
         },
       );
 
@@ -584,7 +578,7 @@ class GameWorld {
         text: 'CASHIER HIRED! 👔',
       ),
     );
-    addReputationXP(progressionConfig.upgradeXP);
+    addReputationPercent(progressionConfig.upgradeReputationDelta);
     return true;
   }
 
@@ -640,7 +634,7 @@ class GameWorld {
         text: 'WORKER HIRED! 🏃',
       ),
     );
-    addReputationXP(progressionConfig.upgradeXP);
+    addReputationPercent(progressionConfig.upgradeReputationDelta);
     return true;
   }
 
@@ -667,7 +661,7 @@ class GameWorld {
         text: 'SPEED UP! ⚡',
       ),
     );
-    addReputationXP(progressionConfig.upgradeXP);
+    addReputationPercent(progressionConfig.upgradeReputationDelta);
     return true;
   }
 
@@ -693,7 +687,7 @@ class GameWorld {
         text: 'CAPACITY UP! 🎒',
       ),
     );
-    addReputationXP(progressionConfig.upgradeXP);
+    addReputationPercent(progressionConfig.upgradeReputationDelta);
     return true;
   }
 
@@ -723,7 +717,7 @@ class GameWorld {
         text: 'WORKER SPEED! ⚡',
       ),
     );
-    addReputationXP(progressionConfig.upgradeXP);
+    addReputationPercent(progressionConfig.upgradeReputationDelta);
     return true;
   }
 
@@ -753,15 +747,11 @@ class GameWorld {
         text: 'WORKER CAPACITY! 🎒',
       ),
     );
-    addReputationXP(progressionConfig.upgradeXP);
+    addReputationPercent(progressionConfig.upgradeReputationDelta);
     return true;
   }
 
   // --- Reputation & Store Progression (M6.1) ---
-
-  double get reputationPercent =>
-      (reputationXP / progressionConfig.targetReputationXP * 100.0)
-          .clamp(0.0, 100.0);
 
   int get reputationLevel {
     if (reputationPercent >= 100.0) return 5;
@@ -779,21 +769,18 @@ class GameWorld {
       completedMissionIds.length >= progressionConfig.goals.length;
 
   void _updateSpawnInterval() {
-    final t = (reputationXP / progressionConfig.targetReputationXP).clamp(0.0, 1.0);
+    final t = (reputationPercent / 100.0).clamp(0.0, 1.0);
     customerSystem.spawnInterval = progressionConfig.baseSpawnInterval -
         t * (progressionConfig.baseSpawnInterval - progressionConfig.minSpawnInterval);
   }
 
-  void addReputationXP(int amount, {String? reason}) {
-    if (amount < 0) {
+  void addReputationPercent(double delta, {String? reason}) {
+    if (delta < 0) {
       if (isReputationLocked100) return; // 100% Lock Rule!
-      reputationXP = math.max(0, reputationXP + amount);
-    } else if (amount > 0) {
-      reputationXP = math.min(
-        progressionConfig.targetReputationXP,
-        reputationXP + amount,
-      );
-      if (reputationXP >= progressionConfig.targetReputationXP) {
+      reputationPercent = math.max(0.0, reputationPercent + delta);
+    } else if (delta > 0) {
+      reputationPercent = math.min(100.0, reputationPercent + delta);
+      if (reputationPercent >= 100.0) {
         isReputationLocked100 = true;
       }
     }
@@ -830,11 +817,10 @@ class GameWorld {
 
       if (isMet) {
         completedMissionIds.add(goal.id);
-        addReputationXP(goal.rewardXP, reason: goal.title);
         floatingTexts.add(
           FloatingTextEntity(
             position: Vector2(player.position.x, player.position.y - 40.0),
-            text: '+${goal.rewardXP} XP: ${goal.title}!',
+            text: 'GOAL DONE: ${goal.title}! 🎯',
           ),
         );
       }

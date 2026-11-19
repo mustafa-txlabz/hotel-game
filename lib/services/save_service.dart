@@ -50,7 +50,7 @@ class SaveService {
         'storeName': world.progressionConfig.storeName,
         'wallet': world.rupees,
         'lifetimeRupees': world.lifetimeRupees,
-        'reputationXP': world.reputationXP,
+        'reputationPercent': world.reputationPercent,
         'isReputationLocked100': world.isReputationLocked100,
         'completedMissionIds': world.completedMissionIds.toList(),
         'kettleLevel': world.chaiStation.level,
@@ -102,9 +102,14 @@ class SaveService {
         world.lifetimeRupees = (storeData['lifetimeRupees'] as num).toDouble();
       }
 
-      // 2. Restore Reputation XP & 100% lock
-      if (storeData.containsKey('reputationXP')) {
-        world.reputationXP = (storeData['reputationXP'] as num).toInt();
+      // 2. Restore Reputation Percent & 100% lock
+      if (storeData.containsKey('reputationPercent')) {
+        world.reputationPercent =
+            (storeData['reputationPercent'] as num).toDouble();
+      } else if (storeData.containsKey('reputationXP')) {
+        // Migration from earlier test saves
+        world.reputationPercent =
+            ((storeData['reputationXP'] as num).toDouble() / 10.0).clamp(0.0, 100.0);
       }
       if (storeData.containsKey('isReputationLocked100')) {
         world.isReputationLocked100 = storeData['isReputationLocked100'] as bool;
@@ -191,16 +196,20 @@ class SaveService {
         }
       }
 
-      // 8. Finally, restore exact saved reputation XP and lock without duplicate upgrade additions
-      if (storeData.containsKey('reputationXP')) {
-        world.reputationXP = (storeData['reputationXP'] as num).toInt();
+      // 8. Finally, restore exact saved reputation percent and lock without duplicate upgrade additions
+      if (storeData.containsKey('reputationPercent')) {
+        world.reputationPercent =
+            (storeData['reputationPercent'] as num).toDouble();
+      } else if (storeData.containsKey('reputationXP')) {
+        world.reputationPercent =
+            ((storeData['reputationXP'] as num).toDouble() / 10.0).clamp(0.0, 100.0);
       }
       if (storeData.containsKey('isReputationLocked100')) {
         world.isReputationLocked100 = storeData['isReputationLocked100'] as bool;
       }
 
-      // Update dynamic customer spawn interval based on restored XP
-      world.addReputationXP(0);
+      // Update dynamic customer spawn interval based on restored reputation
+      world.addReputationPercent(0.0);
       return true;
     } catch (e) {
       return false;
