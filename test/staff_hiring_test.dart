@@ -90,6 +90,29 @@ void main() {
   });
 
   group('Autonomous Chotu AI & Task Execution (M6)', () {
+    test('Store 1 limits workers to maximum 3 and disables further hiring', () {
+      final world = GameWorld(initialRupees: 5000.0);
+      expect(world.canHireWorker, isTrue);
+      expect(world.maxWorkers, 3);
+      expect(world.workerCount, 0);
+
+      expect(world.hireWorker(), isTrue); // Worker 1 (1/3)
+      expect(world.workerCount, 1);
+      expect(world.canHireWorker, isTrue);
+
+      expect(world.hireWorker(), isTrue); // Worker 2 (2/3)
+      expect(world.workerCount, 2);
+      expect(world.canHireWorker, isTrue);
+
+      expect(world.hireWorker(), isTrue); // Worker 3 (3/3)
+      expect(world.workerCount, 3);
+      expect(world.canHireWorker, isFalse); // 3/3 reached!
+
+      // Attempting to hire 4th worker fails!
+      expect(world.hireWorker(), isFalse);
+      expect(world.workerCount, 3);
+    });
+
     test('Hiring Chotu spawns autonomous worker with correct stats', () {
       final world = GameWorld(initialRupees: 300.0);
       expect(world.chotuCount, 0);

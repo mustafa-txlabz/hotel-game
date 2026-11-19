@@ -26,6 +26,7 @@ class GameBalance {
   static const double dineInTip = 25.0;
 
   // Staff Hiring & HR Upgrades (M6)
+  static const int maxWorkersLevel1 = 3;
   static const double hireCashierCost = 150.0;
   static const double hireHelperBaseCost = 200.0;
   static const double hireHelperCostMultiplier = 1.6;

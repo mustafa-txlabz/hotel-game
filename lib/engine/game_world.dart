@@ -162,7 +162,7 @@ class GameWorld {
         id: 'hire_helper',
         type: PadType.floorUnlock,
         position: Vector2(660.0, 480.0),
-        title: 'HELPER',
+        title: 'WORKER',
         totalCost: GameBalance.hireHelperBaseCost,
         onUnlocked: () {
           hireHelper(free: true);
@@ -545,12 +545,21 @@ class GameWorld {
     return true;
   }
 
+  int get maxWorkers => GameBalance.maxWorkersLevel1;
+  bool get canHireWorker => workerCount < maxWorkers;
+  bool get canHireHelper => canHireWorker;
+  bool get canHireChotu => canHireWorker;
+
   double get nextHelperCost =>
       GameBalance.hireHelperBaseCost *
       math.pow(GameBalance.hireHelperCostMultiplier, helperCount);
   double get nextChotuCost => nextHelperCost;
+  double get nextWorkerCost => nextHelperCost;
+
+  bool hireWorker({bool free = false}) => hireHelper(free: free);
 
   bool hireHelper({bool free = false}) {
+    if (!canHireWorker) return false;
     final cost = nextHelperCost;
     if (!free && rupees < cost) return false;
     if (!free) rupees -= cost;
@@ -563,7 +572,7 @@ class GameWorld {
 
     final helper = StaffEntity(
       id: nextStaffId++,
-      name: 'Helper ${helperCount + 1}',
+      name: 'Worker ${helperCount + 1}',
       role: StaffRole.helper,
       startPosition: startPos,
       speed: currentWorkerSpeed,
@@ -585,7 +594,7 @@ class GameWorld {
     floatingTexts.add(
       FloatingTextEntity(
         position: Vector2(helper.position.x, helper.position.y - 25.0),
-        text: 'HELPER HIRED! 🏃',
+        text: 'WORKER HIRED! 🏃',
       ),
     );
     return true;

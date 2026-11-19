@@ -184,20 +184,20 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Waiter / Helpers Card
+                  // Worker Card
                   _buildStaffCard(
-                    title: 'Helpers / Waiters',
+                    title: 'Worker',
                     subtitle: 'Carries chai & cleans dirty tables',
                     icon: Icons.directions_run_rounded,
                     iconColor: Colors.deepOrange,
                     isHired: false,
-                    hiredLabel: '${world.helperCount} Hired',
-                    cost: world.nextHelperCost,
-                    canAfford: world.rupees >= world.nextHelperCost,
-                    hireButtonLabel: world.helperCount == 0 ? 'HIRE HELPER' : 'HIRE +1 HELPER',
-                    badge: world.helperCount > 0 ? '${world.helperCount} Active' : null,
+                    isMax: !world.canHireWorker,
+                    hiredLabel: '${world.workerCount}/${world.maxWorkers}',
+                    cost: world.nextWorkerCost,
+                    canAfford: world.canHireWorker && world.rupees >= world.nextWorkerCost,
+                    badge: '${world.workerCount}/${world.maxWorkers}',
                     onHire: () {
-                      if (world.hireHelper()) {
+                      if (world.hireWorker()) {
                         widget.controller.tick(0.0);
                         setState(() {});
                       }
@@ -408,8 +408,8 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
     required double cost,
     required bool canAfford,
     required VoidCallback onHire,
-    String? hireButtonLabel,
     String? badge,
+    bool isMax = false,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -483,7 +483,25 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
             ),
           ),
           const SizedBox(width: 10),
-          if (isHired)
+          if (isMax)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade400, width: 1.5),
+              ),
+              child: const Text(
+                'MAX',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                  letterSpacing: 1,
+                ),
+              ),
+            )
+          else if (isHired)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
