@@ -191,6 +191,14 @@ class SaveService {
         }
       }
 
+      // 8. Finally, restore exact saved reputation XP and lock without duplicate upgrade additions
+      if (storeData.containsKey('reputationXP')) {
+        world.reputationXP = (storeData['reputationXP'] as num).toInt();
+      }
+      if (storeData.containsKey('isReputationLocked100')) {
+        world.isReputationLocked100 = storeData['isReputationLocked100'] as bool;
+      }
+
       // Update dynamic customer spawn interval based on restored XP
       world.addReputationXP(0);
       return true;

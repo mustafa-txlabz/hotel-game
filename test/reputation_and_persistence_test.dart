@@ -75,11 +75,14 @@ void main() {
       final world = GameWorld(initialRupees: 5000.0);
       final initialXP = world.reputationXP;
 
+      // Hiring Cashier gives upgrade XP (+20) + 'hire_cashier' mission reward (+60) = +80
       world.hireCashier();
-      expect(world.reputationXP, initialXP + world.progressionConfig.upgradeXP);
+      expect(world.reputationXP, initialXP + world.progressionConfig.upgradeXP + 60);
 
+      // Hiring 1st Worker gives upgrade XP (+20) (mission requires 3 workers)
+      final afterCashierXP = world.reputationXP;
       world.hireWorker();
-      expect(world.reputationXP, initialXP + (world.progressionConfig.upgradeXP * 2));
+      expect(world.reputationXP, afterCashierXP + world.progressionConfig.upgradeXP);
     });
 
     test('Goal completion awards XP and marks mission completed', () {
@@ -170,8 +173,8 @@ void main() {
       expect(loadSuccess, isTrue);
 
       // Verify exact restoration
-      expect(freshWorld.rupees, 1250.0);
-      expect(freshWorld.reputationXP, 340);
+      expect(freshWorld.rupees, world.rupees);
+      expect(freshWorld.reputationXP, world.reputationXP);
       expect(freshWorld.hasCashier, isTrue);
       expect(freshWorld.workerCount, 1);
       expect(freshWorld.diningTables[0].isUnlocked, isTrue);

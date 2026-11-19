@@ -27,36 +27,31 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('Tapping on side icon buttons triggers action without spawning joystick', (
+  testWidgets('Tapping on HR button opens HR sheet without spawning joystick', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const ChaiDhabaEmpireApp());
     await tester.pump();
 
-    // Verify side icon buttons exist
     final hrButton = find.byTooltip('HR & Upgrades');
-    final goalsButton = find.byTooltip('Goals & Expansion');
-    final settingsButton = find.byTooltip('Settings');
-
     expect(hrButton, findsOneWidget);
-    expect(goalsButton, findsOneWidget);
-    expect(settingsButton, findsOneWidget);
 
-    // Tap on HR & Upgrades button
     await tester.tap(hrButton);
     await tester.pump(const Duration(milliseconds: 300));
 
     // HR Sheet opens
     expect(find.text('HR & UPGRADES'), findsOneWidget);
+  });
 
-    // Close HR sheet
-    final closeButton = find.byIcon(Icons.close_rounded);
-    if (closeButton.evaluate().isNotEmpty) {
-      await tester.tap(closeButton);
-      await tester.pump(const Duration(milliseconds: 300));
-    }
+  testWidgets('Tapping on Goals button opens Goals sheet without spawning joystick', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const ChaiDhabaEmpireApp());
+    await tester.pump();
 
-    // Tap on Goals button
+    final goalsButton = find.byTooltip('Goals & Expansion');
+    expect(goalsButton, findsOneWidget);
+
     await tester.tap(goalsButton);
     await tester.pump(const Duration(milliseconds: 300));
 
