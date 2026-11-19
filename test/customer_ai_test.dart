@@ -132,6 +132,28 @@ void main() {
       expect(c2.patienceTimer, lessThan(c2.patienceTime));
     });
 
+    test('Patience expiration when cashier is present but counter has no items', () {
+      final counter = ServingCounter();
+      final system = CustomerSystem();
+
+      final c1 = system.spawnCustomer(item: ItemType.chai, count: 1)!;
+      c1.position.x = system.queue.getSlotPosition(0).x;
+      c1.position.y = system.queue.getSlotPosition(0).y;
+
+      // Cashier is present, but NO items are available on the counter
+      counter.isCashierPresent = true;
+      expect(counter.totalFoodCount, 0);
+
+      // Elapse patience time (23 seconds)
+      for (int i = 0; i < 46; i++) {
+        system.update(0.5, counter);
+      }
+
+      // Customer leaves disappointed because item was not served
+      expect(c1.state, CustomerState.leavingUnhappy);
+      expect(c1.targetPosition.y, system.entrancePosition.y);
+    });
+
     test('Successful service: Cashier present + food available = sale and cash drop', () {
       final counter = ServingCounter();
       counter.addFoodItem(ItemType.chai);

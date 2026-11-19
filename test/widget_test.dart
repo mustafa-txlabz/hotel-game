@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:chai_dhaba_empire/app.dart';
 import 'package:chai_dhaba_empire/core/strings.dart';
 import 'package:chai_dhaba_empire/ui/game/game_viewport.dart';

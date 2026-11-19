@@ -315,9 +315,55 @@ class CustomerSystem {
       if (isAtFront && !headCustomer.isLeaving) {
         headCustomer.state = CustomerState.waitingInQueue;
 
-        if (!counter.isCashierPresent) {
-          // Cashier green zone is EMPTY!
-          // Progress background patience timer
+        bool wasServed = false;
+        if (counter.isCashierPresent && counter.canServe()) {
+          final served = counter.takeFoodItem(headCustomer.desiredItem);
+          if (served != null) {
+            wasServed = true;
+            headCustomer.patienceTimer = 0.0; // Reset patience when served an item
+            counter.triggerService();
+            counter.addCashBundle(); // Cash bundle placed on counter's right cash tray!
+            headCustomer.receivedCount++;
+            headCustomer.state = CustomerState.beingServed;
+            onCustomerServed?.call(headCustomer, served);
+
+            if (headCustomer.isOrderComplete) {
+              // Find first available seat across all unlocked dining tables (M5)
+              TableSeat? targetSeat;
+              DiningTable? targetTable;
+              for (final table in diningTables) {
+                if (table.isUnlocked) {
+                  final freeSeat = table.firstAvailableSeat;
+                  if (freeSeat != null) {
+                    targetSeat = freeSeat;
+                    targetTable = table;
+                    break;
+                  }
+                }
+              }
+
+              if (targetSeat != null && targetTable != null) {
+                // Customer claims specific seat and walks to sit down
+                targetSeat.isOccupied = true;
+                targetSeat.isSeated = false;
+                headCustomer.assignedTable = targetTable;
+                headCustomer.assignedSeat = targetSeat;
+                headCustomer.state = CustomerState.walkingToTable;
+                headCustomer.targetPosition = targetSeat.position.copy();
+                queue.dequeue();
+                onCustomerDinedIn?.call(headCustomer, targetTable);
+              } else {
+                // Takeaway to go!
+                headCustomer.state = CustomerState.leavingHappy;
+                headCustomer.targetPosition = entrancePosition.copy();
+                queue.dequeue();
+              }
+            }
+          }
+        }
+
+        // If customer was NOT served on this tick, patience timer progresses
+        if (!wasServed && !headCustomer.isLeaving) {
           headCustomer.patienceTimer += dt;
           if (headCustomer.patienceTimer >= headCustomer.patienceTime) {
             // Customer leaves disappointed
@@ -325,52 +371,6 @@ class CustomerSystem {
             headCustomer.targetPosition = entrancePosition.copy();
             queue.dequeue();
             onCustomerLeftUnhappy?.call(headCustomer);
-          }
-        } else {
-          // Cashier IS PRESENT!
-          // Freeze patience timer while being attended
-          if (counter.canServe()) {
-            final served = counter.takeFoodItem(headCustomer.desiredItem);
-            if (served != null) {
-              counter.triggerService();
-              counter.addCashBundle(); // Cash bundle placed on counter's right cash tray!
-              headCustomer.receivedCount++;
-              headCustomer.state = CustomerState.beingServed;
-              onCustomerServed?.call(headCustomer, served);
-
-              if (headCustomer.isOrderComplete) {
-                // Find first available seat across all unlocked dining tables (M5)
-                TableSeat? targetSeat;
-                DiningTable? targetTable;
-                for (final table in diningTables) {
-                  if (table.isUnlocked) {
-                    final freeSeat = table.firstAvailableSeat;
-                    if (freeSeat != null) {
-                      targetSeat = freeSeat;
-                      targetTable = table;
-                      break;
-                    }
-                  }
-                }
-
-                if (targetSeat != null && targetTable != null) {
-                  // Customer claims specific seat and walks to sit down
-                  targetSeat.isOccupied = true;
-                  targetSeat.isSeated = false;
-                  headCustomer.assignedTable = targetTable;
-                  headCustomer.assignedSeat = targetSeat;
-                  headCustomer.state = CustomerState.walkingToTable;
-                  headCustomer.targetPosition = targetSeat.position.copy();
-                  queue.dequeue();
-                  onCustomerDinedIn?.call(headCustomer, targetTable);
-                } else {
-                  // Takeaway to go!
-                  headCustomer.state = CustomerState.leavingHappy;
-                  headCustomer.targetPosition = entrancePosition.copy();
-                  queue.dequeue();
-                }
-              }
-            }
           }
         }
       }
