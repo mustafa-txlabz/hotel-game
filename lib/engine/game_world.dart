@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../data/balance.dart';
+import '../data/progression_config.dart';
 import 'customer_ai.dart';
 import 'entities.dart';
 import 'ground_pad.dart';
@@ -46,6 +47,12 @@ class GameWorld {
   double rupees;
   double lifetimeRupees;
 
+  // Store Progression & Reputation System (M6.1)
+  final StoreProgressionConfig progressionConfig;
+  int reputationXP;
+  bool isReputationLocked100;
+  final Set<String> completedMissionIds;
+
   // Callbacks for sound & haptics
   void Function(ItemType item)? onItemPickedUp;
   void Function(ItemType item)? onItemDeposited;
@@ -59,6 +66,10 @@ class GameWorld {
     this.worldHeight = 1200.0,
     this.wallThickness = 32.0,
     double initialRupees = 0.0,
+    int initialReputationXP = 0,
+    bool initialReputationLocked100 = false,
+    Set<String>? initialCompletedMissions,
+    StoreProgressionConfig? config,
     ChaiStation? station,
     ServingCounter? servingCounter,
     TrashBin? trash,
@@ -67,7 +78,11 @@ class GameWorld {
     List<DiningTable>? tables,
     HRDesk? hr,
     List<StaffEntity>? staffMembers,
-  }) : player = PlayerEntity(startPosition: Vector2(450.0, 600.0)),
+  }) : progressionConfig = config ?? StoreProgressionConfig.store1,
+       reputationXP = initialReputationXP,
+       isReputationLocked100 = initialReputationLocked100,
+       completedMissionIds = initialCompletedMissions ?? <String>{},
+       player = PlayerEntity(startPosition: Vector2(450.0, 600.0)),
        chaiStation = station ?? ChaiStation(position: Vector2(260.0, 260.0)),
        counter =
            servingCounter ?? ServingCounter(position: Vector2(450.0, 720.0)),
@@ -75,7 +90,10 @@ class GameWorld {
        customerSystem =
            customers ??
            CustomerSystem(
-             queue: CustomerQueue(headPosition: Vector2(450.0, 782.0)),
+             queue: CustomerQueue(
+               headPosition: Vector2(450.0, 782.0),
+               maxCapacity: (config ?? StoreProgressionConfig.store1).queueCapacity,
+             ),
              entrancePosition: Vector2(450.0, 1165.0),
            ),
        cashBundles = [],
@@ -109,12 +127,32 @@ class GameWorld {
     player.carryCapacity =
         GameBalance.playerCapacityLevels[playerCapacityLevel - 1];
 
+    // Configure initial customer spawn interval based on current reputation
+    _updateSpawnInterval();
+
     // Bind tables to customer system for dine-in seating
     customerSystem.diningTables = diningTables;
 
-    // Forward customer served events to sound/haptic callback
+    // Forward customer served events to sound/haptic callback and reputation
     customerSystem.onCustomerServed = (customer, item) {
       onItemServed?.call(item);
+      addReputationXP(progressionConfig.happyTakeawayXP);
+    };
+
+    customerSystem.onCustomerFinishedEating = (customer, table) {
+      addReputationXP(
+        progressionConfig.happyDineInXP - progressionConfig.happyTakeawayXP,
+      );
+    };
+
+    customerSystem.onCustomerLeftUnhappy = (customer) {
+      addReputationXP(progressionConfig.sadCustomerXP);
+      floatingTexts.add(
+        FloatingTextEntity(
+          position: Vector2(customer.position.x, customer.position.y - 35.0),
+          text: '${progressionConfig.sadCustomerXP} XP 💔',
+        ),
+      );
     };
 
     // Initialize default ground pads if not supplied
@@ -144,6 +182,7 @@ class GameWorld {
         titleForLevel: (targetLevel) => 'UPGRADE L$targetLevel',
         onLevelUp: (newLevel) {
           chaiStation.upgradeTo(newLevel);
+          addReputationXP(progressionConfig.upgradeXP);
         },
       );
 
@@ -177,6 +216,7 @@ class GameWorld {
         totalCost: 80.0,
         onUnlocked: () {
           diningTables[0].isUnlocked = true;
+          addReputationXP(progressionConfig.upgradeXP);
         },
       );
 
@@ -190,6 +230,7 @@ class GameWorld {
           if (diningTables.length > 1) {
             diningTables[1].isUnlocked = true;
           }
+          addReputationXP(progressionConfig.upgradeXP);
         },
       );
 
@@ -483,6 +524,7 @@ class GameWorld {
         );
 
         onCashCollected?.call(bundle.value);
+        checkMissions();
       }
     }
 
@@ -542,6 +584,7 @@ class GameWorld {
         text: 'CASHIER HIRED! 👔',
       ),
     );
+    addReputationXP(progressionConfig.upgradeXP);
     return true;
   }
 
@@ -597,6 +640,7 @@ class GameWorld {
         text: 'WORKER HIRED! 🏃',
       ),
     );
+    addReputationXP(progressionConfig.upgradeXP);
     return true;
   }
 
@@ -623,6 +667,7 @@ class GameWorld {
         text: 'SPEED UP! ⚡',
       ),
     );
+    addReputationXP(progressionConfig.upgradeXP);
     return true;
   }
 
@@ -648,6 +693,7 @@ class GameWorld {
         text: 'CAPACITY UP! 🎒',
       ),
     );
+    addReputationXP(progressionConfig.upgradeXP);
     return true;
   }
 
@@ -677,6 +723,7 @@ class GameWorld {
         text: 'WORKER SPEED! ⚡',
       ),
     );
+    addReputationXP(progressionConfig.upgradeXP);
     return true;
   }
 
@@ -706,7 +753,92 @@ class GameWorld {
         text: 'WORKER CAPACITY! 🎒',
       ),
     );
+    addReputationXP(progressionConfig.upgradeXP);
     return true;
+  }
+
+  // --- Reputation & Store Progression (M6.1) ---
+
+  double get reputationPercent =>
+      (reputationXP / progressionConfig.targetReputationXP * 100.0)
+          .clamp(0.0, 100.0);
+
+  int get reputationLevel {
+    if (reputationPercent >= 100.0) return 5;
+    if (reputationPercent >= 75.0) return 4;
+    if (reputationPercent >= 50.0) return 3;
+    if (reputationPercent >= 25.0) return 2;
+    return 1;
+  }
+
+  int get unlockedTableCount =>
+      diningTables.where((t) => t.isUnlocked).length;
+
+  bool get isStoreMastered =>
+      isReputationLocked100 &&
+      completedMissionIds.length >= progressionConfig.goals.length;
+
+  void _updateSpawnInterval() {
+    final t = (reputationXP / progressionConfig.targetReputationXP).clamp(0.0, 1.0);
+    customerSystem.spawnInterval = progressionConfig.baseSpawnInterval -
+        t * (progressionConfig.baseSpawnInterval - progressionConfig.minSpawnInterval);
+  }
+
+  void addReputationXP(int amount, {String? reason}) {
+    if (amount < 0) {
+      if (isReputationLocked100) return; // 100% Lock Rule!
+      reputationXP = math.max(0, reputationXP + amount);
+    } else if (amount > 0) {
+      reputationXP = math.min(
+        progressionConfig.targetReputationXP,
+        reputationXP + amount,
+      );
+      if (reputationXP >= progressionConfig.targetReputationXP) {
+        isReputationLocked100 = true;
+      }
+    }
+
+    _updateSpawnInterval();
+    checkMissions();
+  }
+
+  void checkMissions() {
+    for (final goal in progressionConfig.goals) {
+      if (completedMissionIds.contains(goal.id)) continue;
+
+      bool isMet = false;
+      switch (goal.type) {
+        case GoalType.hireCashier:
+          isMet = hasCashier;
+          break;
+        case GoalType.hireWorkers:
+          isMet = workerCount >= goal.targetValue;
+          break;
+        case GoalType.unlockTables:
+          isMet = unlockedTableCount >= goal.targetValue;
+          break;
+        case GoalType.upgradeKettle:
+          isMet = chaiStation.level >= goal.targetValue;
+          break;
+        case GoalType.reachReputation:
+          isMet = reputationPercent >= goal.targetValue;
+          break;
+        case GoalType.earnRevenue:
+          isMet = lifetimeRupees >= goal.targetValue;
+          break;
+      }
+
+      if (isMet) {
+        completedMissionIds.add(goal.id);
+        addReputationXP(goal.rewardXP, reason: goal.title);
+        floatingTexts.add(
+          FloatingTextEntity(
+            position: Vector2(player.position.x, player.position.y - 40.0),
+            text: '+${goal.rewardXP} XP: ${goal.title}!',
+          ),
+        );
+      }
+    }
   }
 
   bool _isTableClaimedByOther(int tableId, int currentWorkerId) {

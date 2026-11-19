@@ -193,6 +193,7 @@ class CustomerSystem {
   // Event callbacks
   void Function(CustomerEntity, ItemType)? onCustomerServed;
   void Function(CustomerEntity)? onCustomerLeftUnhappy;
+  void Function(CustomerEntity)? onCustomerCrowdedOut;
   void Function(CustomerEntity)? onCustomerSpawned;
   void Function(CustomerEntity, DiningTable)? onCustomerDinedIn;
   void Function(CustomerEntity, DiningTable)? onCustomerFinishedEating;
@@ -231,13 +232,28 @@ class CustomerSystem {
     return customer;
   }
 
+  /// Spawns a customer when the queue is full who observes the crowd and leaves unhappy.
+  CustomerEntity? spawnCrowdedCustomer() {
+    final customer = CustomerEntity(
+      id: nextCustomerId++,
+      startPosition: entrancePosition.copy(),
+      targetPosition: Vector2(entrancePosition.x, entrancePosition.y - 45.0),
+      desiredItem: ItemType.chai,
+      desiredCount: 1,
+      variant: (nextCustomerId) % 4,
+    );
+    activeCustomers.add(customer);
+    onCustomerCrowdedOut?.call(customer);
+    return customer;
+  }
+
   /// Main simulation tick for Customer AI.
   void update(double dt, ServingCounter counter) {
     if (dt <= 0.0) return;
 
     // 1. Spawning
+    spawnTimer += dt;
     if (!queue.isFull) {
-      spawnTimer += dt;
       if (spawnTimer >= spawnInterval) {
         spawnTimer = 0.0;
         // Mostly 1 cup, occasionally 2 cups for variety
@@ -245,16 +261,26 @@ class CustomerSystem {
         spawnCustomer(item: ItemType.chai, count: orderCount);
       }
     } else {
-      spawnTimer = 0.0;
+      // Queue is full: customers occasionally arrive, see the crowd, and turn away
+      if (spawnTimer >= spawnInterval * 1.6) {
+        spawnTimer = 0.0;
+        spawnCrowdedCustomer();
+      }
     }
 
     // 2. Update movement and dining for all active customers
     for (final customer in activeCustomers) {
       customer.update(dt);
 
-      // Transition to waitingInQueue when reached destination slot
+      // Transition to waitingInQueue when reached destination slot, or leavingUnhappy if crowded out
       if (customer.state == CustomerState.spawning && !customer.isMoving) {
-        customer.state = CustomerState.waitingInQueue;
+        if (queue.customers.contains(customer)) {
+          customer.state = CustomerState.waitingInQueue;
+        } else {
+          customer.state = CustomerState.leavingUnhappy;
+          customer.targetPosition = entrancePosition.copy();
+          onCustomerLeftUnhappy?.call(customer);
+        }
       }
 
       // Check dine-in eating duration completion

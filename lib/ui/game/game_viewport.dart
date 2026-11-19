@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../data/balance.dart';
 import '../../state/game_controller.dart';
+import '../overlays/goals_overlay.dart';
 import '../overlays/hr_upgrade_sheet.dart';
 import '../overlays/hud_overlay.dart';
 import '../overlays/joystick_widget.dart';
@@ -20,7 +21,7 @@ class GameViewport extends StatefulWidget {
 }
 
 class _GameViewportState extends State<GameViewport>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final Ticker _ticker;
   Duration _lastElapsed = Duration.zero;
 
@@ -36,7 +37,19 @@ class _GameViewportState extends State<GameViewport>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _ticker = createTicker(_onTick)..start();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      if (mounted) {
+        context.read<GameController>().saveGame();
+      }
+    }
   }
 
   void _onTick(Duration elapsed) {
@@ -122,6 +135,7 @@ class _GameViewportState extends State<GameViewport>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _ticker.dispose();
     super.dispose();
   }
@@ -193,23 +207,7 @@ class _GameViewportState extends State<GameViewport>
                     tooltip: 'Goals & Expansion',
                     onTap: () {
                       _resetJoystick();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text(
-                            'Goals & New Locations coming soon! 🏆',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          backgroundColor: AppTheme.chaiDarkBrown,
-                          behavior: SnackBarBehavior.floating,
-                          duration: const Duration(seconds: 2),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      );
+                      GoalsOverlay.show(context, controller);
                     },
                   ),
                   const SizedBox(height: 14),

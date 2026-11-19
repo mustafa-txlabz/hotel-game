@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:chai_dhaba_empire/app.dart';
 import 'package:chai_dhaba_empire/core/strings.dart';
 import 'package:chai_dhaba_empire/ui/game/game_viewport.dart';
@@ -47,5 +48,19 @@ void main() {
 
     // HR Sheet opens
     expect(find.text('HR & UPGRADES'), findsOneWidget);
+
+    // Close HR sheet
+    final closeButton = find.byIcon(Icons.close_rounded);
+    if (closeButton.evaluate().isNotEmpty) {
+      await tester.tap(closeButton);
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    // Tap on Goals button
+    await tester.tap(goalsButton);
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Goals & Reputation Sheet opens
+    expect(find.text('STORE OBJECTIVES'), findsOneWidget);
   });
 }

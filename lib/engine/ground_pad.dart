@@ -57,6 +57,24 @@ class GroundPad {
 
   bool get isMaxLevel => currentLevel >= maxLevel;
 
+  /// Sets current level directly and updates title/cost (used during state restoration).
+  void setLevel(int level) {
+    currentLevel = level;
+    if (currentLevel >= maxLevel) {
+      isCompleted = true;
+      title = 'MAX';
+      remainingCost = 0.0;
+    } else {
+      if (costForLevel != null) {
+        totalCost = costForLevel!(currentLevel + 1);
+        remainingCost = totalCost;
+      }
+      if (titleForLevel != null) {
+        title = titleForLevel!(currentLevel + 1);
+      }
+    }
+  }
+
   /// Checks if character is standing inside the pad rectangle with comfortable reach.
   bool isInside(Vector2 pos) {
     final halfW = width / 2 + 10.0;

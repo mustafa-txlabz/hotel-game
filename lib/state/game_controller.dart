@@ -2,14 +2,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../engine/game_world.dart';
+import '../services/save_service.dart';
 
 /// Central game controller binding [GameWorld] simulation to Flutter UI.
 class GameController extends ChangeNotifier {
   final GameWorld _world;
+  final SaveService _saveService;
 
   DateTime _lastHapticTime = DateTime.fromMillisecondsSinceEpoch(0);
+  double _autoSaveTimer = 0.0;
+  bool _isInitialized = false;
 
-  GameController({GameWorld? world}) : _world = world ?? GameWorld() {
+  GameController({GameWorld? world, SaveService? saveService})
+      : _world = world ?? GameWorld(),
+        _saveService = saveService ?? SaveService() {
+    _initSave();
+
     _world.onItemPickedUp = (_) {
       _triggerHaptic(HapticFeedback.lightImpact);
       notifyListeners();
@@ -36,6 +44,19 @@ class GameController extends ChangeNotifier {
     };
   }
 
+  Future<void> _initSave() async {
+    await _saveService.loadStoreState(_world);
+    _isInitialized = true;
+    notifyListeners();
+  }
+
+  Future<void> saveGame() async {
+    await _saveService.saveStoreState(_world);
+  }
+
+  SaveService get saveService => _saveService;
+  bool get isInitialized => _isInitialized;
+
   void _triggerHaptic(AsyncCallback hapticFn) {
     final now = DateTime.now();
     if (now.difference(_lastHapticTime).inMilliseconds >= 70) {
@@ -55,6 +76,13 @@ class GameController extends ChangeNotifier {
   /// Ticks the physics and world simulation by [dt] seconds.
   void tick(double dt) {
     _world.tick(dt);
+
+    _autoSaveTimer += dt;
+    if (_autoSaveTimer >= 5.0) {
+      _autoSaveTimer = 0.0;
+      _saveService.saveStoreState(_world);
+    }
+
     notifyListeners();
   }
 }
