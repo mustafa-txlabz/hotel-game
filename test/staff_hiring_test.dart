@@ -207,7 +207,7 @@ void main() {
       expect(chotu.carriedCount, 0);
     });
 
-    test('Chotu Runner waits near kettle and does NOT run to HR desk when kettle is brewing', () {
+    test('Chotu Runner waits at Staff Standby area when kettle is brewing and counter is stocked', () {
       final world = GameWorld(initialRupees: 0.0);
       world.hireChotu(free: true);
       final chotu = world.staff.firstWhere((s) => s.role == StaffRole.helper);
@@ -223,10 +223,10 @@ void main() {
 
       world.tick(0.1);
 
-      // Chotu must remain in kitchen / near kettle, NOT sprint towards HR desk (750, 260)!
-      expect(chotu.targetPosition.x, closeTo(world.chaiStation.pickupZoneCenter.x, 25.0));
-      expect(chotu.targetPosition.y, closeTo(world.chaiStation.pickupZoneCenter.y, 25.0));
-      expect(chotu.taskState, ChotuTaskState.fetchingChai);
+      // Chotu does NOT camp at kettle; instead waits at Staff Standby area (720, 270)!
+      expect(chotu.targetPosition.x, closeTo(720.0, 50.0));
+      expect(chotu.targetPosition.y, closeTo(270.0, 50.0));
+      expect(chotu.taskState, ChotuTaskState.idle);
     });
 
     test('Multiple Chotus have distinct duties (Runner vs Busboy) and never swarm same table', () {
@@ -335,7 +335,7 @@ void main() {
       expect(world.counter.totalFoodCount, greaterThan(10));
     });
 
-    test('Worker with overflow item waits at counter when 30 items full and deposits when space opens', () {
+    test('Worker with overflow item dumps in trash when counter is 30 items full and becomes free', () {
       final world = GameWorld(initialRupees: 0.0);
       world.hireChotu(free: true);
       final chotu = world.staff.firstWhere((s) => s.role == StaffRole.helper);
@@ -361,19 +361,25 @@ void main() {
       expect(world.counter.totalFoodCount, 30);
       expect(world.counter.isFoodFull, isTrue);
       expect(chotu.carriedCount, 1); // 1 cup remains in hands!
-      expect(chotu.taskState, ChotuTaskState.deliveringChai); // Waiting at counter holding it!
 
-      // Customer takes 1 cup from counter
-      final taken = world.counter.takeFoodItem(ItemType.chai);
-      expect(taken, ItemType.chai);
-      expect(world.counter.totalFoodCount, 29); // Space opened!
+      // Worker immediately heads to trash bin instead of blocking counter!
+      world.tick(0.1);
+      expect(chotu.taskState, ChotuTaskState.dumpingTrash);
+      expect(chotu.targetPosition.x, closeTo(world.trashBin.position.x + 25.0, 5.0));
 
-      world.counter.depositTimer = 0.0;
-      world.tick(0.1); // Chotu immediately deposits the remaining cup!
+      // Teleport worker to trash bin to dump excess item
+      chotu.position.x = world.trashBin.position.x + 25.0;
+      chotu.position.y = world.trashBin.position.y;
+      world.tick(0.1);
 
-      expect(chotu.carriedCount, 0); // Hands now empty!
-      expect(world.counter.totalFoodCount, 30); // Counter back to 30!
+      // Carried items are dumped into trash bin! Hands are empty!
+      expect(chotu.carriedCount, 0);
       expect(chotu.taskState, ChotuTaskState.idle);
+
+      // Next tick: Idle worker targets Staff Standby area
+      world.tick(0.1);
+      expect(chotu.targetPosition.x, closeTo(720.0, 50.0));
+      expect(chotu.targetPosition.y, closeTo(270.0, 50.0));
     });
   });
 

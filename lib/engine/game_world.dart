@@ -719,33 +719,36 @@ class GameWorld {
     // Natural lane offset based on worker ID so multiple helpers never overlap on identical tracks
     final laneOffset = ((helper.id % 3) - 1) * 20.0;
 
-    // 1. If carrying dirty trays, primary objective is to dump them at Trash Bin!
-    if (helper.carriedItems.contains(ItemType.dirtyTray)) {
+    // 1. If dumping trash (dirty trays OR excess food due to full counter), dump at Trash Bin!
+    if (helper.taskState == HelperTaskState.dumpingTrash ||
+        helper.carriedItems.contains(ItemType.dirtyTray)) {
       helper.targetPosition.x = trashBin.position.x + 25.0;
       helper.targetPosition.y = trashBin.position.y + laneOffset * 0.5;
       helper.taskState = HelperTaskState.dumpingTrash;
       helper.assignedTableId = null;
 
       if (trashBin.isInsideZone(helper.position) && trashBin.canDiscard()) {
-        final idx = helper.carriedItems.indexOf(ItemType.dirtyTray);
-        if (idx != -1) {
-          helper.carriedItems.removeAt(idx);
+        if (helper.carriedItems.isNotEmpty) {
+          final isTray = helper.carriedItems.first == ItemType.dirtyTray;
+          helper.carriedItems.removeAt(0);
           trashBin.triggerDiscarded();
           onItemDiscarded?.call();
           floatingTexts.add(
             FloatingTextEntity(
               position: Vector2(trashBin.position.x, trashBin.position.y - 20.0),
-              text: 'CLEANED! 🗑️',
+              text: isTray ? 'CLEANED! 🗑️' : 'DISCARDED! 🗑️',
             ),
           );
+        }
+        if (helper.carriedItems.isEmpty) {
+          helper.taskState = HelperTaskState.idle;
         }
       }
       return;
     }
 
-    // 2. If carrying chai cups, deliver them to the Serving Counter food towers!
-    if (helper.taskState == HelperTaskState.deliveringChai ||
-        helper.carriedItems.contains(ItemType.chai)) {
+    // 2. If carrying chai cups (and not dumping trash), deliver to Serving Counter food towers!
+    if (helper.carriedItems.contains(ItemType.chai)) {
       // Target the food deposit zone center (360, 668), safe from cashier boundary (396)
       final depositOffset = (helper.id % 2 == 0 ? -10.0 : 10.0);
       helper.targetPosition.x = counter.foodDepositZoneCenter.x + depositOffset;
@@ -760,7 +763,12 @@ class GameWorld {
         if (!helper.isMoving) {
           helper.angle = math.pi / 2; // Facing down towards counter
         }
-        if (counter.canDepositFood()) {
+        if (counter.isFoodFull || !counter.hasFoodRoom) {
+          // Counter is completely full! Worker dumps remaining items in trash bin and becomes free!
+          helper.taskState = HelperTaskState.dumpingTrash;
+          helper.targetPosition.x = trashBin.position.x + 25.0;
+          helper.targetPosition.y = trashBin.position.y + laneOffset * 0.5;
+        } else if (counter.canDepositFood()) {
           final idx = helper.carriedItems.indexOf(ItemType.chai);
           if (idx != -1) {
             if (counter.addFoodItem(ItemType.chai)) {
@@ -768,9 +776,9 @@ class GameWorld {
               onItemDeposited?.call(ItemType.chai);
             }
           }
-        }
-        if (!helper.carriedItems.contains(ItemType.chai)) {
-          helper.taskState = HelperTaskState.idle;
+          if (!helper.carriedItems.contains(ItemType.chai)) {
+            helper.taskState = HelperTaskState.idle;
+          }
         }
       }
       return;
@@ -840,11 +848,10 @@ class GameWorld {
     }
 
     // 4. Counter needs restocking: fetch chai from Chai Kettle!
-    // Any free worker actively helps restock chai as long as counter has room (up to 30 items)!
-    final needsRestock = counter.hasFoodRoom;
-    final canHelpRestock = needsRestock;
+    // Restock only when counter has room AND kettle has brewed cups ready!
+    final needsRestock = counter.hasFoodRoom && chaiStation.shelfCount > 0;
 
-    if (canHelpRestock && !helper.isFull) {
+    if (needsRestock && !helper.isFull) {
       helper.assignedTableId = null;
       helper.targetPosition.x = chaiStation.pickupZoneCenter.x + laneOffset;
       helper.targetPosition.y = chaiStation.pickupZoneCenter.y;
@@ -860,21 +867,26 @@ class GameWorld {
         if (helper.carriedCount > 0) {
           helper.taskState = HelperTaskState.deliveringChai;
         } else {
-          // Kettle is currently brewing: wait at pickup zone facing the kettle
-          helper.angle = -math.pi / 2;
+          helper.taskState = HelperTaskState.idle;
         }
       }
       return;
     }
 
-    // 5. Idle / Standby near kitchen prep area
+    // 5. Idle / Standby at dedicated Staff Rest Area (Top-Right open zone, away from counter & machines)
     helper.taskState = HelperTaskState.idle;
     helper.assignedTableId = null;
 
-    helper.targetPosition.x = chaiStation.pickupZoneCenter.x + laneOffset;
-    helper.targetPosition.y = chaiStation.pickupZoneCenter.y + 12.0;
+    final standbyBaseX = 720.0;
+    final standbyBaseY = 270.0;
+    final slotCol = (helper.id - 1) % 3;
+    final slotRow = ((helper.id - 1) ~/ 3) % 2;
+
+    helper.targetPosition.x = standbyBaseX + slotCol * 35.0;
+    helper.targetPosition.y = standbyBaseY + slotRow * 35.0;
+
     if (!helper.isMoving) {
-      helper.angle = math.pi / 2; // Facing down
+      helper.angle = math.pi / 2; // Facing down towards the shop floor
     }
   }
 }
