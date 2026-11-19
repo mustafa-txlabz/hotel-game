@@ -228,7 +228,7 @@ Add hiring and staff management:
 3. **HR Upgrades**: Upgrade Owner and Worker speed and carry capacity via left HUD glass badge.
 *Done when: A hired cashier serves customers automatically, and autonomous helpers restock counter and clean tables.*
 
-### **M6.1 — Per-Store Reputation System, Goals Overlay & Multi-Store Persistence** *(Up Next)*
+### **M6.1 — Per-Store Reputation System, Goals Overlay & Multi-Store Persistence** *(Completed)*
 Implement per-store reputation progression, dynamic customer scaling, goal checklist, and JSON save/load:
 1. **Configurable Per-Store Reputation & XP**:
    - Each store defines its own progression profile (`storeId`, `storeName`, `targetReputationXP`, XP gains for takeaway +2, dine-in +4, sad customer -3, upgrades +20).
@@ -247,7 +247,7 @@ Implement per-store reputation progression, dynamic customer scaling, goal check
    - Auto-saves on interval & app pause; restores exact state and customer rate on game restart.
 *Done when: Progress saves/loads seamlessly across restarts, HUD Trophy button displays live reputation bar & mission checklist, and reputation dynamically drives customer flow and difficulty.*
 
-### **M7 — Food Variety (Burger Grill / Samosa) & Audio Polish**
+### **M7 — Food Variety (Burger Grill / Samosa) & Audio Polish** *(Up Next)*
 Unlock additional food machines (Burger Grill / Samosa Fryer) with separate, dedicated food towers on the counter. Customers place mixed orders (`☕ + 🍔`). Add lively sound effects, sizzling audio, and haptic polish.
 *Done when: Multiple food types are brewed, stacked in distinct counter towers, and sold to customers.*
 
@@ -266,4 +266,4 @@ Add AdMob Rewarded Ads for instant boosts (Chai Rush 2x Speed, Free VIP Helper, 
 
 ## 7. Current Step
 
-Milestone **M6 — Staff Hiring & Cashier Faculty** has been completed and fully verified with unit and simulation tests. Milestone **M6.1 — Per-Store Reputation System, Goals Overlay & Multi-Store Persistence** is up next upon user approval.
+Milestone **M6.1 — Per-Store Reputation System, Goals Overlay & Multi-Store Persistence** has been completed and fully verified with unit and simulation tests. Milestone **M7 — Food Variety (Burger Grill / Samosa) & Audio Polish** is up next upon user approval.
