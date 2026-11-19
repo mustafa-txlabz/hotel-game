@@ -25,4 +25,27 @@ void main() {
     await gesture.up();
     await tester.pump();
   });
+
+  testWidgets('Tapping on side icon buttons triggers action without spawning joystick', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const ChaiDhabaEmpireApp());
+    await tester.pump();
+
+    // Verify side icon buttons exist
+    final hrButton = find.byTooltip('HR & Upgrades');
+    final goalsButton = find.byTooltip('Goals & Expansion');
+    final settingsButton = find.byTooltip('Settings');
+
+    expect(hrButton, findsOneWidget);
+    expect(goalsButton, findsOneWidget);
+    expect(settingsButton, findsOneWidget);
+
+    // Tap on HR & Upgrades button
+    await tester.tap(hrButton);
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // HR Sheet opens
+    expect(find.text('HR & UPGRADES'), findsOneWidget);
+  });
 }

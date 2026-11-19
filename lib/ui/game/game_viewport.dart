@@ -99,9 +99,7 @@ class _GameViewportState extends State<GameViewport>
     controller.setJoystickInput(normalized.dx, normalized.dy);
   }
 
-  void _handlePointerUp(PointerUpEvent event) {
-    if (event.pointer != _activePointerId) return;
-
+  void _resetJoystick() {
     _activePointerId = null;
     setState(() {
       _joystickOrigin = null;
@@ -112,17 +110,14 @@ class _GameViewportState extends State<GameViewport>
     controller.setJoystickInput(0.0, 0.0);
   }
 
+  void _handlePointerUp(PointerUpEvent event) {
+    if (event.pointer != _activePointerId) return;
+    _resetJoystick();
+  }
+
   void _handlePointerCancel(PointerCancelEvent event) {
     if (event.pointer != _activePointerId) return;
-
-    _activePointerId = null;
-    setState(() {
-      _joystickOrigin = null;
-      _joystickCurrent = null;
-    });
-
-    final controller = Provider.of<GameController>(context, listen: false);
-    controller.setJoystickInput(0.0, 0.0);
+    _resetJoystick();
   }
 
   @override
@@ -137,112 +132,117 @@ class _GameViewportState extends State<GameViewport>
 
     return Scaffold(
       backgroundColor: const Color(0xFF2C180B),
-      body: Listener(
-        onPointerDown: _handlePointerDown,
-        onPointerMove: _handlePointerMove,
-        onPointerUp: _handlePointerUp,
-        onPointerCancel: _handlePointerCancel,
-        behavior: HitTestBehavior.opaque,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // World Canvas
-            RepaintBoundary(
-              child: CustomPaint(
-                painter: WorldPainter(
-                  world: controller.world,
-                  cameraOffset: _cameraOffset,
-                ),
-                size: Size.infinite,
-              ),
-            ),
-
-            // Floating Virtual Joystick
-            JoystickWidget(origin: _joystickOrigin, current: _joystickCurrent),
-
-            // Top HUD (Rupees & Carry Counter)
-            IgnorePointer(
-              child: HudOverlay(
-                rupees: controller.rupees,
-                carriedCount: controller.world.player.carriedCount,
-                carryCapacity: controller.world.player.carryCapacity,
-                showTutorial: !_hasMovedOnce,
-              ),
-            ),
-
-            // Left-Side Action Badges (HR & Upgrades, Goals, Settings)
-            Positioned(
-              left: 16,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildGlassIconButton(
-                      icon: Icons.assignment_ind_rounded,
-                      iconColor: AppTheme.goldYellow,
-                      tooltip: 'HR & Upgrades',
-                      onTap: () {
-                        HrUpgradeSheet.show(context, controller);
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    _buildGlassIconButton(
-                      icon: Icons.emoji_events_rounded,
-                      iconColor: const Color(0xFF00E676),
-                      tooltip: 'Goals & Expansion',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text(
-                              'Goals & New Locations coming soon! 🏆',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            backgroundColor: AppTheme.chaiDarkBrown,
-                            behavior: SnackBarBehavior.floating,
-                            duration: const Duration(seconds: 2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    _buildGlassIconButton(
-                      icon: Icons.settings_rounded,
-                      iconColor: Colors.white,
-                      tooltip: 'Settings',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text(
-                              'Settings coming soon! ⚙️',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            backgroundColor: AppTheme.chaiDarkBrown,
-                            behavior: SnackBarBehavior.floating,
-                            duration: const Duration(seconds: 2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 1. World Canvas with Joystick Touch Listener (captures drags on the game arena only)
+          Positioned.fill(
+            child: Listener(
+              onPointerDown: _handlePointerDown,
+              onPointerMove: _handlePointerMove,
+              onPointerUp: _handlePointerUp,
+              onPointerCancel: _handlePointerCancel,
+              behavior: HitTestBehavior.opaque,
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  painter: WorldPainter(
+                    world: controller.world,
+                    cameraOffset: _cameraOffset,
+                  ),
+                  size: Size.infinite,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+
+          // 2. Floating Virtual Joystick
+          JoystickWidget(origin: _joystickOrigin, current: _joystickCurrent),
+
+          // 3. Top HUD (Rupees & Carry Counter)
+          IgnorePointer(
+            child: HudOverlay(
+              rupees: controller.rupees,
+              carriedCount: controller.world.player.carriedCount,
+              carryCapacity: controller.world.player.carryCapacity,
+              showTutorial: !_hasMovedOnce,
+            ),
+          ),
+
+          // 4. Left-Side Action Badges (HR & Upgrades, Goals, Settings)
+          Positioned(
+            left: 16,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildGlassIconButton(
+                    icon: Icons.assignment_ind_rounded,
+                    iconColor: AppTheme.goldYellow,
+                    tooltip: 'HR & Upgrades',
+                    onTap: () {
+                      _resetJoystick();
+                      HrUpgradeSheet.show(context, controller);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  _buildGlassIconButton(
+                    icon: Icons.emoji_events_rounded,
+                    iconColor: const Color(0xFF00E676),
+                    tooltip: 'Goals & Expansion',
+                    onTap: () {
+                      _resetJoystick();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text(
+                            'Goals & New Locations coming soon! 🏆',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          backgroundColor: AppTheme.chaiDarkBrown,
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  _buildGlassIconButton(
+                    icon: Icons.settings_rounded,
+                    iconColor: Colors.white,
+                    tooltip: 'Settings',
+                    onTap: () {
+                      _resetJoystick();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text(
+                            'Settings coming soon! ⚙️',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          backgroundColor: AppTheme.chaiDarkBrown,
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
