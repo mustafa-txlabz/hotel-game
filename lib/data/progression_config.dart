@@ -37,7 +37,7 @@ class StoreProgressionConfig {
   final String storeName;
   final double customerReputationDelta; // e.g. +0.2% per customer
   final double sadCustomerReputationDelta; // e.g. -0.2% per sad customer
-  final double upgradeReputationDelta; // e.g. +2.0% per upgrade/unlock
+  final double upgradeReputationDelta; // 0.0 (Reputation is driven 100% by customers)
   final double baseSpawnInterval;
   final double minSpawnInterval;
   final int queueCapacity;
@@ -48,32 +48,25 @@ class StoreProgressionConfig {
     required this.storeName,
     this.customerReputationDelta = 0.2,
     this.sadCustomerReputationDelta = -0.2,
-    this.upgradeReputationDelta = 2.0,
-    this.baseSpawnInterval = 3.0,
-    this.minSpawnInterval = 1.0,
+    this.upgradeReputationDelta = 0.0,
+    this.baseSpawnInterval = 2.0,
+    this.minSpawnInterval = 0.5,
     this.queueCapacity = 8,
     this.goals = const [],
   });
 
   /// Calculates dynamic customer spawn interval (in seconds) based on store reputation %.
   /// Breakpoints:
-  /// - 0% Reputation:  3.0s
-  /// - 25% Reputation: 2.0s
-  /// - 50% Reputation: 1.5s
-  /// - 75%-100% Rep:   1.0s
+  /// - 0% Reputation:  2.0s
+  /// - 25% Reputation: 1.5s
+  /// - 50% Reputation: 1.0s
+  /// - 75%-100% Rep:   0.5s
   double calculateSpawnInterval(double reputationPercent) {
     final r = reputationPercent.clamp(0.0, 100.0);
-    if (r <= 25.0) {
-      final t = r / 25.0;
-      return 3.0 - t * (3.0 - 2.0); // 3.0s -> 2.0s
-    } else if (r <= 50.0) {
-      final t = (r - 25.0) / 25.0;
-      return 2.0 - t * (2.0 - 1.5); // 2.0s -> 1.5s
-    } else if (r <= 75.0) {
-      final t = (r - 50.0) / 25.0;
-      return 1.5 - t * (1.5 - 1.0); // 1.5s -> 1.0s
+    if (r <= 75.0) {
+      return 2.0 - (r / 75.0) * 1.5; // Linear 2.0s -> 1.5s -> 1.0s -> 0.5s
     } else {
-      return 1.0; // 75% to 100% -> 1.0s
+      return 0.5; // 75% to 100% locked at 0.5s (Rush hour!)
     }
   }
 
@@ -83,9 +76,9 @@ class StoreProgressionConfig {
     storeName: 'Highway Kadak Dhaba',
     customerReputationDelta: 0.2,
     sadCustomerReputationDelta: -0.2,
-    upgradeReputationDelta: 2.0,
-    baseSpawnInterval: 3.0,
-    minSpawnInterval: 1.0,
+    upgradeReputationDelta: 0.0,
+    baseSpawnInterval: 2.0,
+    minSpawnInterval: 0.5,
     queueCapacity: 8,
     goals: [
       StoreGoal(
@@ -137,9 +130,9 @@ class StoreProgressionConfig {
     storeName: 'City Food Street',
     customerReputationDelta: 0.1, // Half increment for larger store
     sadCustomerReputationDelta: -0.15,
-    upgradeReputationDelta: 1.5,
-    baseSpawnInterval: 3.5,
-    minSpawnInterval: 1.5,
+    upgradeReputationDelta: 0.0,
+    baseSpawnInterval: 2.0,
+    minSpawnInterval: 0.5,
     queueCapacity: 10,
     goals: [],
   );

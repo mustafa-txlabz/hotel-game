@@ -49,7 +49,16 @@ class GameWorld {
 
   // Store Progression & Reputation System (M6.1)
   final StoreProgressionConfig progressionConfig;
-  double reputationPercent;
+  double _reputationPercent;
+  double get reputationPercent => _reputationPercent;
+  set reputationPercent(double value) {
+    _reputationPercent = value.clamp(0.0, 100.0);
+    if (_reputationPercent >= 100.0) {
+      isReputationLocked100 = true;
+    }
+    _updateSpawnInterval();
+    checkMissions();
+  }
   bool isReputationLocked100;
   final Set<String> completedMissionIds;
 
@@ -79,7 +88,7 @@ class GameWorld {
     HRDesk? hr,
     List<StaffEntity>? staffMembers,
   }) : progressionConfig = config ?? StoreProgressionConfig.store1,
-       reputationPercent = initialReputationPercent,
+       _reputationPercent = initialReputationPercent,
        isReputationLocked100 = initialReputationLocked100,
        completedMissionIds = initialCompletedMissions ?? <String>{},
        player = PlayerEntity(startPosition: Vector2(450.0, 600.0)),
@@ -176,7 +185,7 @@ class GameWorld {
         titleForLevel: (targetLevel) => 'UPGRADE L$targetLevel',
         onLevelUp: (newLevel) {
           chaiStation.upgradeTo(newLevel);
-          addReputationPercent(progressionConfig.upgradeReputationDelta);
+          checkMissions();
         },
       );
 
@@ -210,7 +219,7 @@ class GameWorld {
         totalCost: 80.0,
         onUnlocked: () {
           diningTables[0].isUnlocked = true;
-          addReputationPercent(progressionConfig.upgradeReputationDelta);
+          checkMissions();
         },
       );
 
@@ -224,7 +233,7 @@ class GameWorld {
           if (diningTables.length > 1) {
             diningTables[1].isUnlocked = true;
           }
-          addReputationPercent(progressionConfig.upgradeReputationDelta);
+          checkMissions();
         },
       );
 
@@ -639,7 +648,7 @@ class GameWorld {
         text: 'CASHIER HIRED! 👔',
       ),
     );
-    addReputationPercent(progressionConfig.upgradeReputationDelta);
+    checkMissions();
     return true;
   }
 
@@ -695,7 +704,7 @@ class GameWorld {
         text: 'WORKER HIRED! 🏃',
       ),
     );
-    addReputationPercent(progressionConfig.upgradeReputationDelta);
+    checkMissions();
     return true;
   }
 
@@ -722,7 +731,6 @@ class GameWorld {
         text: 'SPEED UP! ⚡',
       ),
     );
-    addReputationPercent(progressionConfig.upgradeReputationDelta);
     return true;
   }
 
@@ -748,7 +756,6 @@ class GameWorld {
         text: 'CAPACITY UP! 🎒',
       ),
     );
-    addReputationPercent(progressionConfig.upgradeReputationDelta);
     return true;
   }
 
@@ -778,7 +785,6 @@ class GameWorld {
         text: 'WORKER SPEED! ⚡',
       ),
     );
-    addReputationPercent(progressionConfig.upgradeReputationDelta);
     return true;
   }
 
@@ -808,7 +814,6 @@ class GameWorld {
         text: 'WORKER CAPACITY! 🎒',
       ),
     );
-    addReputationPercent(progressionConfig.upgradeReputationDelta);
     return true;
   }
 
@@ -837,16 +842,10 @@ class GameWorld {
   void addReputationPercent(double delta, {String? reason}) {
     if (delta < 0) {
       if (isReputationLocked100) return; // 100% Lock Rule!
-      reputationPercent = math.max(0.0, reputationPercent + delta);
+      reputationPercent = math.max(0.0, _reputationPercent + delta);
     } else if (delta > 0) {
-      reputationPercent = math.min(100.0, reputationPercent + delta);
-      if (reputationPercent >= 100.0) {
-        isReputationLocked100 = true;
-      }
+      reputationPercent = math.min(100.0, _reputationPercent + delta);
     }
-
-    _updateSpawnInterval();
-    checkMissions();
   }
 
   void checkMissions() {

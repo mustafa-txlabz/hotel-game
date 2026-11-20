@@ -59,52 +59,55 @@ void main() {
 
     test('Customer spawn rate dynamically speeds up with higher reputation', () {
       final world = GameWorld(initialReputationPercent: 0.0);
-      expect(world.customerSystem.spawnInterval, closeTo(3.0, 0.01));
+      expect(world.customerSystem.spawnInterval, closeTo(2.0, 0.01));
 
       // At 25% reputation
       world.addReputationPercent(25.0);
       expect(world.reputationPercent, 25.0);
-      expect(world.customerSystem.spawnInterval, closeTo(2.0, 0.01));
+      expect(world.customerSystem.spawnInterval, closeTo(1.5, 0.01));
 
       // At 50% reputation
       world.addReputationPercent(25.0);
       expect(world.reputationPercent, 50.0);
-      expect(world.customerSystem.spawnInterval, closeTo(1.5, 0.01));
+      expect(world.customerSystem.spawnInterval, closeTo(1.0, 0.01));
 
       // At 75% reputation
       world.addReputationPercent(25.0);
       expect(world.reputationPercent, 75.0);
-      expect(world.customerSystem.spawnInterval, closeTo(1.0, 0.01));
+      expect(world.customerSystem.spawnInterval, closeTo(0.5, 0.01));
 
       // At 100% reputation
       world.addReputationPercent(25.0);
       expect(world.reputationPercent, 100.0);
-      expect(world.customerSystem.spawnInterval, closeTo(1.0, 0.01));
+      expect(world.customerSystem.spawnInterval, closeTo(0.5, 0.01));
     });
 
-    test('Equipment and Staff upgrades reward +2.0% reputation each', () {
+    test('Equipment and Staff upgrades do NOT modify reputation (driven 100% by customers)', () {
       final world = GameWorld(initialRupees: 5000.0);
       final initialRep = world.reputationPercent;
 
-      // Hiring Cashier gives upgrade reputation (+2.0%)
+      // Hiring Cashier does NOT give reputation
       world.hireCashier();
-      expect(world.reputationPercent, closeTo(initialRep + 2.0, 0.001));
+      expect(world.reputationPercent, initialRep);
 
-      // Hiring 1st Worker gives upgrade reputation (+2.0%)
-      final afterCashierRep = world.reputationPercent;
+      // Hiring 1st Worker does NOT give reputation
       world.hireWorker();
-      expect(world.reputationPercent, closeTo(afterCashierRep + 2.0, 0.001));
+      expect(world.reputationPercent, initialRep);
+
+      // Upgrades do NOT give reputation
+      world.upgradePlayerSpeed();
+      expect(world.reputationPercent, initialRep);
     });
 
-    test('Goal completion marks mission completed without duplicate reputation reward', () {
+    test('Goal completion marks mission completed without reputation reward (customer-only)', () {
       final world = GameWorld(initialRupees: 5000.0);
       expect(world.completedMissionIds, isEmpty);
 
       // Hire Cashier completes 'hire_cashier' goal
       world.hireCashier();
       expect(world.completedMissionIds.contains('hire_cashier'), isTrue);
-      // Reputation should be exactly +2.0% (from the hire action), not inflated by duplicate mission XP
-      expect(world.reputationPercent, closeTo(2.0, 0.001));
+      // Reputation stays at 0.0% (reputation is driven strictly by served customers)
+      expect(world.reputationPercent, 0.0);
     });
   });
 
