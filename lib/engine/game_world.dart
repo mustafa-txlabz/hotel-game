@@ -830,9 +830,8 @@ class GameWorld {
       completedMissionIds.length >= progressionConfig.goals.length;
 
   void _updateSpawnInterval() {
-    final t = (reputationPercent / 100.0).clamp(0.0, 1.0);
-    customerSystem.spawnInterval = progressionConfig.baseSpawnInterval -
-        t * (progressionConfig.baseSpawnInterval - progressionConfig.minSpawnInterval);
+    customerSystem.spawnInterval =
+        progressionConfig.calculateSpawnInterval(reputationPercent);
   }
 
   void addReputationPercent(double delta, {String? reason}) {

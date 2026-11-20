@@ -49,11 +49,33 @@ class StoreProgressionConfig {
     this.customerReputationDelta = 0.2,
     this.sadCustomerReputationDelta = -0.2,
     this.upgradeReputationDelta = 2.0,
-    this.baseSpawnInterval = 4.0,
-    this.minSpawnInterval = 1.8,
+    this.baseSpawnInterval = 3.0,
+    this.minSpawnInterval = 1.0,
     this.queueCapacity = 8,
     this.goals = const [],
   });
+
+  /// Calculates dynamic customer spawn interval (in seconds) based on store reputation %.
+  /// Breakpoints:
+  /// - 0% Reputation:  3.0s
+  /// - 25% Reputation: 2.0s
+  /// - 50% Reputation: 1.5s
+  /// - 75%-100% Rep:   1.0s
+  double calculateSpawnInterval(double reputationPercent) {
+    final r = reputationPercent.clamp(0.0, 100.0);
+    if (r <= 25.0) {
+      final t = r / 25.0;
+      return 3.0 - t * (3.0 - 2.0); // 3.0s -> 2.0s
+    } else if (r <= 50.0) {
+      final t = (r - 25.0) / 25.0;
+      return 2.0 - t * (2.0 - 1.5); // 2.0s -> 1.5s
+    } else if (r <= 75.0) {
+      final t = (r - 50.0) / 25.0;
+      return 1.5 - t * (1.5 - 1.0); // 1.5s -> 1.0s
+    } else {
+      return 1.0; // 75% to 100% -> 1.0s
+    }
+  }
 
   /// Store 1: Highway Kadak Dhaba (Starting Location)
   static const StoreProgressionConfig store1 = StoreProgressionConfig(
@@ -62,8 +84,8 @@ class StoreProgressionConfig {
     customerReputationDelta: 0.2,
     sadCustomerReputationDelta: -0.2,
     upgradeReputationDelta: 2.0,
-    baseSpawnInterval: 4.0,
-    minSpawnInterval: 1.8,
+    baseSpawnInterval: 3.0,
+    minSpawnInterval: 1.0,
     queueCapacity: 8,
     goals: [
       StoreGoal(
