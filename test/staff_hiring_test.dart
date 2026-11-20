@@ -452,4 +452,144 @@ void main() {
       expect(chotu2.carryCapacity, GameBalance.workerCapacityLevels[1]);
     });
   });
+
+  group('Staff Physical Solid Collisions & Navigation (M6 / Local Fix)', () {
+    test('Serving counter is solid for workers: worker is pushed outside counter bounds', () {
+      final world = GameWorld(initialRupees: 0.0);
+      world.hireChotu(free: true);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.helper);
+
+      // Force worker position inside the serving counter box (450, 720)
+      chotu.position.x = world.counter.position.x;
+      chotu.position.y = world.counter.position.y;
+
+      world.tick(0.01);
+
+      // Worker must have been pushed outside the counter rectangle!
+      final halfW = world.counter.width / 2;
+      final halfH = world.counter.height / 2;
+      final left = world.counter.position.x - halfW;
+      final right = world.counter.position.x + halfW;
+      final top = world.counter.position.y - halfH;
+      final bottom = world.counter.position.y + halfH;
+
+      final isInside = chotu.position.x > left &&
+          chotu.position.x < right &&
+          chotu.position.y > top &&
+          chotu.position.y < bottom;
+
+      expect(isInside, isFalse);
+    });
+
+    test('Chai Kettle machine is solid for workers: worker cannot penetrate station', () {
+      final world = GameWorld(initialRupees: 0.0);
+      world.hireChotu(free: true);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.helper);
+
+      // Place worker inside kettle box
+      chotu.position.x = world.chaiStation.position.x;
+      chotu.position.y = world.chaiStation.position.y;
+
+      world.tick(0.01);
+
+      final halfW = world.chaiStation.width / 2;
+      final halfH = world.chaiStation.height / 2;
+      final left = world.chaiStation.position.x - halfW;
+      final right = world.chaiStation.position.x + halfW;
+      final top = world.chaiStation.position.y - halfH;
+      final bottom = world.chaiStation.position.y + halfH;
+
+      final isInside = chotu.position.x > left &&
+          chotu.position.x < right &&
+          chotu.position.y > top &&
+          chotu.position.y < bottom;
+
+      expect(isInside, isFalse);
+    });
+
+    test('Unlocked Dining Tables are solid for workers, locked tables are not', () {
+      final world = GameWorld(initialRupees: 0.0);
+      world.hireChotu(free: true);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.helper);
+      final table = world.diningTables.first;
+      expect(table.isUnlocked, isFalse);
+
+      // When table is locked: no solid collision
+      chotu.position.x = table.position.x;
+      chotu.position.y = table.position.y;
+      chotu.targetPosition.x = table.position.x;
+      chotu.targetPosition.y = table.position.y;
+      world.tick(0.01);
+      expect(chotu.position.x, table.position.x);
+      expect(chotu.position.y, table.position.y);
+
+      // Unlock table
+      table.isUnlocked = true;
+      world.tick(0.01);
+
+      // Now table is solid: worker is pushed outside!
+      final halfW = table.width / 2;
+      final halfH = table.height / 2;
+      final isInside = chotu.position.x > table.position.x - halfW &&
+          chotu.position.x < table.position.x + halfW &&
+          chotu.position.y > table.position.y - halfH &&
+          chotu.position.y < table.position.y + halfH;
+
+      expect(isInside, isFalse);
+    });
+
+    test('Trash Bin is NOT solid for workers (allows easy dumping)', () {
+      final world = GameWorld(initialRupees: 0.0);
+      world.hireChotu(free: true);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.helper);
+
+      chotu.position.x = world.trashBin.position.x;
+      chotu.position.y = world.trashBin.position.y;
+      chotu.targetPosition.x = world.trashBin.position.x;
+      chotu.targetPosition.y = world.trashBin.position.y;
+
+      world.tick(0.01);
+
+      // Worker is allowed inside the trash bin zone without collision ejection
+      expect(chotu.position.x, world.trashBin.position.x);
+      expect(chotu.position.y, world.trashBin.position.y);
+    });
+
+    test('Workers route cleanly around the counter via open corridors without cutting through', () {
+      final world = GameWorld(initialRupees: 0.0);
+      world.hireChotu(free: true);
+      final chotu = world.staff.firstWhere((s) => s.role == StaffRole.helper);
+
+      // Position worker at Table 2 (700, 950) in dining area
+      chotu.position.x = 700.0;
+      chotu.position.y = 950.0;
+      // Target Trash Bin (125, 460) in kitchen area
+      chotu.targetPosition.x = world.trashBin.position.x + 25.0;
+      chotu.targetPosition.y = world.trashBin.position.y;
+
+      // Simulate movement for 30 seconds
+      bool penetratedCounter = false;
+      final counterLeft = world.counter.position.x - world.counter.width / 2;
+      final counterRight = world.counter.position.x + world.counter.width / 2;
+      final counterTop = world.counter.position.y - world.counter.height / 2;
+      final counterBottom = world.counter.position.y + world.counter.height / 2;
+
+      for (int i = 0; i < 400; i++) {
+        world.tick(0.05);
+
+        if (chotu.position.x > counterLeft &&
+            chotu.position.x < counterRight &&
+            chotu.position.y > counterTop &&
+            chotu.position.y < counterBottom) {
+          penetratedCounter = true;
+          break;
+        }
+      }
+
+      // Worker must NEVER have penetrated the counter!
+      expect(penetratedCounter, isFalse);
+      // Worker should have successfully reached near trash bin!
+      expect(chotu.position.y, lessThan(counterTop));
+    });
+  });
 }

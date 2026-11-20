@@ -287,6 +287,7 @@ class GameWorld {
     for (final member in staff) {
       if (member.role == StaffRole.helper || member.role == StaffRole.chotu) {
         _updateHelperAI(member, dt);
+        _resolveStaffCollisions(member);
       }
     }
 
@@ -336,7 +337,13 @@ class GameWorld {
     if (player.position.y > maxY) player.position.y = maxY;
   }
 
-  void _resolveBoxCollision(Vector2 boxCenter, double width, double height) {
+  void _resolveEntityBoxCollision(
+    Vector2 entityPos,
+    double entityRadius,
+    Vector2 boxCenter,
+    double width,
+    double height,
+  ) {
     final halfW = width / 2;
     final halfH = height / 2;
     final left = boxCenter.x - halfW;
@@ -344,37 +351,91 @@ class GameWorld {
     final top = boxCenter.y - halfH;
     final bottom = boxCenter.y + halfH;
 
-    final closestX = player.position.x.clamp(left, right);
-    final closestY = player.position.y.clamp(top, bottom);
+    final closestX = entityPos.x.clamp(left, right);
+    final closestY = entityPos.y.clamp(top, bottom);
 
-    final dx = player.position.x - closestX;
-    final dy = player.position.y - closestY;
+    final dx = entityPos.x - closestX;
+    final dy = entityPos.y - closestY;
     final distance = math.sqrt(dx * dx + dy * dy);
 
-    if (distance < player.radius) {
+    if (distance < entityRadius) {
       if (distance > 0.0001) {
-        final push = player.radius - distance;
-        player.position.x += (dx / distance) * push;
-        player.position.y += (dy / distance) * push;
+        final push = entityRadius - distance;
+        entityPos.x += (dx / distance) * push;
+        entityPos.y += (dy / distance) * push;
       } else {
-        final distLeft = (player.position.x - left).abs();
-        final distRight = (right - player.position.x).abs();
-        final distTop = (player.position.y - top).abs();
-        final distBottom = (bottom - player.position.y).abs();
+        final distLeft = (entityPos.x - left).abs();
+        final distRight = (right - entityPos.x).abs();
+        final distTop = (entityPos.y - top).abs();
+        final distBottom = (bottom - entityPos.y).abs();
         final minDist = math.min(
           math.min(distLeft, distRight),
           math.min(distTop, distBottom),
         );
 
         if (minDist == distBottom) {
-          player.position.y = bottom + player.radius;
+          entityPos.y = bottom + entityRadius;
         } else if (minDist == distTop) {
-          player.position.y = top - player.radius;
+          entityPos.y = top - entityRadius;
         } else if (minDist == distRight) {
-          player.position.x = right + player.radius;
+          entityPos.x = right + entityRadius;
         } else {
-          player.position.x = left - player.radius;
+          entityPos.x = left - entityRadius;
         }
+      }
+    }
+  }
+
+  void _resolveBoxCollision(Vector2 boxCenter, double width, double height) {
+    _resolveEntityBoxCollision(
+      player.position,
+      player.radius,
+      boxCenter,
+      width,
+      height,
+    );
+  }
+
+  void _resolveStaffCollisions(StaffEntity staffMember) {
+    // 1. Boundary walls
+    final minX = wallThickness + staffMember.radius;
+    final maxX = worldWidth - wallThickness - staffMember.radius;
+    final minY = wallThickness + staffMember.radius;
+    final maxY = worldHeight - wallThickness - staffMember.radius;
+
+    if (staffMember.position.x < minX) staffMember.position.x = minX;
+    if (staffMember.position.x > maxX) staffMember.position.x = maxX;
+    if (staffMember.position.y < minY) staffMember.position.y = minY;
+    if (staffMember.position.y > maxY) staffMember.position.y = maxY;
+
+    // 2. Kitchen machines (Chai Kettle)
+    _resolveEntityBoxCollision(
+      staffMember.position,
+      staffMember.radius,
+      chaiStation.position,
+      chaiStation.width,
+      chaiStation.height,
+    );
+
+    // 3. Serving Counter (solid for workers)
+    _resolveEntityBoxCollision(
+      staffMember.position,
+      staffMember.radius,
+      counter.position,
+      counter.width,
+      counter.height,
+    );
+
+    // 4. Dining Tables (solid for workers when unlocked)
+    for (final table in diningTables) {
+      if (table.isUnlocked) {
+        _resolveEntityBoxCollision(
+          staffMember.position,
+          staffMember.radius,
+          table.position,
+          table.width,
+          table.height,
+        );
       }
     }
   }
@@ -879,7 +940,7 @@ class GameWorld {
       // Target the food deposit zone center (360, 668), safe from cashier boundary (396)
       final depositOffset = (helper.id % 2 == 0 ? -10.0 : 10.0);
       helper.targetPosition.x = counter.foodDepositZoneCenter.x + depositOffset;
-      helper.targetPosition.y = counter.foodDepositZoneCenter.y + 4.0;
+      helper.targetPosition.y = counter.foodDepositZoneCenter.y;
       helper.taskState = HelperTaskState.deliveringChai;
       helper.assignedTableId = null;
 
@@ -937,7 +998,9 @@ class GameWorld {
     if (wantsToClean) {
       helper.assignedTableId = unclaimedDirtyTable.id;
       helper.targetPosition.x = unclaimedDirtyTable.position.x;
-      helper.targetPosition.y = unclaimedDirtyTable.position.y + 40.0;
+      final approachFromTop = helper.position.y < unclaimedDirtyTable.position.y;
+      helper.targetPosition.y = unclaimedDirtyTable.position.y +
+          (approachFromTop ? -52.0 : 52.0);
       helper.taskState = HelperTaskState.cleaningTable;
 
       if (unclaimedDirtyTable.isInsideCleanZone(helper.position)) {
