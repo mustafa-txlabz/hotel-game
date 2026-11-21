@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:chai_dhaba_empire/engine/customer_ai.dart';
 import 'package:chai_dhaba_empire/engine/game_world.dart';
-import 'package:chai_dhaba_empire/engine/stations.dart';
 
 void main() {
   group('Automatic Sliding Doors & Exterior Road (UI Polish)', () {
@@ -75,40 +74,59 @@ void main() {
       }
       expect(world.doorOpenFactor, greaterThan(0.5));
 
-      // Walk South through the open doorway
+      // Walk South through the open doorway onto sidewalk
       world.player.position.y = 1240.0;
       world.tick(0.05);
-      // Allowed on the porch!
+      // Allowed on the sidewalk!
       expect(world.player.position.y, 1240.0);
+      expect(world.player.isOutside, isTrue);
 
-      // Walk into the solid south wall away from the door (e.g. x: 200, y: 1240)
-      world.player.position.x = 200.0;
-      world.player.position.y = 1200.0;
-      world.tick(0.05);
+      // Walk inside the shop into the solid south wall away from the door (x: 200, y: 1180)
+      final freshWorld = GameWorld();
+      freshWorld.player.position.x = 200.0;
+      freshWorld.player.position.y = 1180.0;
+      freshWorld.tick(0.05);
       // Blocked by south wall at maxY (1200 - 32 - 18 = 1150.0)
-      final maxY = world.worldHeight - world.wallThickness - world.player.radius;
-      expect(world.player.position.y, closeTo(maxY, 0.01));
+      final maxY = freshWorld.worldHeight - freshWorld.wallThickness - freshWorld.player.radius;
+      expect(freshWorld.player.position.y, closeTo(maxY, 0.01));
     });
 
-    test('Customers spawn on highway exterior and despawn upon leaving to highway', () {
-      final counter = ServingCounter();
+    test('Customers spawn on sidewalk footpath (left/right) and path to door', () {
       final system = CustomerSystem();
 
-      // Spawns at exterior highway position (450, 1340)
-      expect(system.entrancePosition.y, 1340.0);
+      // Entrance threshold on sidewalk is (450, 1245)
+      expect(system.entrancePosition.y, 1245.0);
 
-      final customer = system.spawnCustomer()!;
-      expect(customer.position.y, 1340.0);
-      expect(customer.position.x, 450.0);
+      // Customer 1 spawns on sidewalk (left or right side)
+      final c1 = system.spawnCustomer()!;
+      expect(c1.position.y, 1245.0);
+      expect(c1.targetPosition.y, lessThan(1200.0)); // Target is inside queue slot
 
-      // Complete customer flow to leavingHappy
-      customer.state = CustomerState.leavingHappy;
-      customer.position.x = 450.0;
-      customer.position.y = 1335.0; // Near highway despawn threshold
+      // Customer 2 spawns on opposite side of sidewalk
+      final c2 = system.spawnCustomer()!;
+      expect(c2.position.y, 1245.0);
+      expect(c2.position.x != c1.position.x, isTrue);
+    });
 
-      system.update(0.1, counter);
-      expect(customer.state, CustomerState.despawned);
-      expect(system.activeCustomers.contains(customer), isFalse);
+    test('Owner pushing down against the curb does NOT snap back inside the shop', () {
+      final world = GameWorld();
+      world.customerSystem.spawnInterval = 999.0;
+      world.doorOpenFactor = 1.0;
+      world.player.isOutside = true;
+
+      // Owner is outside on sidewalk (y: 1240.0)
+      world.player.position.x = 450.0;
+      world.player.position.y = 1240.0;
+      world.tick(0.05);
+      expect(world.player.position.y, 1240.0);
+
+      // Owner tries to push further down past curb (y: 1300.0)
+      world.player.position.y = 1300.0;
+      world.tick(0.05);
+      // Cleanly held at the curb on the sidewalk without jumping inside!
+      final curbY = 1275.0 - world.player.radius;
+      expect(world.player.position.y, closeTo(curbY, 0.01));
+      expect(world.player.position.y, greaterThan(world.worldHeight));
     });
   });
 }

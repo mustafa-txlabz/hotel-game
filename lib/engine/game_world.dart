@@ -106,7 +106,7 @@ class GameWorld {
                headPosition: Vector2(450.0, 782.0),
                maxCapacity: (config ?? StoreProgressionConfig.store1).queueCapacity,
              ),
-              entrancePosition: Vector2(450.0, 1340.0),
+              entrancePosition: Vector2(450.0, 1245.0),
            ),
        cashBundles = [],
        floatingTexts = [],
@@ -389,28 +389,53 @@ class GameWorld {
     final isAtDoorway = player.position.x >= doorLeft + player.radius &&
         player.position.x <= doorRight - player.radius;
 
-    if (isAtDoorway && doorOpenFactor > 0.15) {
-      // Automatic doors open: allow stepping out onto sidewalk porch up to road curb
-      const porchLimitY = 1265.0;
-      if (player.position.y > porchLimitY - player.radius) {
-        player.position.y = porchLimitY - player.radius;
+    // Check outside state transitions
+    if (!player.isOutside) {
+      if (isAtDoorway && doorOpenFactor > 0.15 && player.position.y >= worldHeight) {
+        player.isOutside = true;
       }
     } else {
-      if (player.position.y > maxY) player.position.y = maxY;
+      if (isAtDoorway && player.position.y <= maxY) {
+        player.isOutside = false;
+      }
     }
 
-    // When outside on the porch, constrain horizontally to porch walkway
-    if (player.position.y > maxY) {
-      final porchMinX = doorLeft + player.radius;
-      final porchMaxX = doorRight - player.radius;
-      if (player.position.x < porchMinX) player.position.x = porchMinX;
-      if (player.position.x > porchMaxX) player.position.x = porchMaxX;
+    if (player.isOutside) {
+      // OUTSIDE ON SIDEWALK
+      // 1. South road curb: stops player from walking onto the road
+      const curbLimitY = 1275.0;
+      if (player.position.y > curbLimitY - player.radius) {
+        player.position.y = curbLimitY - player.radius;
+      }
+
+      // 2. North boundary on sidewalk: outside of brick wall blocks player except at doorway
+      if (!isAtDoorway) {
+        final outerWallY = worldHeight + player.radius;
+        if (player.position.y < outerWallY) {
+          player.position.y = outerWallY;
+        }
+      }
+
+      // 3. Horizontal bounds on sidewalk
+      final sidewalkMinX = 40.0 + player.radius;
+      final sidewalkMaxX = worldWidth - 40.0 - player.radius;
+      if (player.position.x < sidewalkMinX) player.position.x = sidewalkMinX;
+      if (player.position.x > sidewalkMaxX) player.position.x = sidewalkMaxX;
     } else {
+      // INSIDE THE SHOP (y < worldHeight)
+      // Top wall
+      if (player.position.y < minY) player.position.y = minY;
+
+      // Left and Right walls
       if (player.position.x < minX) player.position.x = minX;
       if (player.position.x > maxX) player.position.x = maxX;
-    }
 
-    if (player.position.y < minY) player.position.y = minY;
+      // South wall: doorway allows passing through when door is open.
+      // Brick walls stop player at maxY (1150.0).
+      if (!isAtDoorway || doorOpenFactor <= 0.15) {
+        if (player.position.y > maxY) player.position.y = maxY;
+      }
+    }
   }
 
   void _resolveEntityBoxCollision(

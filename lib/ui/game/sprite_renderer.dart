@@ -1885,19 +1885,6 @@ class SpriteRenderer {
       whiteLine,
     );
 
-    // Pedestrian Zebra Crossing (Crosswalk in front of Dhaba entrance: x 390 to 510)
-    final zebraPaint = Paint()
-      ..color = const Color(0xEEFFFFFF)
-      ..strokeWidth = 11.0
-      ..strokeCap = StrokeCap.square;
-    for (double zx = 402.0; zx <= 498.0; zx += 18.0) {
-      canvas.drawLine(
-        Offset(zx, asphaltTop + 6.0),
-        Offset(zx, asphaltTop + 68.0),
-        zebraPaint,
-      );
-    }
-
     // Highway Center Divider: Dashed Yellow Line
     final yellowDash = Paint()
       ..color = const Color(0xFFFFD54F)
@@ -1924,13 +1911,9 @@ class SpriteRenderer {
     _drawRoadArrow(canvas, 270.0, asphaltTop + 100.0, pointingEast: true);
     _drawRoadArrow(canvas, 640.0, asphaltTop + 255.0, pointingEast: false);
 
-    // 7. Parked Authentic Pakistani Bedford Truck (Highway shoulder: x 40 to 160)
-    _drawPakistaniTruck(canvas, 100.0, asphaltTop + 85.0);
+    // Note: Vehicles (truck, rickshaw) temporarily removed per user request for empty highway
 
-    // 8. Parked Iconic Pakistani Auto-Rickshaw (Tuk-Tuk: x 750 to 820)
-    _drawAutoRickshaw(canvas, 785.0, asphaltTop + 80.0);
-
-    // 9. Far Roadside Verge & Greenery (y: 1660.0 to 1850.0)
+    // 7. Far Roadside Verge & Greenery (y: 1660.0 to 1850.0)
     final farVerge = Paint()..color = const Color(0xFF6D4C41);
     canvas.drawRect(
       Rect.fromLTRB(minExtX, asphaltBottom, maxExtX, asphaltBottom + 35.0),
@@ -2086,7 +2069,8 @@ class SpriteRenderer {
     canvas.drawPath(headPath, arrowPaint);
   }
 
-  static void _drawPakistaniTruck(Canvas canvas, double cx, double cy) {
+  /// Draws an authentic Pakistani Bedford Truck with traditional truck art.
+  static void drawPakistaniTruck(Canvas canvas, double cx, double cy) {
     canvas.save();
     canvas.translate(cx, cy);
 
@@ -2197,7 +2181,8 @@ class SpriteRenderer {
     canvas.restore();
   }
 
-  static void _drawAutoRickshaw(Canvas canvas, double cx, double cy) {
+  /// Draws an iconic Pakistani green and yellow Auto-Rickshaw (Tuk-Tuk).
+  static void drawAutoRickshaw(Canvas canvas, double cx, double cy) {
     canvas.save();
     canvas.translate(cx, cy);
 

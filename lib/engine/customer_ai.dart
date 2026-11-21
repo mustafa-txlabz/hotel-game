@@ -93,11 +93,31 @@ class CustomerEntity {
       return;
     }
 
-    final dist = position.distanceTo(targetPosition);
+    // Effective target for sidewalk pathfinding
+    Vector2 effectiveTarget = targetPosition;
+    if (position.y >= 1200.0 && targetPosition.y < 1200.0) {
+      // Entering from sidewalk: first navigate horizontally to door center (450, 1245)
+      if ((position.x - 450.0).abs() > 8.0) {
+        effectiveTarget = Vector2(450.0, 1245.0);
+      }
+    } else if (isLeaving && position.y < 1200.0) {
+      // Leaving from inside: first navigate through the door (450, 1220)
+      if (position.distanceTo(Vector2(450.0, 1220.0)) > 6.0) {
+        effectiveTarget = Vector2(450.0, 1220.0);
+      }
+    }
+
+    final dist = position.distanceTo(effectiveTarget);
     final step = speed * dt;
     if (dist <= step || dist <= 2.0) {
-      position.x = targetPosition.x;
-      position.y = targetPosition.y;
+      position.x = effectiveTarget.x;
+      position.y = effectiveTarget.y;
+
+      if (effectiveTarget != targetPosition) {
+        // Reached intermediate door checkpoint, continue next frame towards actual target
+        return;
+      }
+
       isMoving = false;
       walkCycle = 0.0;
 
@@ -116,8 +136,8 @@ class CustomerEntity {
       }
     } else {
       isMoving = true;
-      final dx = targetPosition.x - position.x;
-      final dy = targetPosition.y - position.y;
+      final dx = effectiveTarget.x - position.x;
+      final dy = effectiveTarget.y - position.y;
 
       position.x += (dx / dist) * step;
       position.y += (dy / dist) * step;
@@ -214,11 +234,20 @@ class CustomerSystem {
     List<DiningTable>? tables,
     this.spawnInterval = GameBalance.customerSpawnInterval,
   }) : queue = queue ?? CustomerQueue(),
-       entrancePosition = entrancePosition ?? Vector2(450.0, 1340.0),
+       entrancePosition = entrancePosition ?? Vector2(450.0, 1245.0),
        diningTables = tables ?? [],
        activeCustomers = [],
        spawnTimer = 0.0,
        nextCustomerId = 1;
+
+  /// Sets up a customer to depart the store and path along the sidewalk to exit.
+  void _setCustomerLeaving(CustomerEntity customer, CustomerState leavingState) {
+    customer.state = leavingState;
+    final exitX = (customer.id % 2 == 0) ? -70.0 : 970.0;
+    customer.targetPosition = entrancePosition.y >= 1200.0
+        ? Vector2(exitX, entrancePosition.y)
+        : entrancePosition.copy();
+  }
 
   /// Determines order item count (1 to 10):
   /// - 65% of orders: 1 to 3 items (eligible for Dine-In table!)
@@ -235,17 +264,25 @@ class CustomerSystem {
     }
   }
 
-  /// Spawns a new customer at the entrance and enqueues them.
+  /// Spawns a new customer on the sidewalk footpath (left or right side) and enqueues them.
   CustomerEntity? spawnCustomer({
     ItemType item = ItemType.chai,
     int count = 1,
   }) {
     if (queue.isFull) return null;
 
+    final slotTarget = queue.getSlotPosition(queue.count);
+    final isLeft = (nextCustomerId % 2 == 0);
+    final sidewalkSpawnX = isLeft ? -50.0 : 950.0;
+
+    final startPos = entrancePosition.y >= 1200.0
+        ? Vector2(sidewalkSpawnX, entrancePosition.y)
+        : entrancePosition.copy();
+
     final customer = CustomerEntity(
       id: nextCustomerId++,
-      startPosition: entrancePosition.copy(),
-      targetPosition: queue.getSlotPosition(queue.count),
+      startPosition: startPos,
+      targetPosition: slotTarget,
       desiredItem: item,
       desiredCount: count,
       variant: (nextCustomerId) % 4,
@@ -259,16 +296,24 @@ class CustomerSystem {
 
   /// Spawns a customer when the queue is full who observes the crowd and leaves unhappy.
   CustomerEntity? spawnCrowdedCustomer() {
-    final targetY =
-        entrancePosition.y > 1200.0 ? 1160.0 : entrancePosition.y - 45.0;
+    final isLeft = (nextCustomerId % 2 == 0);
+    final sidewalkSpawnX = isLeft ? -50.0 : 950.0;
+    final startPos = entrancePosition.y >= 1200.0
+        ? Vector2(sidewalkSpawnX, entrancePosition.y)
+        : entrancePosition.copy();
+
     final customer = CustomerEntity(
       id: nextCustomerId++,
-      startPosition: entrancePosition.copy(),
-      targetPosition: Vector2(entrancePosition.x, targetY),
+      startPosition: startPos,
+      targetPosition: Vector2(
+        entrancePosition.x,
+        entrancePosition.y > 1200.0 ? 1160.0 : entrancePosition.y - 45.0,
+      ),
       desiredItem: ItemType.chai,
       desiredCount: 1,
       variant: (nextCustomerId) % 4,
     );
+
     activeCustomers.add(customer);
     onCustomerCrowdedOut?.call(customer);
     return customer;
@@ -303,8 +348,7 @@ class CustomerSystem {
         if (queue.customers.contains(customer)) {
           customer.state = CustomerState.waitingInQueue;
         } else {
-          customer.state = CustomerState.leavingUnhappy;
-          customer.targetPosition = entrancePosition.copy();
+          _setCustomerLeaving(customer, CustomerState.leavingUnhappy);
           onCustomerLeftUnhappy?.call(customer);
         }
       }
@@ -337,8 +381,7 @@ class CustomerSystem {
           customer.tableWaitTimer += dt;
           if (customer.tableWaitTimer >= customer.tableWaitDuration) {
             // Waited 2.5s and still no table: throw away chai, get angry, and leave!
-            customer.state = CustomerState.leavingUnhappy;
-            customer.targetPosition = entrancePosition.copy();
+            _setCustomerLeaving(customer, CustomerState.leavingUnhappy);
             onCustomerTableTimeout?.call(customer);
             onCustomerLeftUnhappy?.call(customer);
           }
@@ -362,8 +405,7 @@ class CustomerSystem {
           customer.assignedSeat = null;
           customer.assignedTable = null;
           customer.hasDinedIn = true;
-          customer.state = CustomerState.leavingHappy;
-          customer.targetPosition = entrancePosition.copy();
+          _setCustomerLeaving(customer, CustomerState.leavingHappy);
         }
       }
     }
@@ -431,8 +473,7 @@ class CustomerSystem {
                 }
               } else {
                 // Large order (> 3 cups): Strictly Takeaway to go!
-                headCustomer.state = CustomerState.leavingHappy;
-                headCustomer.targetPosition = entrancePosition.copy();
+                _setCustomerLeaving(headCustomer, CustomerState.leavingHappy);
                 queue.dequeue();
               }
             }
@@ -444,8 +485,7 @@ class CustomerSystem {
           headCustomer.patienceTimer += dt;
           if (headCustomer.patienceTimer >= headCustomer.patienceTime) {
             // Customer leaves disappointed
-            headCustomer.state = CustomerState.leavingUnhappy;
-            headCustomer.targetPosition = entrancePosition.copy();
+            _setCustomerLeaving(headCustomer, CustomerState.leavingUnhappy);
             queue.dequeue();
             onCustomerLeftUnhappy?.call(headCustomer);
           }
@@ -453,13 +493,18 @@ class CustomerSystem {
       }
     }
 
-    // 4. Despawn customers when they reach the entrance / highway exit
+    // 4. Despawn customers when they reach the entrance / sidewalk exit
     final toRemove = <CustomerEntity>[];
     for (final customer in activeCustomers) {
       if (customer.isLeaving) {
         final distToExit = customer.position.distanceTo(entrancePosition);
-        if (distToExit < 24.0 ||
-            customer.position.y >= entrancePosition.y - 10.0) {
+        final isOffSidewalk =
+            customer.position.x <= -40.0 || customer.position.x >= 940.0;
+        final isAtEntranceDirect =
+            customer.targetPosition.x == entrancePosition.x &&
+            distToExit < 24.0;
+
+        if (isOffSidewalk || isAtEntranceDirect) {
           customer.state = CustomerState.despawned;
           toRemove.add(customer);
         }

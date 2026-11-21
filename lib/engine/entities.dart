@@ -114,6 +114,7 @@ class PlayerEntity {
   final List<ItemType> carriedItems;
   double wobbleAngle; // Sway in radians
   double wobbleVelocity;
+  bool isOutside;
 
   PlayerEntity({
     Vector2? startPosition,
@@ -127,7 +128,8 @@ class PlayerEntity {
        walkCycle = 0.0,
        carriedItems = [],
        wobbleAngle = 0.0,
-       wobbleVelocity = 0.0;
+       wobbleVelocity = 0.0,
+       isOutside = false;
 
   int get carriedCount => carriedItems.length;
   bool get isFull => carriedCount >= carryCapacity;
