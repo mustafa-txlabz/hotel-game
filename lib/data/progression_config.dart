@@ -49,24 +49,23 @@ class StoreProgressionConfig {
     this.customerReputationDelta = 0.2,
     this.sadCustomerReputationDelta = -0.2,
     this.upgradeReputationDelta = 0.0,
-    this.baseSpawnInterval = 2.0,
-    this.minSpawnInterval = 0.5,
+    this.baseSpawnInterval = 4.0,
+    this.minSpawnInterval = 2.0,
     this.queueCapacity = 8,
     this.goals = const [],
   });
 
   /// Calculates dynamic customer spawn interval (in seconds) based on store reputation %.
   /// Breakpoints:
-  /// - 0% Reputation:  2.0s
-  /// - 25% Reputation: 1.5s
-  /// - 50% Reputation: 1.0s
-  /// - 75%-100% Rep:   0.5s
+  /// - 0% Reputation:  4.0s
+  /// - 25% Reputation: 3.0s
+  /// - 50%-100% Rep:   2.0s
   double calculateSpawnInterval(double reputationPercent) {
     final r = reputationPercent.clamp(0.0, 100.0);
-    if (r <= 75.0) {
-      return 2.0 - (r / 75.0) * 1.5; // Linear 2.0s -> 1.5s -> 1.0s -> 0.5s
+    if (r <= 50.0) {
+      return 4.0 - (r / 50.0) * 2.0; // 0% = 4.0s, 25% = 3.0s, 50% = 2.0s
     } else {
-      return 0.5; // 75% to 100% locked at 0.5s (Rush hour!)
+      return 2.0; // 50% to 100% locked at 2.0s
     }
   }
 
@@ -77,8 +76,8 @@ class StoreProgressionConfig {
     customerReputationDelta: 0.2,
     sadCustomerReputationDelta: -0.2,
     upgradeReputationDelta: 0.0,
-    baseSpawnInterval: 2.0,
-    minSpawnInterval: 0.5,
+    baseSpawnInterval: 4.0,
+    minSpawnInterval: 2.0,
     queueCapacity: 8,
     goals: [
       StoreGoal(

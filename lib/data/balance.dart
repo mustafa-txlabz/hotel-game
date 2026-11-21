@@ -18,7 +18,7 @@ class GameBalance {
 
   // Customer & Economy Settings (M3 & M5)
   static const double customerSpeed = 135.0;
-  static const double customerSpawnInterval = 3.2;
+  static const double customerSpawnInterval = 4.0;
   static const int maxQueueCapacity = 8;
   static const double customerPatienceTime = 22.0;
   static const double chaiPrice = 10.0;
