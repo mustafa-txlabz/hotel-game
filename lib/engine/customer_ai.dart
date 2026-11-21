@@ -9,10 +9,11 @@ enum CustomerState {
   spawning, // Entering dhaba through front door, walking towards queue
   waitingInQueue, // Waiting in line in front of the serving counter
   beingServed, // Actively receiving food at the head of the queue
+  waitingForTable, // Finished buying 1-3 cups, waiting near tables for a seat to free up
   walkingToTable, // Walking to assigned dining table to sit
   eating, // Sitting at dining table, eating/drinking
   leavingHappy, // Satisfied customer walking towards exit door
-  leavingUnhappy, // Disappointed customer leaving due to unattended counter
+  leavingUnhappy, // Disappointed customer leaving due to unattended counter or table timeout
   despawned, // Left the dhaba floor, removed from simulation
 }
 
@@ -46,6 +47,10 @@ class CustomerEntity {
   final double eatDuration;
   bool hasDinedIn;
 
+  // Table waiting state (when tables are occupied for 1-3 cups orders)
+  double tableWaitTimer;
+  final double tableWaitDuration;
+
   CustomerEntity({
     required this.id,
     required Vector2 startPosition,
@@ -56,6 +61,7 @@ class CustomerEntity {
     this.desiredCount = 1,
     this.patienceTime = GameBalance.customerPatienceTime,
     this.eatDuration = GameBalance.customerEatDuration,
+    this.tableWaitDuration = GameBalance.customerTableWaitDuration,
     this.variant = 0,
   }) : position = startPosition.copy(),
        angle = -math.pi / 2, // Facing North (towards counter)
@@ -65,6 +71,7 @@ class CustomerEntity {
        walkCycle = 0.0,
        isMoving = false,
        eatTimer = 0.0,
+       tableWaitTimer = 0.0,
        assignedTable = null,
        assignedSeat = null,
        hasDinedIn = false;
@@ -98,6 +105,8 @@ class CustomerEntity {
       if (state == CustomerState.waitingInQueue ||
           state == CustomerState.beingServed) {
         angle = -math.pi / 2;
+      } else if (state == CustomerState.waitingForTable) {
+        angle = math.pi / 2; // Face South towards dining tables
       } else if (state == CustomerState.walkingToTable) {
         // Arrived at dining table seat! Transition to eating
         state = CustomerState.eating;
@@ -197,6 +206,7 @@ class CustomerSystem {
   void Function(CustomerEntity)? onCustomerSpawned;
   void Function(CustomerEntity, DiningTable)? onCustomerDinedIn;
   void Function(CustomerEntity, DiningTable)? onCustomerFinishedEating;
+  void Function(CustomerEntity)? onCustomerTableTimeout;
 
   CustomerSystem({
     CustomerQueue? queue,
@@ -209,6 +219,21 @@ class CustomerSystem {
        activeCustomers = [],
        spawnTimer = 0.0,
        nextCustomerId = 1;
+
+  /// Determines order item count (1 to 10):
+  /// - 65% of orders: 1 to 3 items (eligible for Dine-In table!)
+  /// - 25% of orders: 4 to 6 items (takeaway)
+  /// - 10% of orders: 7 to 10 items (bulk takeaway)
+  int _determineOrderCount() {
+    final rng = math.Random().nextDouble();
+    if (rng < 0.65) {
+      return 1 + math.Random().nextInt(3); // 1, 2, or 3
+    } else if (rng < 0.90) {
+      return 4 + math.Random().nextInt(3); // 4, 5, or 6
+    } else {
+      return 7 + math.Random().nextInt(4); // 7, 8, 9, or 10
+    }
+  }
 
   /// Spawns a new customer at the entrance and enqueues them.
   CustomerEntity? spawnCustomer({
@@ -256,8 +281,7 @@ class CustomerSystem {
     if (!queue.isFull) {
       if (spawnTimer >= spawnInterval) {
         spawnTimer = 0.0;
-        // Mostly 1 cup, occasionally 2 cups for variety
-        final orderCount = (nextCustomerId % 4 == 0) ? 2 : 1;
+        final orderCount = _determineOrderCount();
         spawnCustomer(item: ItemType.chai, count: orderCount);
       }
     } else {
@@ -280,6 +304,42 @@ class CustomerSystem {
           customer.state = CustomerState.leavingUnhappy;
           customer.targetPosition = entrancePosition.copy();
           onCustomerLeftUnhappy?.call(customer);
+        }
+      }
+
+      // Handle customer waiting for a table to free up (2.5s wait)
+      if (customer.state == CustomerState.waitingForTable) {
+        TableSeat? freeSeat;
+        DiningTable? freeTable;
+        for (final table in diningTables) {
+          if (table.isUnlocked) {
+            final seat = table.firstAvailableSeat;
+            if (seat != null) {
+              freeSeat = seat;
+              freeTable = table;
+              break;
+            }
+          }
+        }
+
+        if (freeSeat != null && freeTable != null) {
+          // Table seat opened up! Claim it and walk over
+          freeSeat.isOccupied = true;
+          freeSeat.isSeated = false;
+          customer.assignedTable = freeTable;
+          customer.assignedSeat = freeSeat;
+          customer.state = CustomerState.walkingToTable;
+          customer.targetPosition = freeSeat.position.copy();
+          onCustomerDinedIn?.call(customer, freeTable);
+        } else {
+          customer.tableWaitTimer += dt;
+          if (customer.tableWaitTimer >= customer.tableWaitDuration) {
+            // Waited 2.5s and still no table: throw away chai, get angry, and leave!
+            customer.state = CustomerState.leavingUnhappy;
+            customer.targetPosition = entrancePosition.copy();
+            onCustomerTableTimeout?.call(customer);
+            onCustomerLeftUnhappy?.call(customer);
+          }
         }
       }
 
@@ -328,32 +388,47 @@ class CustomerSystem {
             onCustomerServed?.call(headCustomer, served);
 
             if (headCustomer.isOrderComplete) {
-              // Find first available seat across all unlocked dining tables (M5)
-              TableSeat? targetSeat;
-              DiningTable? targetTable;
-              for (final table in diningTables) {
-                if (table.isUnlocked) {
-                  final freeSeat = table.firstAvailableSeat;
-                  if (freeSeat != null) {
-                    targetSeat = freeSeat;
-                    targetTable = table;
-                    break;
+              final hasUnlockedTables = diningTables.any((t) => t.isUnlocked);
+              final wantsDineIn = hasUnlockedTables &&
+                  headCustomer.desiredCount <= GameBalance.maxDineInOrderItems;
+
+              if (wantsDineIn) {
+                // Find first available seat across all unlocked dining tables (M5)
+                TableSeat? targetSeat;
+                DiningTable? targetTable;
+                for (final table in diningTables) {
+                  if (table.isUnlocked) {
+                    final freeSeat = table.firstAvailableSeat;
+                    if (freeSeat != null) {
+                      targetSeat = freeSeat;
+                      targetTable = table;
+                      break;
+                    }
                   }
                 }
-              }
 
-              if (targetSeat != null && targetTable != null) {
-                // Customer claims specific seat and walks to sit down
-                targetSeat.isOccupied = true;
-                targetSeat.isSeated = false;
-                headCustomer.assignedTable = targetTable;
-                headCustomer.assignedSeat = targetSeat;
-                headCustomer.state = CustomerState.walkingToTable;
-                headCustomer.targetPosition = targetSeat.position.copy();
-                queue.dequeue();
-                onCustomerDinedIn?.call(headCustomer, targetTable);
+                if (targetSeat != null && targetTable != null) {
+                  // Customer claims specific seat and walks to sit down
+                  targetSeat.isOccupied = true;
+                  targetSeat.isSeated = false;
+                  headCustomer.assignedTable = targetTable;
+                  headCustomer.assignedSeat = targetSeat;
+                  headCustomer.state = CustomerState.walkingToTable;
+                  headCustomer.targetPosition = targetSeat.position.copy();
+                  queue.dequeue();
+                  onCustomerDinedIn?.call(headCustomer, targetTable);
+                } else {
+                  // Tables are full or locked! Customer steps to waiting area to wait 2.5s for table
+                  final isLeft = (headCustomer.id % 2 == 0);
+                  final sideX = isLeft ? 270.0 : 630.0;
+                  final offsetX = ((headCustomer.id % 3) - 1) * 20.0;
+                  headCustomer.targetPosition = Vector2(sideX + offsetX, 860.0);
+                  headCustomer.state = CustomerState.waitingForTable;
+                  headCustomer.tableWaitTimer = 0.0;
+                  queue.dequeue();
+                }
               } else {
-                // Takeaway to go!
+                // Large order (> 3 cups): Strictly Takeaway to go!
                 headCustomer.state = CustomerState.leavingHappy;
                 headCustomer.targetPosition = entrancePosition.copy();
                 queue.dequeue();

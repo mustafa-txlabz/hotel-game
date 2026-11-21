@@ -24,6 +24,9 @@ class GameBalance {
   static const double chaiPrice = 10.0;
   static const double customerEatDuration = 5.0;
   static const double dineInTip = 25.0;
+  static const int maxCustomerOrderItems = 10;
+  static const int maxDineInOrderItems = 3;
+  static const double customerTableWaitDuration = 2.5;
 
   // Staff Hiring & HR Upgrades (M6)
   static const int maxWorkersLevel1 = 3;

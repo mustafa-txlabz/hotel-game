@@ -348,8 +348,9 @@ class SpriteRenderer {
     canvas.drawCircle(const Offset(-13, 2), 4.5, handPaint);
     canvas.drawCircle(const Offset(13, 2), 4.5, handPaint);
 
-    // If walking to table or leaving happy from takeaway (not after dine-in meal), carry a cup of chai in hand!
+    // If walking to table, waiting for table, or leaving happy from takeaway (not after dine-in meal), carry a cup of chai in hand!
     if (customer.state == CustomerState.walkingToTable ||
+        customer.state == CustomerState.waitingForTable ||
         (customer.state == CustomerState.leavingHappy && !customer.hasDinedIn)) {
       canvas.save();
       canvas.translate(0, 12);
@@ -364,6 +365,8 @@ class SpriteRenderer {
         customer.state == CustomerState.beingServed ||
         customer.state == CustomerState.spawning) {
       _drawOrderSpeechBubble(canvas, customer);
+    } else if (customer.state == CustomerState.waitingForTable) {
+      _drawWaitingForTableReaction(canvas, customer);
     } else if (customer.state == CustomerState.leavingUnhappy) {
       _drawUnhappyReaction(canvas);
     } else if (customer.state == CustomerState.leavingHappy) {
@@ -416,8 +419,62 @@ class SpriteRenderer {
     );
   }
 
+  static void _drawWaitingForTableReaction(
+    Canvas canvas,
+    CustomerEntity customer,
+  ) {
+    const bubbleWidth = 42.0;
+    const bubbleHeight = 22.0;
+    const bubbleY = -34.0;
+
+    final bubblePath = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: const Offset(0, bubbleY),
+            width: bubbleWidth,
+            height: bubbleHeight,
+          ),
+          const Radius.circular(8),
+        ),
+      );
+
+    canvas.drawShadow(bubblePath, Colors.black38, 3.0, false);
+    canvas.drawPath(bubblePath, Paint()..color = Colors.white);
+
+    // Border
+    canvas.drawPath(
+      bubblePath,
+      Paint()
+        ..color = const Color(0xFFCFD8DC)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+
+    // Tail
+    final tail = Path()
+      ..moveTo(-4, bubbleY + bubbleHeight / 2)
+      ..lineTo(0, bubbleY + bubbleHeight / 2 + 5)
+      ..lineTo(4, bubbleY + bubbleHeight / 2)
+      ..close();
+    canvas.drawPath(tail, Paint()..color = Colors.white);
+
+    final textPainter = TextPainter(
+      text: const TextSpan(
+        text: '🪑⏳',
+        style: TextStyle(fontSize: 10),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    textPainter.paint(
+      canvas,
+      Offset(-textPainter.width / 2, bubbleY - textPainter.height / 2),
+    );
+  }
+
   static void _drawOrderSpeechBubble(Canvas canvas, CustomerEntity customer) {
-    const bubbleWidth = 44.0;
+    final remaining = customer.desiredCount - customer.receivedCount;
+    final bubbleWidth = remaining >= 10 ? 50.0 : 44.0;
     const bubbleHeight = 24.0;
     const bubbleY = -34.0;
 
@@ -462,7 +519,6 @@ class SpriteRenderer {
     canvas.restore();
 
     // Order count text
-    final remaining = customer.desiredCount - customer.receivedCount;
     final textPainter = TextPainter(
       text: TextSpan(
         text: 'x$remaining',

@@ -168,7 +168,7 @@ class ServingCounter {
     this.width = 300.0,
     this.height = 56.0,
     this.depositInterval = 0.14,
-    this.serviceInterval = 0.32,
+    this.serviceInterval = 1.75,
     this.cashCollectInterval = 0.08,
     this.maxColumns = 3,
     this.maxPerTower = 10,

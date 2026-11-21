@@ -109,15 +109,15 @@ void main() {
       expect(system.queue.isEmpty, isTrue);
     });
 
-    test('Served customer takes takeaway if no table is unlocked/available', () {
+    test('Served customer takes takeaway if order is > 3 items', () {
       final counter = ServingCounter(position: Vector2(450.0, 720.0));
       counter.isCashierPresent = true;
-      counter.addFoodItem(ItemType.chai);
+      counter.foodTowers.first.count = 4; // 4 cups ready
 
       final table = DiningTable(
         id: 1,
         position: Vector2(200.0, 950.0),
-        isUnlocked: false, // Locked table!
+        isUnlocked: true,
       );
 
       final system = CustomerSystem(
@@ -126,11 +126,14 @@ void main() {
         tables: [table],
       );
 
-      final customer = system.spawnCustomer(item: ItemType.chai, count: 1)!;
+      final customer = system.spawnCustomer(item: ItemType.chai, count: 4)!;
       customer.position.x = 450.0;
       customer.position.y = 782.0;
 
-      system.update(0.1, counter);
+      for (int i = 0; i < 4; i++) {
+        counter.serviceTimer = 0.0;
+        system.update(0.1, counter);
+      }
 
       expect(customer.isOrderComplete, isTrue);
       expect(customer.state, CustomerState.leavingHappy); // Takeaway!
@@ -246,9 +249,90 @@ void main() {
       fifthCustomer.position.y = 782.0;
       system.update(0.1, counter);
 
-      // 5th customer must take takeaway to go!
-      expect(fifthCustomer.state, CustomerState.leavingHappy);
+      // 5th customer waits near tables for 2.5s!
+      expect(fifthCustomer.state, CustomerState.waitingForTable);
       expect(fifthCustomer.assignedTable, isNull);
+    });
+
+    test('Customer waiting for table gives up after 2.5s, refunds Rs 10 per cup and loses reputation', () {
+      final world = GameWorld(initialRupees: 100.0, initialReputationPercent: 10.0);
+      world.hireCashier(free: true);
+      final initialRep = world.reputationPercent;
+
+      // Table 1 is unlocked but fully occupied
+      world.diningTables[0].isUnlocked = true;
+      for (final s in world.diningTables[0].seats) {
+        s.isOccupied = true;
+      }
+      world.diningTables[1].isUnlocked = false;
+
+      world.counter.foodTowers.first.count = 5;
+      world.counter.serviceTimer = 0.0;
+
+      final customer = world.customerSystem.spawnCustomer(item: ItemType.chai, count: 1)!;
+      customer.position.x = 450.0;
+      customer.position.y = 782.0;
+
+      world.tick(0.1);
+      expect(customer.state, CustomerState.waitingForTable);
+      expect(world.reputationPercent, closeTo(initialRep + 0.2, 0.001)); // Served +0.2%
+      expect(world.rupees, 100.0); // No refund yet, waiting for table
+
+      // Wait 1.5s (total 1.6s) -> still waiting
+      world.tick(1.5);
+      expect(customer.state, CustomerState.waitingForTable);
+      expect(world.rupees, 100.0);
+
+      // Wait another 1.0s (total 2.6s >= 2.5s timeout)
+      world.tick(1.0);
+      expect(customer.state, CustomerState.leavingUnhappy);
+      expect(world.rupees, 90.0); // Rs 10 refunded!
+      expect(world.reputationPercent, closeTo(initialRep, 0.001)); // Penalty deducted -0.2%!
+    });
+
+    test('Customer waiting for table takes seat if table becomes free before 2.5s', () {
+      final table = DiningTable(
+        id: 1,
+        position: Vector2(200.0, 950.0),
+        isUnlocked: true,
+      );
+      // Occupy all seats
+      for (final s in table.seats) {
+        s.isOccupied = true;
+      }
+      expect(table.isAvailable, isFalse);
+
+      final counter = ServingCounter(position: Vector2(450.0, 720.0));
+      counter.isCashierPresent = true;
+      counter.addFoodItem(ItemType.chai);
+
+      final system = CustomerSystem(
+        queue: CustomerQueue(headPosition: Vector2(450.0, 782.0)),
+        entrancePosition: Vector2(450.0, 1165.0),
+        tables: [table],
+      );
+
+      final customer = system.spawnCustomer(item: ItemType.chai, count: 1)!;
+      customer.position.x = 450.0;
+      customer.position.y = 782.0;
+      system.update(0.1, counter);
+      expect(customer.state, CustomerState.waitingForTable);
+
+      // Wait 1.0s
+      system.update(1.0, counter);
+      expect(customer.state, CustomerState.waitingForTable);
+
+      // Free a seat!
+      table.seats.first.isOccupied = false;
+      table.seats.first.isSeated = false;
+      table.seats.first.hasDirtyTray = false;
+      expect(table.isAvailable, isTrue);
+
+      // Next tick: customer claims seat!
+      system.update(0.1, counter);
+      expect(customer.state, CustomerState.walkingToTable);
+      expect(customer.assignedSeat, table.seats.first);
+      expect(table.seats.first.isOccupied, isTrue);
     });
   });
 

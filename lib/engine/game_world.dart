@@ -158,6 +158,25 @@ class GameWorld {
       );
     };
 
+    customerSystem.onCustomerTableTimeout = (customer) {
+      // Customer waited 2.5s and no table was available: refund money and throw away chai
+      final refundAmount = GameBalance.chaiPrice * customer.receivedCount;
+      rupees = math.max(0.0, rupees - refundAmount);
+
+      floatingTexts.add(
+        FloatingTextEntity(
+          position: Vector2(customer.position.x, customer.position.y - 45.0),
+          text: '-Rs ${refundAmount.toInt()} 💸',
+        ),
+      );
+      floatingTexts.add(
+        FloatingTextEntity(
+          position: Vector2(customer.position.x, customer.position.y - 65.0),
+          text: 'NO TABLE! ☕💥',
+        ),
+      );
+    };
+
     // Initialize default ground pads if not supplied
     if (groundPads.isEmpty) {
       final kettlePad = GroundPad(
