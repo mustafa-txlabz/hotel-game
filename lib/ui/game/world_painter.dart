@@ -22,6 +22,14 @@ class WorldPainter extends CustomPainter {
       size.height / 2 - cameraOffset.dy,
     );
 
+    // 1.5 Draw Grand Trunk Highway Exterior Environment (Road, sidewalk, curbs, truck, rickshaw, signboard)
+    SpriteRenderer.drawExteriorEnvironment(
+      canvas,
+      world.worldWidth,
+      world.worldHeight,
+      world.wallThickness,
+    );
+
     // 2. Draw Floor
     SpriteRenderer.drawFloor(
       canvas,
@@ -46,6 +54,15 @@ class WorldPainter extends CustomPainter {
       world.worldWidth,
       world.worldHeight,
       world.wallThickness,
+    );
+
+    // 5.5 Draw Automatic Sliding Double Doors (with motion sensor & glass panels)
+    SpriteRenderer.drawAutomaticDoors(
+      canvas,
+      world.worldWidth,
+      world.worldHeight,
+      world.wallThickness,
+      world.doorOpenFactor,
     );
 
     // 6. Draw Stations (Chai Kettle, Serving Counter, Trash Bin)

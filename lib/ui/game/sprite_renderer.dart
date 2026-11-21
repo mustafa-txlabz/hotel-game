@@ -1424,25 +1424,853 @@ class SpriteRenderer {
       capPaint,
     );
 
-    // Welcome mat at entrance
+    // Welcome mat at inside entrance threshold
     final matPaint = Paint()..color = AppTheme.truckArtGreen;
     final matBorder = Paint()
       ..color = AppTheme.goldYellow
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
+      ..strokeWidth = 2.5;
     final matRect = Rect.fromCenter(
-      center: Offset(width / 2, height - wallThickness / 2),
-      width: doorWidth - 20,
-      height: wallThickness + 10,
+      center: Offset(width / 2, height - wallThickness - 14.0),
+      width: doorWidth - 24.0,
+      height: 24.0,
     );
     canvas.drawRRect(
-      RRect.fromRectAndRadius(matRect, const Radius.circular(6)),
+      RRect.fromRectAndRadius(matRect, const Radius.circular(5)),
       matPaint,
     );
     canvas.drawRRect(
-      RRect.fromRectAndRadius(matRect, const Radius.circular(6)),
+      RRect.fromRectAndRadius(matRect, const Radius.circular(5)),
       matBorder,
     );
+
+    // Subtle decorative geometric line on mat
+    final goldLinePaint = Paint()
+      ..color = AppTheme.goldYellow.withValues(alpha: 0.6)
+      ..strokeWidth = 1.5;
+    canvas.drawLine(
+      Offset(width / 2 - 45, height - wallThickness - 14.0),
+      Offset(width / 2 + 45, height - wallThickness - 14.0),
+      goldLinePaint,
+    );
+  }
+
+  /// Draws the modern double sliding glass automatic doors with overhead motion sensor,
+  /// frosted safety bands, chrome tubular handles, and aluminum framing.
+  static void drawAutomaticDoors(
+    Canvas canvas,
+    double width,
+    double height,
+    double wallThickness,
+    double doorOpenFactor,
+  ) {
+    const doorWidth = 180.0;
+    final doorLeft = (width - doorWidth) / 2; // 360.0
+    final doorRight = doorLeft + doorWidth; // 540.0
+    final doorCenter = width / 2; // 450.0
+    final doorY = height - wallThickness; // 1168.0
+
+    // 1. Stainless Steel Floor Guide Track / Threshold Plate
+    final trackPaint = Paint()..color = const Color(0xFF546E7A);
+    final trackShine = Paint()
+      ..color = const Color(0xFFCFD8DC)
+      ..strokeWidth = 1.5;
+    canvas.drawRect(
+      Rect.fromLTWH(
+        doorLeft - 6.0,
+        doorY + wallThickness - 8.0,
+        doorWidth + 12.0,
+        7.0,
+      ),
+      trackPaint,
+    );
+    canvas.drawLine(
+      Offset(doorLeft - 4.0, doorY + wallThickness - 5.0),
+      Offset(doorRight + 4.0, doorY + wallThickness - 5.0),
+      trackShine,
+    );
+
+    // 2. Sliding Double Glass Panels
+    final slideDist = doorOpenFactor * 78.0;
+    const panelWidth = 88.0;
+    const panelHeight = 22.0;
+    final panelTop = doorY + 5.0;
+
+    // Paints for Glass Panels
+    final glassShadow = Paint()..color = const Color(0x33000000);
+    final glassFill = Paint()..color = const Color(0x9980DEEA);
+    final glassFrame = Paint()
+      ..color = const Color(0xFFECEFF1)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    final safetyStripe = Paint()
+      ..color = const Color(0x88FFFFFF)
+      ..strokeWidth = 1.5;
+    final reflectionGleam = Paint()
+      ..color = const Color(0x44FFFFFF)
+      ..strokeWidth = 1.8;
+    final handlePaint = Paint()
+      ..color = const Color(0xFFCFD8DC)
+      ..strokeWidth = 3.5
+      ..strokeCap = StrokeCap.round;
+    final handleHighlight = Paint()
+      ..color = const Color(0xFFFFFFFF)
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+
+    void renderDoorLeaf({required double left, required bool isLeftLeaf}) {
+      final leafRect = Rect.fromLTWH(left, panelTop, panelWidth, panelHeight);
+      final leafRRect = RRect.fromRectAndRadius(
+        leafRect,
+        const Radius.circular(3),
+      );
+
+      // Panel drop shadow
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          leafRect.translate(0, 2),
+          const Radius.circular(3),
+        ),
+        glassShadow,
+      );
+
+      // Glass fill
+      canvas.drawRRect(leafRRect, glassFill);
+
+      // Diagonal specular reflection streak
+      canvas.drawLine(
+        Offset(left + 15, panelTop + 3),
+        Offset(left + 45, panelTop + panelHeight - 3),
+        reflectionGleam,
+      );
+
+      // Frosted safety stripes
+      canvas.drawLine(
+        Offset(left + 6, panelTop + panelHeight / 2 - 2),
+        Offset(left + panelWidth - 6, panelTop + panelHeight / 2 - 2),
+        safetyStripe,
+      );
+      canvas.drawLine(
+        Offset(left + 6, panelTop + panelHeight / 2 + 3),
+        Offset(left + panelWidth - 6, panelTop + panelHeight / 2 + 3),
+        safetyStripe,
+      );
+
+      // Aluminum border frame
+      canvas.drawRRect(leafRRect, glassFrame);
+
+      // Vertical tubular handle bar
+      final handleX = isLeftLeaf ? (left + panelWidth - 9.0) : (left + 9.0);
+      canvas.drawLine(
+        Offset(handleX, panelTop + 3.0),
+        Offset(handleX, panelTop + panelHeight - 3.0),
+        handlePaint,
+      );
+      canvas.drawLine(
+        Offset(handleX - 0.5, panelTop + 4.0),
+        Offset(handleX - 0.5, panelTop + panelHeight - 4.0),
+        handleHighlight,
+      );
+    }
+
+    // Draw Left and Right Panels
+    renderDoorLeaf(
+      left: (doorCenter - panelWidth) - slideDist,
+      isLeftLeaf: true,
+    );
+    renderDoorLeaf(left: doorCenter + slideDist, isLeftLeaf: false);
+
+    // 3. Vertical Aluminum Door Jambs
+    final jambPaint = Paint()..color = const Color(0xFF37474F);
+    final jambBevel = Paint()
+      ..color = const Color(0xFF78909C)
+      ..strokeWidth = 1.0;
+
+    // Left Jamb
+    final leftJambRect = Rect.fromLTWH(
+      doorLeft - 4.0,
+      doorY,
+      7.0,
+      wallThickness,
+    );
+    canvas.drawRect(leftJambRect, jambPaint);
+    canvas.drawLine(
+      Offset(doorLeft + 3.0, doorY),
+      Offset(doorLeft + 3.0, doorY + wallThickness),
+      jambBevel,
+    );
+
+    // Right Jamb
+    final rightJambRect = Rect.fromLTWH(
+      doorRight - 3.0,
+      doorY,
+      7.0,
+      wallThickness,
+    );
+    canvas.drawRect(rightJambRect, jambPaint);
+    canvas.drawLine(
+      Offset(doorRight - 3.0, doorY),
+      Offset(doorRight - 3.0, doorY + wallThickness),
+      jambBevel,
+    );
+
+    // 4. Overhead Header Beam & Automatic Motion Sensor Box
+    final headerPaint = Paint()..color = const Color(0xFF263238);
+    final headerBevel = Paint()
+      ..color = const Color(0xFF90A4AE)
+      ..strokeWidth = 1.2;
+    final headerRect = Rect.fromLTWH(
+      doorLeft - 8.0,
+      doorY - 3.0,
+      doorWidth + 16.0,
+      7.0,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(headerRect, const Radius.circular(2)),
+      headerPaint,
+    );
+    canvas.drawLine(
+      Offset(doorLeft - 6.0, doorY - 2.0),
+      Offset(doorRight + 6.0, doorY - 2.0),
+      headerBevel,
+    );
+
+    // Motion Sensor Pod in center of header
+    final sensorBodyPaint = Paint()..color = const Color(0xFF102027);
+    final sensorRRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(doorCenter, doorY),
+        width: 36.0,
+        height: 7.0,
+      ),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(sensorRRect, sensorBodyPaint);
+
+    // Motion sensor indicator LED
+    final isSensorActive = doorOpenFactor > 0.05;
+    final ledPaint = Paint()
+      ..color = isSensorActive
+          ? const Color(0xFF00E676)
+          : const Color(0xFFFF5252);
+    canvas.drawCircle(Offset(doorCenter, doorY), 2.0, ledPaint);
+
+    if (isSensorActive) {
+      final glowPaint = Paint()..color = const Color(0x5500E676);
+      canvas.drawCircle(Offset(doorCenter, doorY), 5.5, glowPaint);
+    }
+
+    // 5. Flanking Porch Terracotta Planter Pots
+    void renderPlanterPot(double cx, double cy) {
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(cx, cy + 12), width: 28, height: 14),
+        glassShadow,
+      );
+      final potPaint = Paint()..color = const Color(0xFFD84315);
+      final potRim = Paint()..color = const Color(0xFFBF360C);
+      final potPath = Path()
+        ..moveTo(cx - 10, cy)
+        ..lineTo(cx + 10, cy)
+        ..lineTo(cx + 7, cy + 12)
+        ..lineTo(cx - 7, cy + 12)
+        ..close();
+      canvas.drawPath(potPath, potPaint);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset(cx, cy), width: 22, height: 5),
+          const Radius.circular(2),
+        ),
+        potRim,
+      );
+
+      final foliageBase = Paint()..color = const Color(0xFF1B5E20);
+      final foliageMid = Paint()..color = const Color(0xFF2E7D32);
+      final foliageLight = Paint()..color = const Color(0xFF4CAF50);
+
+      canvas.drawCircle(Offset(cx, cy - 6), 11.0, foliageBase);
+      canvas.drawCircle(Offset(cx - 3, cy - 8), 9.0, foliageMid);
+      canvas.drawCircle(Offset(cx + 4, cy - 7), 8.0, foliageLight);
+
+      final flowerPaint = Paint()..color = const Color(0xFFFFC107);
+      canvas.drawCircle(Offset(cx - 2, cy - 9), 2.0, flowerPaint);
+      canvas.drawCircle(Offset(cx + 3, cy - 5), 1.8, flowerPaint);
+    }
+
+    renderPlanterPot(doorLeft - 35.0, doorY + wallThickness + 14.0);
+    renderPlanterPot(doorRight + 35.0, doorY + wallThickness + 14.0);
+  }
+
+  /// Draws the complete Grand Trunk Highway exterior environment:
+  /// - Paved sidewalk with interlocking patio pavers
+  /// - Pakistani Yellow & Black striped road curb with wheelchair/pedestrian ramp
+  /// - Multi-lane dark asphalt highway with shoulder solid lines and yellow dashed center line
+  /// - Pedestrian zebra crossing right in front of the Dhaba entrance
+  /// - Directional road arrows on asphalt
+  /// - Authentic Pakistani Bedford Truck with vibrant truck art parked on the highway shoulder
+  /// - Iconic green & yellow Auto-Rickshaw (Tuk-Tuk) taking a chai break
+  /// - Roadside Dhaba neon totem signboard (24/7 KADAK CHAI) & street lamppost
+  /// - Far roadside grass verge and surrounding countryside terrain
+  static void drawExteriorEnvironment(
+    Canvas canvas,
+    double width,
+    double height,
+    double wallThickness,
+  ) {
+    const minExtX = -450.0;
+    final maxExtX = width + 450.0;
+
+    // 1. Base Terrain / Earth Surround (Packed soil & countryside earth)
+    final earthPaint = Paint()..color = const Color(0xFF4E342E);
+    canvas.drawRect(
+      Rect.fromLTRB(minExtX, -350.0, maxExtX, height + 650.0),
+      earthPaint,
+    );
+
+    // Left landscape area (West of building)
+    final gravelPaint = Paint()..color = const Color(0xFF5D4037);
+    final grassCluster = Paint()..color = const Color(0xFF2E7D32);
+    canvas.drawRect(
+      Rect.fromLTRB(minExtX, -350.0, 0.0, height),
+      gravelPaint,
+    );
+    canvas.drawCircle(const Offset(-120.0, 200.0), 45.0, grassCluster);
+    canvas.drawCircle(const Offset(-180.0, 500.0), 60.0, grassCluster);
+    canvas.drawCircle(const Offset(-100.0, 850.0), 50.0, grassCluster);
+
+    // Right landscape area (East of building)
+    canvas.drawRect(
+      Rect.fromLTRB(width, -350.0, maxExtX, height),
+      gravelPaint,
+    );
+    canvas.drawCircle(Offset(width + 120.0, 250.0), 55.0, grassCluster);
+    canvas.drawCircle(Offset(width + 160.0, 600.0), 65.0, grassCluster);
+    canvas.drawCircle(Offset(width + 110.0, 950.0), 50.0, grassCluster);
+
+    // Top landscape area (North of building)
+    canvas.drawRect(
+      Rect.fromLTRB(0.0, -350.0, width, 0.0),
+      gravelPaint,
+    );
+    canvas.drawCircle(Offset(width * 0.3, -80.0), 50.0, grassCluster);
+    canvas.drawCircle(Offset(width * 0.7, -90.0), 55.0, grassCluster);
+
+    // 2. South Sidewalk / Paved Porch Promenade (y: 1200.0 to 1290.0)
+    final sidewalkPaint = Paint()..color = const Color(0xFFCFD8DC);
+    canvas.drawRect(
+      Rect.fromLTRB(minExtX, height, maxExtX, height + 90.0),
+      sidewalkPaint,
+    );
+
+    // Sidewalk paver grid seams
+    final paverGrout = Paint()
+      ..color = const Color(0xFFB0BEC5)
+      ..strokeWidth = 1.0;
+    for (double px = minExtX; px <= maxExtX; px += 35.0) {
+      canvas.drawLine(
+        Offset(px, height),
+        Offset(px, height + 90.0),
+        paverGrout,
+      );
+    }
+    canvas.drawLine(
+      Offset(minExtX, height + 45.0),
+      Offset(maxExtX, height + 45.0),
+      paverGrout,
+    );
+
+    // Entrance Porch Apron (x: 270 to 630, y: 1200 to 1290)
+    final porchApron = Paint()..color = const Color(0xFFBCAAA4);
+    canvas.drawRect(
+      Rect.fromLTRB(270.0, height, 630.0, height + 90.0),
+      porchApron,
+    );
+    final apronLine = Paint()
+      ..color = const Color(0xFF8D6E63).withValues(alpha: 0.35)
+      ..strokeWidth = 1.0;
+    for (double ax = 270.0; ax <= 630.0; ax += 30.0) {
+      canvas.drawLine(Offset(ax, height), Offset(ax, height + 90.0), apronLine);
+    }
+    final wallDropShadow = Paint()..color = const Color(0x33000000);
+    canvas.drawRect(Rect.fromLTWH(0.0, height, width, 5.0), wallDropShadow);
+
+    // 3. Roadside Dhaba Marquee Totem Billboard (at x: 190, y: 1245)
+    _drawDhabaBillboard(canvas, 190.0, height + 45.0);
+
+    // 4. Highway Street Lamppost (at x: 740, y: 1245)
+    _drawStreetLamp(canvas, 740.0, height + 45.0);
+
+    // 5. Pakistani Yellow & Black Striped Road Curb Stones (y: 1290.0 to 1310.0)
+    final curbTop = height + 90.0; // 1290.0
+    const curbHeight = 20.0;
+    final curbBottom = curbTop + curbHeight; // 1310.0
+
+    const stripeWidth = 26.0;
+    final curbYellow = Paint()..color = AppTheme.goldYellow;
+    final curbBlack = Paint()..color = const Color(0xFF212121);
+    final curbHighlight = Paint()
+      ..color = const Color(0x55FFFFFF)
+      ..strokeWidth = 1.5;
+    final curbShadow = Paint()
+      ..color = const Color(0x66000000)
+      ..strokeWidth = 2.0;
+
+    int stripeIdx = 0;
+    for (double cx = minExtX; cx < maxExtX; cx += stripeWidth) {
+      final isRamp = cx >= 395.0 && cx <= 505.0;
+      if (!isRamp) {
+        final isYellow = (stripeIdx % 2 == 0);
+        final stripePath = Path()
+          ..moveTo(cx, curbTop)
+          ..lineTo(cx + stripeWidth, curbTop)
+          ..lineTo(cx + stripeWidth - 8.0, curbBottom)
+          ..lineTo(cx - 8.0, curbBottom)
+          ..close();
+        canvas.drawPath(stripePath, isYellow ? curbYellow : curbBlack);
+      }
+      stripeIdx++;
+    }
+
+    // Pedestrian curb drop ramp (x: 390 to 510)
+    final rampPaint = Paint()..color = const Color(0xFFFFB300);
+    final rampRect = Rect.fromLTRB(390.0, curbTop, 510.0, curbBottom);
+    canvas.drawRect(rampRect, rampPaint);
+    final bumpPaint = Paint()..color = const Color(0xFFFFA000);
+    for (double bx = 400.0; bx <= 500.0; bx += 14.0) {
+      canvas.drawCircle(Offset(bx, curbTop + 10.0), 2.5, bumpPaint);
+    }
+
+    // Curb 3D top edge highlight & bottom cast shadow
+    canvas.drawLine(
+      Offset(minExtX, curbTop),
+      Offset(maxExtX, curbTop),
+      curbHighlight,
+    );
+    canvas.drawLine(
+      Offset(minExtX, curbBottom),
+      Offset(maxExtX, curbBottom),
+      curbShadow,
+    );
+
+    // 6. Grand Trunk Highway (GT Road Asphalt Bed) (y: 1310.0 to 1660.0)
+    final asphaltTop = curbBottom; // 1310.0
+    final asphaltBottom = asphaltTop + 350.0; // 1660.0
+    final roadPaint = Paint()..color = const Color(0xFF212529);
+    canvas.drawRect(
+      Rect.fromLTRB(minExtX, asphaltTop, maxExtX, asphaltBottom),
+      roadPaint,
+    );
+
+    // Subtle asphalt texture tire wear bands
+    final tireTrackPaint = Paint()
+      ..color = const Color(0xFF1B1E21)
+      ..strokeWidth = 28.0;
+    canvas.drawLine(
+      Offset(minExtX, asphaltTop + 70.0),
+      Offset(maxExtX, asphaltTop + 70.0),
+      tireTrackPaint,
+    );
+    canvas.drawLine(
+      Offset(minExtX, asphaltTop + 240.0),
+      Offset(maxExtX, asphaltTop + 240.0),
+      tireTrackPaint,
+    );
+
+    // North Shoulder Solid White Line
+    final whiteLine = Paint()
+      ..color = const Color(0xEEFFFFFF)
+      ..strokeWidth = 5.0;
+    canvas.drawLine(
+      Offset(minExtX, asphaltTop + 25.0),
+      Offset(maxExtX, asphaltTop + 25.0),
+      whiteLine,
+    );
+
+    // Pedestrian Zebra Crossing (Crosswalk in front of Dhaba entrance: x 390 to 510)
+    final zebraPaint = Paint()
+      ..color = const Color(0xEEFFFFFF)
+      ..strokeWidth = 11.0
+      ..strokeCap = StrokeCap.square;
+    for (double zx = 402.0; zx <= 498.0; zx += 18.0) {
+      canvas.drawLine(
+        Offset(zx, asphaltTop + 6.0),
+        Offset(zx, asphaltTop + 68.0),
+        zebraPaint,
+      );
+    }
+
+    // Highway Center Divider: Dashed Yellow Line
+    final yellowDash = Paint()
+      ..color = const Color(0xFFFFD54F)
+      ..strokeWidth = 4.5;
+    const dashLen = 50.0;
+    const dashGap = 35.0;
+    final dashY = asphaltTop + 175.0;
+    for (double dx = minExtX; dx < maxExtX; dx += (dashLen + dashGap)) {
+      canvas.drawLine(
+        Offset(dx, dashY),
+        Offset(dx + dashLen, dashY),
+        yellowDash,
+      );
+    }
+
+    // South Shoulder Solid White Line
+    canvas.drawLine(
+      Offset(minExtX, asphaltBottom - 25.0),
+      Offset(maxExtX, asphaltBottom - 25.0),
+      whiteLine,
+    );
+
+    // Directional Painted Road Arrows on asphalt
+    _drawRoadArrow(canvas, 270.0, asphaltTop + 100.0, pointingEast: true);
+    _drawRoadArrow(canvas, 640.0, asphaltTop + 255.0, pointingEast: false);
+
+    // 7. Parked Authentic Pakistani Bedford Truck (Highway shoulder: x 40 to 160)
+    _drawPakistaniTruck(canvas, 100.0, asphaltTop + 85.0);
+
+    // 8. Parked Iconic Pakistani Auto-Rickshaw (Tuk-Tuk: x 750 to 820)
+    _drawAutoRickshaw(canvas, 785.0, asphaltTop + 80.0);
+
+    // 9. Far Roadside Verge & Greenery (y: 1660.0 to 1850.0)
+    final farVerge = Paint()..color = const Color(0xFF6D4C41);
+    canvas.drawRect(
+      Rect.fromLTRB(minExtX, asphaltBottom, maxExtX, asphaltBottom + 35.0),
+      farVerge,
+    );
+    final farGrass = Paint()..color = const Color(0xFF2E7D32);
+    canvas.drawRect(
+      Rect.fromLTRB(minExtX, asphaltBottom + 35.0, maxExtX, height + 650.0),
+      farGrass,
+    );
+
+    // Highway W-Beam Metal Guardrail along bottom verge
+    final guardrailPaint = Paint()
+      ..color = const Color(0xFF90A4AE)
+      ..strokeWidth = 4.0;
+    final guardrailPost = Paint()
+      ..color = const Color(0xFF546E7A)
+      ..strokeWidth = 3.5;
+    final grY = asphaltBottom + 18.0;
+    canvas.drawLine(Offset(minExtX, grY), Offset(maxExtX, grY), guardrailPaint);
+    for (double rx = minExtX; rx < maxExtX; rx += 70.0) {
+      canvas.drawLine(
+        Offset(rx, grY - 4.0),
+        Offset(rx, grY + 12.0),
+        guardrailPost,
+      );
+    }
+  }
+
+  static void _drawDhabaBillboard(Canvas canvas, double cx, double cy) {
+    final postPaint = Paint()
+      ..color = const Color(0xFF455A64)
+      ..strokeWidth = 3.5;
+    canvas.drawLine(
+      Offset(cx - 24, cy - 10),
+      Offset(cx - 24, cy + 22),
+      postPaint,
+    );
+    canvas.drawLine(
+      Offset(cx + 24, cy - 10),
+      Offset(cx + 24, cy + 22),
+      postPaint,
+    );
+
+    final boardRect = Rect.fromCenter(
+      center: Offset(cx, cy - 15),
+      width: 120,
+      height: 38,
+    );
+    final boardRRect = RRect.fromRectAndRadius(
+      boardRect,
+      const Radius.circular(6),
+    );
+    final boardBg = Paint()..color = const Color(0xFF0F1E2E);
+    final boardBorder = Paint()
+      ..color = AppTheme.saffronOrange
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        boardRect.translate(0, 3),
+        const Radius.circular(6),
+      ),
+      Paint()..color = const Color(0x44000000),
+    );
+    canvas.drawRRect(boardRRect, boardBg);
+    canvas.drawRRect(boardRRect, boardBorder);
+
+    final titlePainter = TextPainter(
+      text: const TextSpan(
+        text: 'CHAI DHABA ☕',
+        style: TextStyle(
+          color: AppTheme.goldYellow,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.8,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    titlePainter.paint(
+      canvas,
+      Offset(cx - titlePainter.width / 2, cy - 28),
+    );
+
+    final subPainter = TextPainter(
+      text: const TextSpan(
+        text: '★ 24/7 OPEN ★',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 8.0,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    subPainter.paint(
+      canvas,
+      Offset(cx - subPainter.width / 2, cy - 14),
+    );
+  }
+
+  static void _drawStreetLamp(Canvas canvas, double cx, double cy) {
+    final glowPaint = Paint()..color = const Color(0x18FFE082);
+    canvas.drawCircle(Offset(cx, cy + 20), 55.0, glowPaint);
+
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(cx, cy + 20), width: 18, height: 10),
+      Paint()..color = const Color(0x33000000),
+    );
+
+    final polePaint = Paint()
+      ..color = const Color(0xFF607D8B)
+      ..strokeWidth = 4.0;
+    canvas.drawLine(Offset(cx, cy + 20), Offset(cx, cy - 35), polePaint);
+
+    final armPaint = Paint()
+      ..color = const Color(0xFF455A64)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
+    final armPath = Path()
+      ..moveTo(cx, cy - 35)
+      ..quadraticBezierTo(cx - 15, cy - 45, cx - 22, cy - 30);
+    canvas.drawPath(armPath, armPaint);
+
+    final lanternPaint = Paint()..color = AppTheme.goldYellow;
+    canvas.drawCircle(Offset(cx - 22, cy - 30), 5.0, lanternPaint);
+  }
+
+  static void _drawRoadArrow(
+    Canvas canvas,
+    double cx,
+    double cy, {
+    required bool pointingEast,
+  }) {
+    final arrowPaint = Paint()..color = const Color(0xAAFFFFFF);
+    final dir = pointingEast ? 1.0 : -1.0;
+
+    final shaft = Rect.fromCenter(
+      center: Offset(cx - dir * 8.0, cy),
+      width: 28.0,
+      height: 4.5,
+    );
+    canvas.drawRect(shaft, arrowPaint);
+
+    final headPath = Path()
+      ..moveTo(cx + dir * 16.0, cy)
+      ..lineTo(cx + dir * 4.0, cy - 8.0)
+      ..lineTo(cx + dir * 4.0, cy + 8.0)
+      ..close();
+    canvas.drawPath(headPath, arrowPaint);
+  }
+
+  static void _drawPakistaniTruck(Canvas canvas, double cx, double cy) {
+    canvas.save();
+    canvas.translate(cx, cy);
+
+    final truckShadow = Paint()..color = const Color(0x55000000);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: const Offset(0, 16), width: 140, height: 48),
+        const Radius.circular(8),
+      ),
+      truckShadow,
+    );
+
+    final tirePaint = Paint()..color = const Color(0xFF1E1E1E);
+    final rimPaint = Paint()..color = const Color(0xFFB0BEC5);
+
+    void drawWheel(double wx, double wy) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset(wx, wy), width: 22, height: 10),
+          const Radius.circular(3),
+        ),
+        tirePaint,
+      );
+      canvas.drawCircle(Offset(wx, wy), 2.5, rimPaint);
+    }
+
+    drawWheel(42, -18);
+    drawWheel(42, 18);
+    drawWheel(-30, -18);
+    drawWheel(-30, 18);
+    drawWheel(-50, -18);
+    drawWheel(-50, 18);
+
+    final bedRect = Rect.fromCenter(
+      center: const Offset(-20, 0),
+      width: 85,
+      height: 38,
+    );
+    final bedPaint = Paint()..color = const Color(0xFFD84315);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(bedRect, const Radius.circular(4)),
+      bedPaint,
+    );
+
+    final colors = [
+      AppTheme.goldYellow,
+      AppTheme.truckArtGreen,
+      AppTheme.truckArtCyan,
+      AppTheme.truckArtRed,
+    ];
+    for (int i = 0; i < 4; i++) {
+      final panelX = -56.0 + i * 20.0;
+      final panelRect = Rect.fromLTWH(panelX, -15.0, 17.0, 30.0);
+      final pColor = colors[i % colors.length];
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(panelRect, const Radius.circular(2)),
+        Paint()..color = pColor,
+      );
+      final diamondPath = Path()
+        ..moveTo(panelX + 8.5, -12.0)
+        ..lineTo(panelX + 15.0, 0.0)
+        ..lineTo(panelX + 8.5, 12.0)
+        ..lineTo(panelX + 2.0, 0.0)
+        ..close();
+      canvas.drawPath(
+        diamondPath,
+        Paint()..color = Colors.white.withValues(alpha: 0.8),
+      );
+    }
+
+    final cabRect = Rect.fromLTWH(22, -17, 34, 34);
+    final cabPaint = Paint()..color = const Color(0xFF00ACC1);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(cabRect, const Radius.circular(4)),
+      cabPaint,
+    );
+
+    final windshield = Rect.fromLTWH(38, -13, 14, 26);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(windshield, const Radius.circular(3)),
+      Paint()..color = const Color(0xCCB2EBF2),
+    );
+
+    final tajPath = Path()
+      ..moveTo(24, -17)
+      ..lineTo(32, -24)
+      ..lineTo(40, -19)
+      ..lineTo(48, -24)
+      ..lineTo(54, -17)
+      ..close();
+    canvas.drawPath(tajPath, Paint()..color = AppTheme.goldYellow);
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: const Offset(57, 0), width: 6, height: 32),
+        const Radius.circular(2),
+      ),
+      Paint()..color = const Color(0xFFECEFF1),
+    );
+
+    final flapPaint = Paint()..color = const Color(0xFF212121);
+    canvas.drawRect(const Rect.fromLTWH(-64, -17, 4, 12), flapPaint);
+    canvas.drawRect(const Rect.fromLTWH(-64, 5, 4, 12), flapPaint);
+    final heartPaint = Paint()..color = Colors.redAccent;
+    canvas.drawCircle(const Offset(-62, -11), 2.0, heartPaint);
+    canvas.drawCircle(const Offset(-62, 11), 2.0, heartPaint);
+
+    canvas.restore();
+  }
+
+  static void _drawAutoRickshaw(Canvas canvas, double cx, double cy) {
+    canvas.save();
+    canvas.translate(cx, cy);
+
+    final rickshawShadow = Paint()..color = const Color(0x44000000);
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(0, 10), width: 56, height: 34),
+      rickshawShadow,
+    );
+
+    final tirePaint = Paint()..color = const Color(0xFF212121);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: const Offset(-16, -14), width: 14, height: 6),
+        const Radius.circular(2),
+      ),
+      tirePaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: const Offset(-16, 14), width: 14, height: 6),
+        const Radius.circular(2),
+      ),
+      tirePaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: const Offset(18, 0), width: 12, height: 6),
+        const Radius.circular(2),
+      ),
+      tirePaint,
+    );
+
+    final bodyPaint = Paint()..color = AppTheme.truckArtGreen;
+    final bodyRect = Rect.fromCenter(
+      center: const Offset(-4, 0),
+      width: 38,
+      height: 26,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(bodyRect, const Radius.circular(5)),
+      bodyPaint,
+    );
+
+    final nosePath = Path()
+      ..moveTo(12, -10)
+      ..lineTo(20, -6)
+      ..lineTo(22, 0)
+      ..lineTo(20, 6)
+      ..lineTo(12, 10)
+      ..close();
+    canvas.drawPath(nosePath, Paint()..color = AppTheme.goldYellow);
+
+    canvas.drawCircle(const Offset(22, 0), 2.5, Paint()..color = Colors.white);
+
+    final roofRect = Rect.fromCenter(
+      center: const Offset(-6, 0),
+      width: 30,
+      height: 22,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(roofRect, const Radius.circular(4)),
+      Paint()..color = const Color(0xFF1E1E1E),
+    );
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: const Offset(-19, 0), width: 4, height: 12),
+        const Radius.circular(2),
+      ),
+      Paint()..color = const Color(0x88B2EBF2),
+    );
+
+    canvas.restore();
   }
 
   /// Draws an interactive floor rectangle pad for in-place machine upgrades or floor unlocks.

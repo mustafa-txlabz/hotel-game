@@ -62,6 +62,9 @@ class GameWorld {
   bool isReputationLocked100;
   final Set<String> completedMissionIds;
 
+  // Automatic Sliding Double Doors (Physical Animated Entrance)
+  double doorOpenFactor = 0.0;
+
   // Callbacks for sound & haptics
   void Function(ItemType item)? onItemPickedUp;
   void Function(ItemType item)? onItemDeposited;
@@ -103,7 +106,7 @@ class GameWorld {
                headPosition: Vector2(450.0, 782.0),
                maxCapacity: (config ?? StoreProgressionConfig.store1).queueCapacity,
              ),
-             entrancePosition: Vector2(450.0, 1165.0),
+              entrancePosition: Vector2(450.0, 1340.0),
            ),
        cashBundles = [],
        floatingTexts = [],
@@ -286,6 +289,26 @@ class GameWorld {
     // 2. Update player physics
     player.update(dt);
 
+    // 2.5 Automatic Sliding Door proximity detection (door center: 450, 1184)
+    final doorCenter = Vector2(worldWidth / 2, worldHeight - wallThickness / 2);
+    const doorDetectionRadius = 110.0;
+
+    bool isSomeoneNearDoor = false;
+    if (player.position.distanceTo(doorCenter) < doorDetectionRadius) {
+      isSomeoneNearDoor = true;
+    } else if (staff.any((s) => s.position.distanceTo(doorCenter) < doorDetectionRadius)) {
+      isSomeoneNearDoor = true;
+    } else if (customerSystem.activeCustomers.any(
+        (c) => c.position.distanceTo(doorCenter) < doorDetectionRadius)) {
+      isSomeoneNearDoor = true;
+    }
+
+    final targetDoorFactor = isSomeoneNearDoor ? 1.0 : 0.0;
+    final lerpSpeed = isSomeoneNearDoor ? 8.0 : 4.5;
+    doorOpenFactor +=
+        (targetDoorFactor - doorOpenFactor) * (dt * lerpSpeed).clamp(0.0, 1.0);
+    doorOpenFactor = doorOpenFactor.clamp(0.0, 1.0);
+
     // 3. Collision against perimeter boundary walls
     _clampPlayerToWorldBounds();
 
@@ -359,10 +382,35 @@ class GameWorld {
     final minY = wallThickness + player.radius;
     final maxY = worldHeight - wallThickness - player.radius;
 
-    if (player.position.x < minX) player.position.x = minX;
-    if (player.position.x > maxX) player.position.x = maxX;
+    // South doorway opening (x: 360 to 540)
+    const doorWidth = 180.0;
+    final doorLeft = (worldWidth - doorWidth) / 2;
+    final doorRight = doorLeft + doorWidth;
+    final isAtDoorway = player.position.x >= doorLeft + player.radius &&
+        player.position.x <= doorRight - player.radius;
+
+    if (isAtDoorway && doorOpenFactor > 0.15) {
+      // Automatic doors open: allow stepping out onto sidewalk porch up to road curb
+      const porchLimitY = 1265.0;
+      if (player.position.y > porchLimitY - player.radius) {
+        player.position.y = porchLimitY - player.radius;
+      }
+    } else {
+      if (player.position.y > maxY) player.position.y = maxY;
+    }
+
+    // When outside on the porch, constrain horizontally to porch walkway
+    if (player.position.y > maxY) {
+      final porchMinX = doorLeft + player.radius;
+      final porchMaxX = doorRight - player.radius;
+      if (player.position.x < porchMinX) player.position.x = porchMinX;
+      if (player.position.x > porchMaxX) player.position.x = porchMaxX;
+    } else {
+      if (player.position.x < minX) player.position.x = minX;
+      if (player.position.x > maxX) player.position.x = maxX;
+    }
+
     if (player.position.y < minY) player.position.y = minY;
-    if (player.position.y > maxY) player.position.y = maxY;
   }
 
   void _resolveEntityBoxCollision(

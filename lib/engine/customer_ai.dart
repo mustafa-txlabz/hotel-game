@@ -214,7 +214,7 @@ class CustomerSystem {
     List<DiningTable>? tables,
     this.spawnInterval = GameBalance.customerSpawnInterval,
   }) : queue = queue ?? CustomerQueue(),
-       entrancePosition = entrancePosition ?? Vector2(450.0, 1165.0),
+       entrancePosition = entrancePosition ?? Vector2(450.0, 1340.0),
        diningTables = tables ?? [],
        activeCustomers = [],
        spawnTimer = 0.0,
@@ -259,10 +259,12 @@ class CustomerSystem {
 
   /// Spawns a customer when the queue is full who observes the crowd and leaves unhappy.
   CustomerEntity? spawnCrowdedCustomer() {
+    final targetY =
+        entrancePosition.y > 1200.0 ? 1160.0 : entrancePosition.y - 45.0;
     final customer = CustomerEntity(
       id: nextCustomerId++,
       startPosition: entrancePosition.copy(),
-      targetPosition: Vector2(entrancePosition.x, entrancePosition.y - 45.0),
+      targetPosition: Vector2(entrancePosition.x, targetY),
       desiredItem: ItemType.chai,
       desiredCount: 1,
       variant: (nextCustomerId) % 4,
@@ -451,12 +453,13 @@ class CustomerSystem {
       }
     }
 
-    // 4. Despawn customers when they reach the entrance door
+    // 4. Despawn customers when they reach the entrance / highway exit
     final toRemove = <CustomerEntity>[];
     for (final customer in activeCustomers) {
       if (customer.isLeaving) {
         final distToExit = customer.position.distanceTo(entrancePosition);
-        if (distToExit < 16.0) {
+        if (distToExit < 24.0 ||
+            customer.position.y >= entrancePosition.y - 10.0) {
           customer.state = CustomerState.despawned;
           toRemove.add(customer);
         }
