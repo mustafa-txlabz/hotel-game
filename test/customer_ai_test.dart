@@ -254,5 +254,41 @@ void main() {
       expect(world.floatingTexts.isNotEmpty, isTrue);
       expect(world.floatingTexts.first.text, '+Rs 10');
     });
+
+    test('Customer order bubble visibility: only at 1st position (head) at counter', () {
+      final world = GameWorld();
+      world.customerSystem.spawnInterval = 999.0;
+
+      // Spawn customer 1 (starts on sidewalk or entrance, far from counter)
+      final c1 = world.customerSystem.spawnCustomer(item: ItemType.chai, count: 2)!;
+      expect(c1.isAtFrontOfQueue, isFalse);
+      expect(c1.isAtFrontOfCounter, isFalse);
+
+      // Tick while walking towards slot 0
+      world.tick(0.1);
+      expect(c1.isAtFrontOfQueue, isFalse);
+      expect(c1.isAtFrontOfCounter, isFalse);
+
+      // Place customer 1 at slot 0 (arrived at counter)
+      c1.position.x = world.customerSystem.queue.getSlotPosition(0).x;
+      c1.position.y = world.customerSystem.queue.getSlotPosition(0).y;
+      world.tick(0.1);
+      expect(c1.isAtFrontOfQueue, isTrue);
+      expect(c1.isAtFrontOfCounter, isTrue);
+
+      // Spawn customer 2 into slot 1 (waiting in queue behind customer 1)
+      final c2 = world.customerSystem.spawnCustomer(item: ItemType.chai, count: 3)!;
+      c2.position.x = world.customerSystem.queue.getSlotPosition(1).x;
+      c2.position.y = world.customerSystem.queue.getSlotPosition(1).y;
+      world.tick(0.1);
+
+      // Customer 2 in slot 1 is NOT at the front of the counter
+      expect(c2.isAtFrontOfQueue, isFalse);
+      expect(c2.isAtFrontOfCounter, isFalse);
+
+      // Customer 1 is still at head
+      expect(c1.isAtFrontOfQueue, isTrue);
+      expect(c1.isAtFrontOfCounter, isTrue);
+    });
   });
 }

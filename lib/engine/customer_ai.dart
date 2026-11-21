@@ -51,6 +51,12 @@ class CustomerEntity {
   double tableWaitTimer;
   final double tableWaitDuration;
 
+  // Whether customer is currently at 1st position (head of queue) at the counter
+  bool isAtFrontOfQueue;
+
+  bool get isAtFrontOfCounter =>
+      isAtFrontOfQueue || state == CustomerState.beingServed;
+
   CustomerEntity({
     required this.id,
     required Vector2 startPosition,
@@ -74,7 +80,8 @@ class CustomerEntity {
        tableWaitTimer = 0.0,
        assignedTable = null,
        assignedSeat = null,
-       hasDinedIn = false;
+       hasDinedIn = false,
+       isAtFrontOfQueue = false;
 
   bool get isOrderComplete => receivedCount >= desiredCount;
   bool get isLeaving =>
@@ -410,13 +417,19 @@ class CustomerSystem {
       }
     }
 
+    // Reset front-of-queue flags for all customers
+    for (final c in activeCustomers) {
+      c.isAtFrontOfQueue = false;
+    }
+
     // 3. Service transaction & patience check at head of queue
     final headCustomer = queue.head;
     if (headCustomer != null) {
       final slot0Pos = queue.getSlotPosition(0);
-      final isAtFront = headCustomer.position.distanceTo(slot0Pos) < 18.0;
+      final isAtFront = headCustomer.position.distanceTo(slot0Pos) < 22.0;
 
       if (isAtFront && !headCustomer.isLeaving) {
+        headCustomer.isAtFrontOfQueue = true;
         headCustomer.state = CustomerState.waitingInQueue;
 
         bool wasServed = false;

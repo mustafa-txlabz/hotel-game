@@ -360,10 +360,10 @@ class SpriteRenderer {
 
     canvas.restore(); // Restore rotation
 
-    // 4. Floating Speech Bubble (Order Bubble when in queue, or reaction when leaving / eating)
-    if (customer.state == CustomerState.waitingInQueue ||
-        customer.state == CustomerState.beingServed ||
-        customer.state == CustomerState.spawning) {
+    // 4. Floating Speech Bubble (Order Bubble ONLY when at 1st number at counter, or reaction when leaving / eating)
+    if ((customer.state == CustomerState.waitingInQueue ||
+            customer.state == CustomerState.beingServed) &&
+        customer.isAtFrontOfCounter) {
       _drawOrderSpeechBubble(canvas, customer);
     } else if (customer.state == CustomerState.waitingForTable) {
       _drawWaitingForTableReaction(canvas, customer);
@@ -1728,31 +1728,22 @@ class SpriteRenderer {
 
     // Left landscape area (West of building)
     final gravelPaint = Paint()..color = const Color(0xFF5D4037);
-    final grassCluster = Paint()..color = const Color(0xFF2E7D32);
     canvas.drawRect(
       Rect.fromLTRB(minExtX, -350.0, 0.0, height),
       gravelPaint,
     );
-    canvas.drawCircle(const Offset(-120.0, 200.0), 45.0, grassCluster);
-    canvas.drawCircle(const Offset(-180.0, 500.0), 60.0, grassCluster);
-    canvas.drawCircle(const Offset(-100.0, 850.0), 50.0, grassCluster);
 
     // Right landscape area (East of building)
     canvas.drawRect(
       Rect.fromLTRB(width, -350.0, maxExtX, height),
       gravelPaint,
     );
-    canvas.drawCircle(Offset(width + 120.0, 250.0), 55.0, grassCluster);
-    canvas.drawCircle(Offset(width + 160.0, 600.0), 65.0, grassCluster);
-    canvas.drawCircle(Offset(width + 110.0, 950.0), 50.0, grassCluster);
 
     // Top landscape area (North of building)
     canvas.drawRect(
       Rect.fromLTRB(0.0, -350.0, width, 0.0),
       gravelPaint,
     );
-    canvas.drawCircle(Offset(width * 0.3, -80.0), 50.0, grassCluster);
-    canvas.drawCircle(Offset(width * 0.7, -90.0), 55.0, grassCluster);
 
     // 2. South Sidewalk / Paved Porch Promenade (y: 1200.0 to 1290.0)
     final sidewalkPaint = Paint()..color = const Color(0xFFCFD8DC);
