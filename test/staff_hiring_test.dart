@@ -58,8 +58,10 @@ void main() {
       customer.position.x = 450.0;
       customer.position.y = 782.0;
 
-      // Update simulation
-      world.tick(0.1);
+      // Update simulation: cashier prepares and serves
+      for (int i = 0; i < 20; i++) {
+        world.tick(0.05);
+      }
 
       // Customer should have been served by hired cashier!
       expect(customer.receivedCount, 1);
@@ -450,6 +452,22 @@ void main() {
       final chotu2 = world.staff.last;
       expect(chotu2.speed, GameBalance.workerSpeedLevels[1]);
       expect(chotu2.carryCapacity, GameBalance.workerCapacityLevels[1]);
+    });
+
+    test('Cashier Speed upgrades update serving interval and consume rupees', () {
+      final world = GameWorld(initialRupees: 500.0);
+      world.hireCashier(free: true);
+
+      expect(world.cashierSpeedLevel, 1);
+      expect(world.counter.serviceInterval, GameBalance.cashierSpeedLevels[0]);
+
+      // Upgrade Cashier Speed
+      final upgraded = world.upgradeCashierSpeed();
+      expect(upgraded, isTrue);
+      expect(world.cashierSpeedLevel, 2);
+      expect(world.cashierSpeed, GameBalance.cashierSpeedLevels[1]);
+      expect(world.counter.serviceInterval, GameBalance.cashierSpeedLevels[1]);
+      expect(world.rupees, 500.0 - GameBalance.cashierSpeedUpgradeCosts[0]);
     });
   });
 

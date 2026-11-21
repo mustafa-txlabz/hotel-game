@@ -430,21 +430,25 @@ class CustomerSystem {
 
       if (isAtFront && !headCustomer.isLeaving) {
         headCustomer.isAtFrontOfQueue = true;
-        headCustomer.state = CustomerState.waitingInQueue;
 
         bool wasServed = false;
-        if (counter.isCashierPresent && counter.canServe()) {
-          final served = counter.takeFoodItem(headCustomer.desiredItem);
-          if (served != null) {
-            wasServed = true;
-            headCustomer.patienceTimer = 0.0; // Reset patience when served an item
-            counter.triggerService();
-            counter.addCashBundle(); // Cash bundle placed on counter's right cash tray!
-            headCustomer.receivedCount++;
+        if (counter.isCashierPresent && counter.totalFoodCount > 0) {
+          // Customer arrives at counter: start cashier service preparation
+          if (headCustomer.state != CustomerState.beingServed) {
             headCustomer.state = CustomerState.beingServed;
-            onCustomerServed?.call(headCustomer, served);
+            counter.triggerService();
+          }
 
-            if (headCustomer.isOrderComplete) {
+          if (counter.canServe()) {
+            final served = counter.takeFoodItem(headCustomer.desiredItem);
+            if (served != null) {
+              wasServed = true;
+              headCustomer.patienceTimer = 0.0; // Reset patience when served an item
+              counter.addCashBundle(); // Cash bundle placed on counter's right cash tray!
+              headCustomer.receivedCount++;
+              onCustomerServed?.call(headCustomer, served);
+
+              if (headCustomer.isOrderComplete) {
               final hasUnlockedTables = diningTables.any((t) => t.isUnlocked);
               final wantsDineIn = hasUnlockedTables &&
                   headCustomer.desiredCount <= GameBalance.maxDineInOrderItems;
@@ -489,9 +493,15 @@ class CustomerSystem {
                 _setCustomerLeaving(headCustomer, CustomerState.leavingHappy);
                 queue.dequeue();
               }
+            } else {
+              // Order has more items remaining: prepare next item!
+              counter.triggerService();
             }
           }
         }
+      } else if (!counter.isCashierPresent || counter.totalFoodCount == 0) {
+        headCustomer.state = CustomerState.waitingInQueue;
+      }
 
         // If customer was NOT served on this tick, patience timer progresses
         if (!wasServed && !headCustomer.isLeaving) {

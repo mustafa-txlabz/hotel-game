@@ -273,7 +273,9 @@ void main() {
       customer.position.x = 450.0;
       customer.position.y = 782.0;
 
-      world.tick(0.1);
+      for (int i = 0; i < 20; i++) {
+        world.tick(0.05);
+      }
       expect(customer.state, CustomerState.waitingForTable);
       expect(world.reputationPercent, closeTo(initialRep + 0.2, 0.001)); // Served +0.2%
       expect(world.rupees, 100.0); // No refund yet, waiting for table
@@ -407,7 +409,9 @@ void main() {
       world.player.position.x = world.counter.cashierZoneCenter.x;
       world.player.position.y = world.counter.cashierZoneCenter.y;
 
-      world.tick(0.1);
+      for (int i = 0; i < 20; i++) {
+        world.tick(0.05);
+      }
 
       // Customer served and heads to Table 1 seat
       expect(customer.state, CustomerState.walkingToTable);

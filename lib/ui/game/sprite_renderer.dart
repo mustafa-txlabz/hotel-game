@@ -292,20 +292,38 @@ class SpriteRenderer {
       shoePaint,
     );
 
-    // Torso / Clothing (Variant Shalwar Kameez Colors)
+    // Torso / Clothing (10 Popping Arcade Colors)
     Color shirtColor;
-    switch (customer.variant % 4) {
+    switch (customer.variant % 10) {
       case 0:
-        shirtColor = const Color(0xFF1976D2); // Royal Blue
+        shirtColor = const Color(0xFF00BCD4); // Bright Cyan / Turquoise
         break;
       case 1:
-        shirtColor = const Color(0xFF2E7D32); // Emerald Green
+        shirtColor = const Color(0xFFFF4081); // Vibrant Coral Pink
         break;
       case 2:
-        shirtColor = const Color(0xFFC2185B); // Maroon / Rose
+        shirtColor = const Color(0xFFFFB300); // Sunny Mango Yellow
+        break;
+      case 3:
+        shirtColor = const Color(0xFF00E676); // Spring Lime Green
+        break;
+      case 4:
+        shirtColor = const Color(0xFF7C4DFF); // Electric Violet Purple
+        break;
+      case 5:
+        shirtColor = const Color(0xFFFF6D00); // Tangerine Orange
+        break;
+      case 6:
+        shirtColor = const Color(0xFF03A9F4); // Sky Blue
+        break;
+      case 7:
+        shirtColor = const Color(0xFFF44336); // Crimson Red
+        break;
+      case 8:
+        shirtColor = const Color(0xFF00BFA5); // Teal / Mint
         break;
       default:
-        shirtColor = const Color(0xFFE65100); // Warm Saffron
+        shirtColor = const Color(0xFFAB47BC); // Orchid Magenta
         break;
     }
 
@@ -316,13 +334,36 @@ class SpriteRenderer {
     );
     canvas.drawRRect(torsoRRect, torsoPaint);
 
-    // Head
-    final headPaint = Paint()..color = AppTheme.characterSkin;
+    // Collar detail
+    final collarPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawLine(const Offset(0, -6), const Offset(0, 0), collarPaint);
+
+    // Head with diverse natural skin tone
+    Color skinColor;
+    switch ((customer.variant ~/ 2) % 4) {
+      case 0:
+        skinColor = const Color(0xFFFFD1A4); // Fair Warm
+        break;
+      case 1:
+        skinColor = const Color(0xFFE0A96D); // Golden Warm
+        break;
+      case 2:
+        skinColor = const Color(0xFFC68B59); // Caramel Olive
+        break;
+      default:
+        skinColor = const Color(0xFF9E6534); // Deep Tan Bronze
+        break;
+    }
+    final headPaint = Paint()..color = skinColor;
     canvas.drawCircle(const Offset(0, -6), 11, headPaint);
 
-    // Hair / Cap / Turban based on variant
-    if (customer.variant % 2 == 0) {
-      // Peshawari / Kufi Cap
+    // Hair / Cap / Turban / Accessories based on variant
+    final headStyle = customer.variant % 5;
+    if (headStyle == 0) {
+      // White Kufi / Prayer Cap with gold trim
       final capPaint = Paint()..color = const Color(0xFFECEFF1);
       canvas.drawArc(
         Rect.fromCircle(center: const Offset(0, -9), radius: 10),
@@ -331,9 +372,73 @@ class SpriteRenderer {
         true,
         capPaint,
       );
-    } else {
-      // Dark Hair
+      final trimPaint = Paint()
+        ..color = const Color(0xFFFFD54F)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      canvas.drawLine(const Offset(-10, -9), const Offset(10, -9), trimPaint);
+    } else if (headStyle == 1) {
+      // Modern Fade Hair + Cool Sunglasses!
       final hairPaint = Paint()..color = const Color(0xFF212121);
+      canvas.drawArc(
+        Rect.fromCircle(center: const Offset(0, -9), radius: 10),
+        math.pi,
+        math.pi,
+        true,
+        hairPaint,
+      );
+      // Sunglasses (Shades)
+      final shadesPaint = Paint()..color = const Color(0xFF1A1A1A);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: const Offset(-4, -5), width: 5, height: 3.5),
+          const Radius.circular(1),
+        ),
+        shadesPaint,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: const Offset(4, -5), width: 5, height: 3.5),
+          const Radius.circular(1),
+        ),
+        shadesPaint,
+      );
+      canvas.drawLine(const Offset(-1.5, -5), const Offset(1.5, -5), shadesPaint);
+    } else if (headStyle == 2) {
+      // Colorful Dhaba Turban (Pagri)
+      final turbanColor = (customer.variant % 2 == 0)
+          ? const Color(0xFFFF9800) // Saffron Orange
+          : const Color(0xFF43A047); // Festive Green
+      final turbanPaint = Paint()..color = turbanColor;
+      canvas.drawOval(
+        Rect.fromCenter(center: const Offset(0, -10), width: 22, height: 11),
+        turbanPaint,
+      );
+      canvas.drawCircle(const Offset(0, -14), 4.5, turbanPaint);
+    } else if (headStyle == 3) {
+      // Sporty Baseball Cap with Visor
+      final capColor = (customer.variant % 2 == 0)
+          ? const Color(0xFFE53935) // Red cap
+          : const Color(0xFF1E88E5); // Blue cap
+      final capPaint = Paint()..color = capColor;
+      canvas.drawArc(
+        Rect.fromCircle(center: const Offset(0, -9), radius: 10),
+        math.pi,
+        math.pi,
+        true,
+        capPaint,
+      );
+      // Cap visor / brim
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: const Offset(0, -9), width: 14, height: 3.5),
+          const Radius.circular(2),
+        ),
+        Paint()..color = Colors.black87,
+      );
+    } else {
+      // Classic Side-Parted Textured Dark Hair
+      final hairPaint = Paint()..color = const Color(0xFF3E2723);
       canvas.drawArc(
         Rect.fromCircle(center: const Offset(0, -9), radius: 10),
         math.pi,
@@ -344,7 +449,7 @@ class SpriteRenderer {
     }
 
     // Hands
-    final handPaint = Paint()..color = AppTheme.characterSkin;
+    final handPaint = Paint()..color = skinColor;
     canvas.drawCircle(const Offset(-13, 2), 4.5, handPaint);
     canvas.drawCircle(const Offset(13, 2), 4.5, handPaint);
 
@@ -880,6 +985,31 @@ class SpriteRenderer {
       AppTheme.chaiDarkBrown,
     );
 
+    // Colorful Arcade Queue Line Markers on the floor (Slots 0 to 7)
+    for (int i = 0; i < 8; i++) {
+      final slotY = 782.0 + i * 46.0;
+      final slotCenter = Offset(counter.position.x, slotY);
+
+      // Subtle rounded waiting spot
+      final padPaint = Paint()
+        ..color = const Color(0xFF00BCD4).withValues(alpha: 0.09)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(slotCenter, 13.0, padPaint);
+
+      final borderPaint = Paint()
+        ..color = const Color(0xFF00BCD4).withValues(alpha: 0.25)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2;
+      canvas.drawCircle(slotCenter, 13.0, borderPaint);
+
+      // Inner subtle dot
+      canvas.drawCircle(
+        slotCenter,
+        2.5,
+        Paint()..color = const Color(0xFF00BCD4).withValues(alpha: 0.35),
+      );
+    }
+
     // -------------------------------------------------------------
     // 2. Physical Three-Part Counter Structure
     // -------------------------------------------------------------
@@ -951,6 +1081,42 @@ class SpriteRenderer {
       6,
       bellPaint,
     );
+
+    // Active Serving Progress Ring above register (Burger Please style!)
+    if (counter.isCashierPresent &&
+        counter.serviceTimer > 0.0 &&
+        counter.serviceInterval > 0.0) {
+      final progress =
+          (1.0 - (counter.serviceTimer / counter.serviceInterval)).clamp(0.0, 1.0);
+      final ringCenter = Offset(counter.position.x, counter.position.y - 20);
+
+      // Background ring
+      final bgRing = Paint()
+        ..color = Colors.black54
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.5;
+      canvas.drawCircle(ringCenter, 10.0, bgRing);
+
+      // Foreground filling progress arc
+      final fgArc = Paint()
+        ..color = const Color(0xFF00E676)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = 3.5;
+      canvas.drawArc(
+        Rect.fromCircle(center: ringCenter, radius: 10.0),
+        -math.pi / 2,
+        2 * math.pi * progress,
+        false,
+        fgArc,
+      );
+
+      // Mini cup icon inside ring
+      canvas.save();
+      canvas.translate(ringCenter.dx, ringCenter.dy + 1);
+      _drawChaiCup(canvas, 0.40);
+      canvas.restore();
+    }
 
     // Right Surface: Cash Tray
     final cashTrayRect = RRect.fromRectAndRadius(

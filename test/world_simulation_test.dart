@@ -205,7 +205,9 @@ void main() {
       customer.position.y = world.customerSystem.queue.getSlotPosition(0).y;
 
       // 3. Now with cashier present AND customer at counter, service triggers!
-      world.tick(0.05);
+      for (int i = 0; i < 25; i++) {
+        world.tick(0.05);
+      }
       expect(world.counter.totalFoodCount, 0);
       expect(world.counter.cashBundleCount, 1);
       expect(customer.state, CustomerState.leavingHappy);

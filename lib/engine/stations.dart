@@ -154,7 +154,7 @@ class ServingCounter {
   final double cashierZoneRadius;
   bool isCashierPresent;
   double serviceTimer;
-  final double serviceInterval;
+  double serviceInterval;
 
   // 3. Right Section: Money Towers & Cash Collection
   final Vector2 cashCollectionZoneCenter;
@@ -168,7 +168,7 @@ class ServingCounter {
     this.width = 300.0,
     this.height = 56.0,
     this.depositInterval = 0.14,
-    this.serviceInterval = 0.70,
+    this.serviceInterval = 0.0,
     this.cashCollectInterval = 0.08,
     this.maxColumns = 3,
     this.maxPerTower = 10,

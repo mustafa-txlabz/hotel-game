@@ -31,6 +31,7 @@ class GameWorld {
   int playerCapacityLevel;
   int workerSpeedLevel;
   int workerCapacityLevel;
+  int cashierSpeedLevel;
 
   // Customer AI & Queue System (M3)
   final CustomerSystem customerSystem;
@@ -133,11 +134,13 @@ class GameWorld {
        playerSpeedLevel = 1,
        playerCapacityLevel = 1,
        workerSpeedLevel = 1,
-       workerCapacityLevel = 1 {
-    // Apply initial upgrade stats to player
+       workerCapacityLevel = 1,
+       cashierSpeedLevel = 1 {
+    // Apply initial upgrade stats to player & counter
     player.speed = GameBalance.playerSpeedLevels[playerSpeedLevel - 1];
     player.carryCapacity =
         GameBalance.playerCapacityLevels[playerCapacityLevel - 1];
+    counter.serviceInterval = cashierSpeed;
 
     // Configure initial customer spawn interval based on current reputation
     _updateSpawnInterval();
@@ -904,6 +907,39 @@ class GameWorld {
       FloatingTextEntity(
         position: Vector2(player.position.x, player.position.y - 25.0),
         text: 'WORKER CAPACITY! 🎒',
+      ),
+    );
+    return true;
+  }
+
+  // --- Cashier Speed Upgrades (Burger Please / Arcade Idle style) ---
+
+  double get cashierSpeed =>
+      GameBalance.cashierSpeedLevels[cashierSpeedLevel - 1];
+
+  bool get canUpgradeCashierSpeed =>
+      hasCashier &&
+      cashierSpeedLevel < GameBalance.cashierSpeedLevels.length &&
+      rupees >= GameBalance.cashierSpeedUpgradeCosts[cashierSpeedLevel - 1];
+
+  double? get cashierSpeedUpgradeCost =>
+      cashierSpeedLevel < GameBalance.cashierSpeedLevels.length
+          ? GameBalance.cashierSpeedUpgradeCosts[cashierSpeedLevel - 1]
+          : null;
+
+  bool upgradeCashierSpeed() {
+    final cost = cashierSpeedUpgradeCost;
+    if (cost == null || !hasCashier || rupees < cost) return false;
+    rupees -= cost;
+    cashierSpeedLevel++;
+    counter.serviceInterval = cashierSpeed;
+    floatingTexts.add(
+      FloatingTextEntity(
+        position: Vector2(
+          counter.cashierZoneCenter.x,
+          counter.cashierZoneCenter.y - 25.0,
+        ),
+        text: 'CASHIER SPEED! ⚡',
       ),
     );
     return true;

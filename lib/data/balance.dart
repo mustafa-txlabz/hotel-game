@@ -36,6 +36,10 @@ class GameBalance {
   static const double hireChotuBaseCost = hireHelperBaseCost;
   static const double hireChotuCostMultiplier = hireHelperCostMultiplier;
 
+  // Cashier Speed Upgrades (Burger Please / Arcade Idle style)
+  static const List<double> cashierSpeedLevels = [0.90, 0.70, 0.52, 0.38, 0.25];
+  static const List<double> cashierSpeedUpgradeCosts = [70.0, 130.0, 220.0, 350.0];
+
   // Owner Upgrades
   static const List<double> playerSpeedLevels = [220.0, 255.0, 290.0, 330.0, 370.0];
   static const List<double> playerSpeedUpgradeCosts = [60.0, 120.0, 200.0, 320.0];

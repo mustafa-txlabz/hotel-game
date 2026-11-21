@@ -64,6 +64,7 @@ class SaveService {
         'playerCapacityLevel': world.playerCapacityLevel,
         'workerSpeedLevel': world.workerSpeedLevel,
         'workerCapacityLevel': world.workerCapacityLevel,
+        'cashierSpeedLevel': world.cashierSpeedLevel,
       };
 
       stores[storeId] = storeData;
@@ -194,6 +195,11 @@ class SaveService {
         for (final s in world.staff) {
           s.carryCapacity = newCap;
         }
+      }
+      if (storeData.containsKey('cashierSpeedLevel')) {
+        world.cashierSpeedLevel =
+            (storeData['cashierSpeedLevel'] as num).toInt();
+        world.counter.serviceInterval = world.cashierSpeed;
       }
 
       // 8. Finally, restore exact saved reputation percent and lock without duplicate upgrade additions

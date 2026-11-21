@@ -187,6 +187,30 @@ class _HrUpgradeSheetState extends State<HrUpgradeSheet> {
                   ),
                   const SizedBox(height: 10),
 
+                  // Cashier Speed Upgrade
+                  if (world.hasCashier) ...[
+                    _buildUpgradeCard(
+                      title: 'Cashier Speed',
+                      emoji: '⚡',
+                      iconColor: AppTheme.truckArtGreen,
+                      levelText:
+                          'Lvl ${world.cashierSpeedLevel}/${GameBalance.cashierSpeedLevels.length}',
+                      description:
+                          '${world.cashierSpeed.toStringAsFixed(2)}s per cup serving',
+                      cost: world.cashierSpeedUpgradeCost,
+                      canAfford: world.canUpgradeCashierSpeed,
+                      isMax: world.cashierSpeedLevel >=
+                          GameBalance.cashierSpeedLevels.length,
+                      onUpgrade: () {
+                        if (world.upgradeCashierSpeed()) {
+                          widget.controller.tick(0.0);
+                          setState(() {});
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+
                   // Worker Card
                   _buildStaffCard(
                     title: 'Worker',

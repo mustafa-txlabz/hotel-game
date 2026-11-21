@@ -229,7 +229,9 @@ void main() {
       world.player.position.x = world.counter.cashierZoneCenter.x;
       world.player.position.y = world.counter.cashierZoneCenter.y;
 
-      world.tick(0.05);
+      for (int i = 0; i < 25; i++) {
+        world.tick(0.05);
+      }
 
       // Sale happens!
       expect(world.counter.isCashierPresent, isTrue);
