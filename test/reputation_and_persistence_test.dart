@@ -59,27 +59,27 @@ void main() {
 
     test('Customer spawn rate dynamically speeds up with higher reputation', () {
       final world = GameWorld(initialReputationPercent: 0.0);
-      expect(world.customerSystem.spawnInterval, closeTo(4.0, 0.01));
+      expect(world.customerSystem.spawnInterval, closeTo(6.0, 0.01));
 
       // At 25% reputation
       world.addReputationPercent(25.0);
       expect(world.reputationPercent, 25.0);
-      expect(world.customerSystem.spawnInterval, closeTo(3.0, 0.01));
+      expect(world.customerSystem.spawnInterval, closeTo(5.0, 0.01));
 
       // At 50% reputation
       world.addReputationPercent(25.0);
       expect(world.reputationPercent, 50.0);
-      expect(world.customerSystem.spawnInterval, closeTo(2.0, 0.01));
+      expect(world.customerSystem.spawnInterval, closeTo(4.0, 0.01));
 
       // At 75% reputation
       world.addReputationPercent(25.0);
       expect(world.reputationPercent, 75.0);
-      expect(world.customerSystem.spawnInterval, closeTo(2.0, 0.01));
+      expect(world.customerSystem.spawnInterval, closeTo(3.5, 0.01));
 
       // At 100% reputation
       world.addReputationPercent(25.0);
       expect(world.reputationPercent, 100.0);
-      expect(world.customerSystem.spawnInterval, closeTo(2.0, 0.01));
+      expect(world.customerSystem.spawnInterval, closeTo(3.5, 0.01));
     });
 
     test('Equipment and Staff upgrades do NOT modify reputation (driven 100% by customers)', () {

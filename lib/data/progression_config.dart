@@ -63,9 +63,9 @@ class StoreProgressionConfig {
   double calculateSpawnInterval(double reputationPercent) {
     final r = reputationPercent.clamp(0.0, 100.0);
     if (r <= 50.0) {
-      return 4.0 - (r / 50.0) * 2.0; // 0% = 4.0s, 25% = 3.0s, 50% = 2.0s
+      return 6.0 - (r / 50.0) * 2.0;
     } else {
-      return 2.0; // 50% to 100% locked at 2.0s
+      return 3.5;
     }
   }
 
