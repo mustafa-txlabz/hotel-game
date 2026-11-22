@@ -117,8 +117,8 @@ void main() {
 
       counter.isCashierPresent = false;
 
-      // Elapse patience time (e.g. 23 seconds)
-      for (int i = 0; i < 46; i++) {
+      // Elapse patience time (15.5 seconds: 31 * 0.5s > 15.0s)
+      for (int i = 0; i < 31; i++) {
         system.update(0.5, counter);
       }
 
@@ -144,8 +144,8 @@ void main() {
       counter.isCashierPresent = true;
       expect(counter.totalFoodCount, 0);
 
-      // Elapse patience time (23 seconds)
-      for (int i = 0; i < 46; i++) {
+      // Elapse patience time (15.5 seconds: 31 * 0.5s > 15.0s)
+      for (int i = 0; i < 31; i++) {
         system.update(0.5, counter);
       }
 

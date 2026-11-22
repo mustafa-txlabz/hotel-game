@@ -20,7 +20,7 @@ class GameBalance {
   static const double customerSpeed = 135.0;
   static const double customerSpawnInterval = 4.0;
   static const int maxQueueCapacity = 8;
-  static const double customerPatienceTime = 22.0;
+  static const double customerPatienceTime = 15.0;
   static const double chaiPrice = 10.0;
   static const double customerEatDuration = 5.0;
   static const double dineInTip = 25.0;

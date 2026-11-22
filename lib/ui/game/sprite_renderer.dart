@@ -985,31 +985,6 @@ class SpriteRenderer {
       AppTheme.chaiDarkBrown,
     );
 
-    // Colorful Arcade Queue Line Markers on the floor (Slots 0 to 7)
-    for (int i = 0; i < 8; i++) {
-      final slotY = 782.0 + i * 46.0;
-      final slotCenter = Offset(counter.position.x, slotY);
-
-      // Subtle rounded waiting spot
-      final padPaint = Paint()
-        ..color = const Color(0xFF00BCD4).withValues(alpha: 0.09)
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(slotCenter, 13.0, padPaint);
-
-      final borderPaint = Paint()
-        ..color = const Color(0xFF00BCD4).withValues(alpha: 0.25)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2;
-      canvas.drawCircle(slotCenter, 13.0, borderPaint);
-
-      // Inner subtle dot
-      canvas.drawCircle(
-        slotCenter,
-        2.5,
-        Paint()..color = const Color(0xFF00BCD4).withValues(alpha: 0.35),
-      );
-    }
-
     // -------------------------------------------------------------
     // 2. Physical Three-Part Counter Structure
     // -------------------------------------------------------------
