@@ -6,6 +6,7 @@ import 'package:chai_dhaba_empire/engine/entities.dart';
 import 'package:chai_dhaba_empire/engine/game_world.dart';
 import 'package:chai_dhaba_empire/engine/staff_ai.dart';
 import 'package:chai_dhaba_empire/services/ad_ids.dart';
+import 'package:chai_dhaba_empire/services/ads_service.dart';
 import 'package:chai_dhaba_empire/state/game_controller.dart';
 import 'package:chai_dhaba_empire/ui/overlays/deal_popup.dart';
 
@@ -280,7 +281,7 @@ void main() {
       expect(find.text('SPECIAL DHABA DEAL'), findsNothing);
     });
 
-    testWidgets('Tapping WATCH AD & CLAIM claims deal and closes popup', (
+    testWidgets('Tapping WATCH AD & CLAIM claims deal and closes popup when ad finishes', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1080, 2400);
@@ -288,8 +289,10 @@ void main() {
       addTearDown(() {
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
+        AdsService.instance.testMockReward = false;
       });
 
+      AdsService.instance.testMockReward = true;
       final controller = GameController();
       const deal = DhabaDeal(
         type: DealType.instantCash,
@@ -321,7 +324,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Tap claim (in test environment, fallback grants reward immediately)
+      // Tap claim (simulates completed ad)
       await tester.tap(find.text('WATCH AD & CLAIM'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
@@ -330,6 +333,60 @@ void main() {
       expect(find.text('SPECIAL DHABA DEAL'), findsNothing);
       // Reward is granted
       expect(controller.rupees, equals(initialRupees + 600.0));
+    });
+
+    testWidgets('Strict Rule: No reward is granted if ad fails to load or user is offline', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      // Ensure mock is OFF (ad is not ready)
+      AdsService.instance.testMockReward = false;
+      final controller = GameController();
+      const deal = DhabaDeal(
+        type: DealType.instantCash,
+        title: 'INSTANT CASH DROP',
+        description: 'Direct ₹600 cash drop!',
+        iconEmoji: '💰',
+        durationSeconds: 0,
+        cashReward: 600.0,
+      );
+
+      final initialRupees = controller.rupees;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () => DealPopup.show(context, controller, deal),
+                  child: const Text('Open Deal'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open Deal'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Tap claim without an active ad
+      await tester.tap(find.text('WATCH AD & CLAIM'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // STRICT CHECK: Rupees are NOT modified!
+      expect(controller.rupees, equals(initialRupees));
+      // STRICT CHECK: User is notified with internet/ad warning snackbar!
+      expect(find.textContaining('Video ad not ready'), findsOneWidget);
     });
   });
 }

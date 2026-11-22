@@ -81,6 +81,25 @@ class _DealPopupState extends State<DealPopup>
           setState(() => _isClaiming = false);
         }
       },
+      onAdFailed: () {
+        if (mounted) {
+          setState(() => _isClaiming = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Video ad not ready. Please check your internet connection! 📶',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              backgroundColor: AppTheme.chaiDarkBrown,
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      },
     );
   }
 

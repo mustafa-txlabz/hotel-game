@@ -62,17 +62,28 @@ class AdsService {
     );
   }
 
+  /// When true, simulates a successful rewarded ad watch (used ONLY in automated unit tests).
+  bool testMockReward = false;
+
   /// Shows a cached Rewarded Ad.
   ///
-  /// - [onUserEarnedReward]: Called when the player finishes watching the ad to grant the deal.
-  /// - [onAdDismissed]: Called when the ad is closed (either completed or skipped).
+  /// - [onUserEarnedReward]: Called strictly when the player completes watching the ad.
+  /// - [onAdDismissed]: Called when the ad is closed.
+  /// - [onAdFailed]: Called when no ad is available (offline, ad blocker, or failed to show).
   void showRewardedAd({
     required VoidCallback onUserEarnedReward,
     VoidCallback? onAdDismissed,
+    VoidCallback? onAdFailed,
   }) {
-    if (_rewardedAd != null) {
-      var rewardEarned = false;
+    // 1. Test environment mock (only during automated tests)
+    if (testMockReward) {
+      onUserEarnedReward();
+      onAdDismissed?.call();
+      return;
+    }
 
+    // 2. Real / Test device execution
+    if (_rewardedAd != null) {
       _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
         onAdDismissedFullScreenContent: (ad) {
           ad.dispose();
@@ -85,29 +96,27 @@ class AdsService {
           ad.dispose();
           _rewardedAd = null;
           loadRewardedAd();
-          // Fallback: If ad failed to display, grant reward so player isn't punished
-          if (!rewardEarned) {
-            rewardEarned = true;
-            onUserEarnedReward();
-          }
+          // STRICT RULE: No reward on failed display!
+          onAdFailed?.call();
           onAdDismissed?.call();
         },
       );
 
       _rewardedAd!.show(
         onUserEarnedReward: (ad, reward) {
-          debugPrint('[AdsService] User earned reward: ${reward.amount} ${reward.type}');
-          rewardEarned = true;
+          debugPrint(
+            '[AdsService] User earned reward: ${reward.amount} ${reward.type}',
+          );
           onUserEarnedReward();
         },
       );
     } else {
-      // Graceful fallback: If no ad is ready (offline or test environment),
-      // grant reward immediately so player can always enjoy the deal.
-      debugPrint('[AdsService] No ad ready, granting reward via fallback.');
-      onUserEarnedReward();
-      onAdDismissed?.call();
+      // STRICT RULE: If ad is not ready (offline, ad blocker, no fill),
+      // DO NOT give reward! Notify caller via onAdFailed.
+      debugPrint('[AdsService] No rewarded ad ready to display. Requesting new load.');
       loadRewardedAd();
+      onAdFailed?.call();
+      onAdDismissed?.call();
     }
   }
 }
