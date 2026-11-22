@@ -4,11 +4,14 @@ import '../../core/number_format.dart';
 import '../../core/strings.dart';
 import '../../core/theme.dart';
 
-/// Top HUD displaying currency balance, item carrying count, and tutorial hints.
+/// Top HUD displaying currency balance, item carrying count, store reputation, and tutorial hints.
 class HudOverlay extends StatelessWidget {
   final double rupees;
   final int carriedCount;
   final int carryCapacity;
+  final double reputationPercent;
+  final int reputationLevel;
+  final VoidCallback? onReputationTap;
   final bool showTutorial;
 
   const HudOverlay({
@@ -16,6 +19,9 @@ class HudOverlay extends StatelessWidget {
     required this.rupees,
     required this.carriedCount,
     required this.carryCapacity,
+    this.reputationPercent = 0.0,
+    this.reputationLevel = 1,
+    this.onReputationTap,
     this.showTutorial = true,
   });
 
@@ -26,14 +32,18 @@ class HudOverlay extends StatelessWidget {
     return SafeArea(
       child: Stack(
         children: [
-          // Top Bar
+          // Top Bar & Reputation Section
           Positioned(
-            top: 12,
+            top: 10,
             left: 16,
             right: 16,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
+                // Row 1: Header Row (Title, Carry Count, Cash Wallet)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                 // Game Title Badge
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -173,7 +183,13 @@ class HudOverlay extends StatelessWidget {
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 8),
+
+            // Row 2: Sleek Store Reputation Bar (Right under Header)
+            _buildReputationBar(context),
+          ],
+        ),
+      ),
 
           // Tutorial Hint when idle
           if (showTutorial)
@@ -218,6 +234,136 @@ class HudOverlay extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildReputationBar(BuildContext context) {
+    final clampedPercent = reputationPercent.clamp(0.0, 100.0);
+    final isMax = clampedPercent >= 100.0;
+    final displayPercent = isMax ? '100%' : '${clampedPercent.toStringAsFixed(1)}%';
+
+    return GestureDetector(
+      onTap: onReputationTap,
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2C1E14).withValues(alpha: 0.88), // Sleek Dhaba dark glass
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isMax
+                ? AppTheme.goldYellow
+                : AppTheme.goldYellow.withValues(alpha: 0.45),
+            width: isMax ? 1.8 : 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isMax
+                  ? AppTheme.goldYellow.withValues(alpha: 0.25)
+                  : Colors.black.withValues(alpha: 0.25),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Left: Star Icon & Rating Level (1 to 5 Stars)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.star_rounded,
+                  color: AppTheme.goldYellow,
+                  size: 18,
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  '★ $reputationLevel',
+                  style: const TextStyle(
+                    color: AppTheme.goldYellow,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 8),
+
+            // Center: Smooth Glowing Golden Progress Bar
+            Expanded(
+              child: Stack(
+                alignment: Alignment.centerLeft,
+                children: [
+                  // Track background
+                  Container(
+                    height: 9,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                  ),
+
+                  // Filling Bar
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final fillWidth =
+                          (constraints.maxWidth * (clampedPercent / 100.0))
+                              .clamp(0.0, constraints.maxWidth);
+
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 350),
+                        curve: Curves.easeOutCubic,
+                        width: fillWidth,
+                        height: 9,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              AppTheme.saffronOrange,
+                              AppTheme.goldYellow,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.goldYellow.withValues(alpha: 0.5),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Right: Single Clean Percentage Display & Trophy Icon
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  displayPercent,
+                  style: TextStyle(
+                    color: isMax ? AppTheme.goldYellow : Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.emoji_events_rounded,
+                  color: AppTheme.goldYellow,
+                  size: 15,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

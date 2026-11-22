@@ -30,7 +30,6 @@ class _GoalsOverlayState extends State<GoalsOverlay> {
   Widget build(BuildContext context) {
     final world = widget.controller.world;
     final config = world.progressionConfig;
-    final repPercent = world.reputationPercent;
 
     return Container(
       margin: const EdgeInsets.only(top: 60),
@@ -94,7 +93,7 @@ class _GoalsOverlayState extends State<GoalsOverlay> {
                           ),
                         ),
                         Text(
-                          'Store Goals & Reputation',
+                          'Store Objectives & Missions',
                           style: TextStyle(
                             color: AppTheme.chaiDarkBrown.withValues(alpha: 0.7),
                             fontWeight: FontWeight.w700,
@@ -124,12 +123,7 @@ class _GoalsOverlayState extends State<GoalsOverlay> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // 1. Top Card: Store Reputation Progress Bar
-                    _buildReputationCard(world, config, repPercent),
-
-                    const SizedBox(height: 20),
-
-                    // 2. Section Header: Store Objectives
+                    // 1. Section Header: Store Objectives
                     Row(
                       children: [
                         const Text(
@@ -164,14 +158,8 @@ class _GoalsOverlayState extends State<GoalsOverlay> {
                     ),
                     const SizedBox(height: 10),
 
-                    // 3. Goals List
+                    // 2. Goals List
                     ...config.goals.map((goal) => _buildGoalCard(world, goal)),
-
-                    const SizedBox(height: 16),
-
-                    // 4. Store Mastered Celebration Card (if achieved)
-                    if (world.isStoreMastered)
-                      _buildMasteredCard(context, config),
 
                     const SizedBox(height: 24),
                   ],
@@ -180,177 +168,6 @@ class _GoalsOverlayState extends State<GoalsOverlay> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildReputationCard(
-    dynamic world,
-    StoreProgressionConfig config,
-    double repPercent,
-  ) {
-    final isLocked = world.isReputationLocked100;
-    final level = world.reputationLevel;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isLocked
-              ? AppTheme.goldYellow
-              : AppTheme.chaiBrown.withValues(alpha: 0.2),
-          width: isLocked ? 2.0 : 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isLocked
-                ? AppTheme.goldYellow.withValues(alpha: 0.25)
-                : Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Row 1: Title & Stars
-          Row(
-            children: [
-              const Text(
-                'Store Reputation',
-                style: TextStyle(
-                  color: AppTheme.chaiDarkBrown,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
-                ),
-              ),
-              const Spacer(),
-              // 5-Star rating visual
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(5, (index) {
-                  return Icon(
-                    index < level
-                        ? Icons.star_rounded
-                        : Icons.star_outline_rounded,
-                    color: index < level ? AppTheme.goldYellow : Colors.black26,
-                    size: 20,
-                  );
-                }),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // Row 2: Percentage & Target details
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${repPercent.toStringAsFixed(1)}% REPUTATION',
-                style: TextStyle(
-                  color: isLocked
-                      ? AppTheme.goldYellow
-                      : AppTheme.saffronOrange,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 14,
-                ),
-              ),
-              Text(
-                isLocked
-                    ? '100% / 100%'
-                    : '${repPercent.toStringAsFixed(1)}% / 100%',
-                style: const TextStyle(
-                  color: AppTheme.chaiDarkBrown,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Horizontal Progress Bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: SizedBox(
-              height: 14,
-              child: Stack(
-                children: [
-                  Container(
-                    color: const Color(0xFFECEFF1),
-                  ),
-                  FractionallySizedBox(
-                    widthFactor: (repPercent / 100.0).clamp(0.0, 1.0),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: isLocked
-                              ? [const Color(0xFFFFD54F), const Color(0xFFFF8F00)]
-                              : [const Color(0xFF00E676), const Color(0xFF00B0FF)],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // Footnote: Rush interval & lock status
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.bolt_rounded,
-                    color: AppTheme.saffronOrange,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Spawn Rate: ${world.customerSystem.spawnInterval.toStringAsFixed(1)}s',
-                    style: const TextStyle(
-                      color: AppTheme.chaiDarkBrown,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              if (isLocked)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppTheme.goldYellow.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text(
-                    '🔒 LOCKED 100%',
-                    style: TextStyle(
-                      color: Color(0xFFE65100),
-                      fontWeight: FontWeight.w900,
-                      fontSize: 10,
-                    ),
-                  ),
-                )
-              else
-                Text(
-                  'Sad customers: -0.2%',
-                  style: TextStyle(
-                    color: Colors.red.shade700,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 11,
-                  ),
-                ),
-            ],
-          ),
-        ],
       ),
     );
   }
@@ -490,89 +307,5 @@ class _GoalsOverlayState extends State<GoalsOverlay> {
       case GoalType.earnRevenue:
         return '₹${GameNumberFormat.format(world.lifetimeRupees)}/₹${GameNumberFormat.format(goal.targetValue.toDouble())}';
     }
-  }
-
-  Widget _buildMasteredCard(
-    BuildContext context,
-    StoreProgressionConfig config,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFF8F00), Color(0xFFFF6F00)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '🎉 STORE MASTERED! 🏆',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '${config.storeName} has reached 100% 5-Star Glory! Ready to travel to Store 2 (City Food Street).',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFFE65100),
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            ),
-            icon: const Icon(Icons.rocket_launch_rounded, size: 18),
-            label: const Text(
-              'STORE 2 (COMING IN M7/M8) ➔',
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
-            ),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text(
-                    'Store 2: City Food Street unlocks in Expansion! 🏙️',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  backgroundColor: AppTheme.chaiDarkBrown,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
   }
 }

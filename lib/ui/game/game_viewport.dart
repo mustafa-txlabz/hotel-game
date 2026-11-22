@@ -172,14 +172,18 @@ class _GameViewportState extends State<GameViewport>
           // 2. Floating Virtual Joystick
           JoystickWidget(origin: _joystickOrigin, current: _joystickCurrent),
 
-          // 3. Top HUD (Rupees & Carry Counter)
-          IgnorePointer(
-            child: HudOverlay(
-              rupees: controller.rupees,
-              carriedCount: controller.world.player.carriedCount,
-              carryCapacity: controller.world.player.carryCapacity,
-              showTutorial: !_hasMovedOnce,
-            ),
+          // 3. Top HUD (Rupees, Carry Counter & Store Reputation Bar)
+          HudOverlay(
+            rupees: controller.rupees,
+            carriedCount: controller.world.player.carriedCount,
+            carryCapacity: controller.world.player.carryCapacity,
+            reputationPercent: controller.world.reputationPercent,
+            reputationLevel: controller.world.reputationLevel,
+            onReputationTap: () {
+              _resetJoystick();
+              GoalsOverlay.show(context, controller);
+            },
+            showTutorial: !_hasMovedOnce,
           ),
 
           // 4. Left-Side Action Badges (HR & Upgrades, Goals, Settings)

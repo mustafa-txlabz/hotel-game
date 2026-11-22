@@ -251,14 +251,22 @@ Implement per-store reputation progression, dynamic customer scaling, goal check
 Unlock additional food machines (Burger Grill / Samosa Fryer) with separate, dedicated food towers on the counter. Customers place mixed orders (`☕ + 🍔`). Add lively sound effects, sizzling audio, and haptic polish.
 *Done when: Multiple food types are brewed, stacked in distinct counter towers, and sold to customers.*
 
-### **M8 — Goals, Level Progression & Multi-Town Expansion (New Shops / Locations)**
-Add full Goal/Mission system driven by the HUD Trophy button:
-1. **Shop Milestones & Level Objectives**: Clear targets to complete the level (e.g., Serve X customers, Reach max kettle level, Unlock all dining tables, Hire full staff, Earn Y total rupees).
-2. **Level Complete Celebration**: Fireworks, confetti, and big reward bonus upon clearing all location goals.
-3. **Multi-Town Location Travel**: Unlock the next city/town location (e.g. Highway Dhaba -> City Food Street -> Mall Bistro), pack up earnings, and open a brand-new, grander shop with new layouts and higher profits!
-*Done when: Players can view and track goals via HUD Trophy button, achieve level completion, and progress to new town locations with expanded shops.*
+### **M8 — Goals, Shop Completion Celebration & Reward Bonus**
+Add full Goal/Mission completion system driven by HUD Reputation Bar and Objectives Sheet:
+1. **Shop Milestones & Level Objectives**: Clear targets to complete the level (tracked in the top HUD reputation bar & objectives sheet).
+2. **Level Complete Celebration**: Fireworks, confetti particle effects, and big reward bonus modal upon clearing all store objectives.
+*Done when: Completing all store goals triggers level-complete victory celebration with bonus rewards.*
 
-### **M9 — AdMob Rewarded Power-Ups, Offline Earnings & Release Prep**
+### **M9 — Multi-Town Location Travel & Vibrant Store Architecture (Burger Please Theme)**
+Unlock new locations and implement vibrant, multi-colored store/room aesthetics:
+1. **Multi-Town Location Travel**: Pack up earnings and travel to next city/town locations (Store 2: City Food Street, Store 3: Mall Bistro) with new layouts and higher profits.
+2. **Vibrant Burger Please Architectural & Color Palette**:
+   - Distinct colorful themed zones/cabins/rooms (Dining Hall, VIP Lounge, Drive-Thru/Takeaway, Kitchen), each with its own signature vibrant wall trims, floor tiles, and room accents.
+   - Colorful machines, themed counters, vibrant custom chairs, and dining tables matching each room's aesthetic.
+   - High-contrast, hyper-polished mobile arcade tycoon visual appeal and intuitive UX.
+*Done when: Players can travel to new store locations with distinct, vibrant multi-colored room/cabin architecture and upgraded equipment.*
+
+### **M10 — AdMob Rewarded Power-Ups, Offline Earnings & Release Prep**
 Add AdMob Rewarded Ads for instant boosts (Chai Rush 2x Speed, Free VIP Helper, 2x Offline Earnings on game launch), full SharedPreferences persistence (save & load), and final Google Play release readiness.
 *Done when: Full game saves/resumes, rewarded ads trigger power-ups, and the release build is ready.*
 
