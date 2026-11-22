@@ -12,6 +12,9 @@ class HudOverlay extends StatelessWidget {
   final double reputationPercent;
   final int reputationLevel;
   final VoidCallback? onReputationTap;
+  final bool showMasteryRewardBar;
+  final double masteryRewardBonus;
+  final VoidCallback? onClaimMasteryReward;
   final bool showTutorial;
 
   const HudOverlay({
@@ -22,6 +25,9 @@ class HudOverlay extends StatelessWidget {
     this.reputationPercent = 0.0,
     this.reputationLevel = 1,
     this.onReputationTap,
+    this.showMasteryRewardBar = false,
+    this.masteryRewardBonus = 1000.0,
+    this.onClaimMasteryReward,
     this.showTutorial = true,
   });
 
@@ -187,14 +193,28 @@ class HudOverlay extends StatelessWidget {
 
             // Row 2: Sleek Store Reputation Bar (Centered with side spacing)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 360),
+                  constraints: const BoxConstraints(maxWidth: 380),
                   child: _buildReputationBar(context),
                 ),
               ),
             ),
+
+            // Row 3: Temporary Store Mastery Reward Claim Bar (shown under reputation bar until claimed)
+            if (showMasteryRewardBar) ...[
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 380),
+                    child: _buildMasteryRewardBar(context),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -254,21 +274,21 @@ class HudOverlay extends StatelessWidget {
     return GestureDetector(
       onTap: onReputationTap,
       child: Container(
-        height: 28,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
         decoration: BoxDecoration(
-          color: const Color(0xFF2C1E14).withValues(alpha: 0.88), // Sleek Dhaba dark glass
-          borderRadius: BorderRadius.circular(14),
+          color: const Color(0xFF2C1E14).withValues(alpha: 0.90), // Sleek Dhaba dark glass
+          borderRadius: BorderRadius.circular(17),
           border: Border.all(
             color: isMax
                 ? AppTheme.goldYellow
-                : AppTheme.goldYellow.withValues(alpha: 0.45),
-            width: isMax ? 1.8 : 1.2,
+                : AppTheme.goldYellow.withValues(alpha: 0.50),
+            width: isMax ? 2.0 : 1.4,
           ),
           boxShadow: [
             BoxShadow(
               color: isMax
-                  ? AppTheme.goldYellow.withValues(alpha: 0.25)
+                  ? AppTheme.goldYellow.withValues(alpha: 0.30)
                   : Colors.black.withValues(alpha: 0.25),
               blurRadius: 8,
               offset: const Offset(0, 3),
@@ -284,21 +304,21 @@ class HudOverlay extends StatelessWidget {
                 Icon(
                   Icons.verified_rounded,
                   color: AppTheme.goldYellow,
-                  size: 14,
+                  size: 16,
                 ),
-                SizedBox(width: 4),
+                SizedBox(width: 5),
                 Text(
                   'REPUTATION',
                   style: TextStyle(
                     color: AppTheme.cream,
                     fontWeight: FontWeight.w900,
-                    fontSize: 10,
-                    letterSpacing: 0.5,
+                    fontSize: 11.5,
+                    letterSpacing: 0.6,
                   ),
                 ),
               ],
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
 
             // Center: Smooth Glowing Golden Progress Bar
             Expanded(
@@ -307,10 +327,10 @@ class HudOverlay extends StatelessWidget {
                 children: [
                   // Track background
                   Container(
-                    height: 8,
+                    height: 10,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(4),
+                      color: Colors.white.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(5),
                     ),
                   ),
 
@@ -325,7 +345,7 @@ class HudOverlay extends StatelessWidget {
                         duration: const Duration(milliseconds: 350),
                         curve: Curves.easeOutCubic,
                         width: fillWidth,
-                        height: 8,
+                        height: 10,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [
@@ -333,11 +353,11 @@ class HudOverlay extends StatelessWidget {
                               AppTheme.goldYellow,
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(5),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.goldYellow.withValues(alpha: 0.5),
-                              blurRadius: 4,
+                              color: AppTheme.goldYellow.withValues(alpha: 0.55),
+                              blurRadius: 5,
                             ),
                           ],
                         ),
@@ -347,7 +367,7 @@ class HudOverlay extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
 
             // Right: Single Clean Percentage Display (No Trophy Icon)
             Text(
@@ -355,12 +375,102 @@ class HudOverlay extends StatelessWidget {
               style: TextStyle(
                 color: isMax ? AppTheme.goldYellow : Colors.white,
                 fontWeight: FontWeight.w900,
-                fontSize: 11,
+                fontSize: 12.5,
                 letterSpacing: 0.3,
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Temporary victory reward bar displayed directly beneath the reputation bar until claimed.
+  Widget _buildMasteryRewardBar(BuildContext context) {
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2C1E14).withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(19),
+        border: Border.all(
+          color: AppTheme.goldYellow,
+          width: 1.6,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.goldYellow.withValues(alpha: 0.25),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Left: Trophy & Reward text
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('🏆', style: TextStyle(fontSize: 16)),
+              const SizedBox(width: 6),
+              const Text(
+                'VICTORY BONUS: ',
+                style: TextStyle(
+                  color: AppTheme.cream,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 11,
+                  letterSpacing: 0.4,
+                ),
+              ),
+              Text(
+                '₹${masteryRewardBonus.toInt()}',
+                style: const TextStyle(
+                  color: AppTheme.goldYellow,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+
+          // Right: Vibrant Green CLAIM Button
+          GestureDetector(
+            onTap: onClaimMasteryReward,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF00E676), Color(0xFF00C853)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF00E676).withValues(alpha: 0.45),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.stars_rounded, color: Colors.white, size: 14),
+                  SizedBox(width: 4),
+                  Text(
+                    'CLAIM',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

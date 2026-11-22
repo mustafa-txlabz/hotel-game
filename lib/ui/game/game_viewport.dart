@@ -205,6 +205,14 @@ class _GameViewportState extends State<GameViewport>
               _resetJoystick();
               GoalsOverlay.show(context, controller);
             },
+            showMasteryRewardBar:
+                controller.world.isStoreMastered &&
+                !controller.world.isMasteryRewardClaimed,
+            masteryRewardBonus: controller.world.masteryRewardBonus,
+            onClaimMasteryReward: () {
+              _resetJoystick();
+              controller.claimMasteryReward();
+            },
             showTutorial: !_hasMovedOnce,
           ),
 

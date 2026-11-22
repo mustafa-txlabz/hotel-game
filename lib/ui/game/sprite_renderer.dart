@@ -593,28 +593,28 @@ class SpriteRenderer {
 
     final double bubbleWidth;
     if (isMixed) {
-      bubbleWidth = 66.0;
+      bubbleWidth = 80.0;
     } else {
       final rem = remC > 0 ? remC : remP;
-      bubbleWidth = rem >= 10 ? 50.0 : 44.0;
+      bubbleWidth = rem >= 10 ? 56.0 : 48.0;
     }
-    const bubbleHeight = 24.0;
-    const bubbleY = -34.0;
+    final double bubbleHeight = 28.0;
+    final double bubbleY = isMixed ? -38.0 : -36.0;
 
     final bubblePath = Path()
       ..addRRect(
         RRect.fromRectAndRadius(
           Rect.fromCenter(
-            center: const Offset(0, bubbleY),
+            center: Offset(0, bubbleY),
             width: bubbleWidth,
             height: bubbleHeight,
           ),
           const Radius.circular(8),
         ),
       )
-      ..moveTo(-4, bubbleY + bubbleHeight / 2)
-      ..lineTo(0, bubbleY + bubbleHeight / 2 + 5)
-      ..lineTo(4, bubbleY + bubbleHeight / 2)
+      ..moveTo(-5, bubbleY + bubbleHeight / 2)
+      ..lineTo(0, bubbleY + bubbleHeight / 2 + 6)
+      ..lineTo(5, bubbleY + bubbleHeight / 2)
       ..close();
 
     // Drop shadow
@@ -639,22 +639,28 @@ class SpriteRenderer {
       // Draw both Chai and Paratha order icons and remaining counts
       final textSpan = TextSpan(
         children: [
-          const TextSpan(text: '☕', style: TextStyle(fontSize: 9)),
+          const TextSpan(
+            text: '☕',
+            style: TextStyle(fontSize: 13),
+          ),
           TextSpan(
-            text: '$remC ',
+            text: ' $remC  ',
             style: const TextStyle(
-              color: Color(0xFF263238),
+              color: Color(0xFF212121),
               fontWeight: FontWeight.w900,
-              fontSize: 9,
+              fontSize: 13,
             ),
           ),
-          const TextSpan(text: '🫓', style: TextStyle(fontSize: 9)),
+          const TextSpan(
+            text: '🫓',
+            style: TextStyle(fontSize: 13),
+          ),
           TextSpan(
-            text: '$remP',
+            text: ' $remP',
             style: const TextStyle(
-              color: Color(0xFF263238),
+              color: Color(0xFF212121),
               fontWeight: FontWeight.w900,
-              fontSize: 9,
+              fontSize: 13,
             ),
           ),
         ],
@@ -670,41 +676,41 @@ class SpriteRenderer {
     } else if (remP > 0) {
       // Paratha only
       canvas.save();
-      canvas.translate(-10, bubbleY - 1);
-      _drawParathaPlate(canvas, 0.45);
+      canvas.translate(-11, bubbleY - 1);
+      _drawParathaPlate(canvas, 0.55);
       canvas.restore();
 
       final textPainter = TextPainter(
         text: TextSpan(
           text: 'x$remP',
           style: const TextStyle(
-            color: Color(0xFF263238),
+            color: Color(0xFF212121),
             fontWeight: FontWeight.w900,
-            fontSize: 10,
+            fontSize: 13.5,
           ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      textPainter.paint(canvas, Offset(4, bubbleY - textPainter.height / 2));
+      textPainter.paint(canvas, Offset(5, bubbleY - textPainter.height / 2));
     } else {
       // Chai only
       canvas.save();
-      canvas.translate(-10, bubbleY - 2);
-      _drawChaiCup(canvas, 0.55);
+      canvas.translate(-11, bubbleY - 2);
+      _drawChaiCup(canvas, 0.65);
       canvas.restore();
 
       final textPainter = TextPainter(
         text: TextSpan(
           text: 'x$remC',
           style: const TextStyle(
-            color: Color(0xFF263238),
+            color: Color(0xFF212121),
             fontWeight: FontWeight.w900,
-            fontSize: 10,
+            fontSize: 13.5,
           ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      textPainter.paint(canvas, Offset(4, bubbleY - textPainter.height / 2));
+      textPainter.paint(canvas, Offset(5, bubbleY - textPainter.height / 2));
     }
   }
 
