@@ -9,6 +9,7 @@ import '../../engine/entities.dart';
 import '../../engine/ground_pad.dart';
 import '../../engine/staff_ai.dart';
 import '../../engine/stations.dart';
+import '../../engine/vip_car.dart';
 
 /// Vector-based high-performance sprite and character renderer for Dhaba Arcade Tycoon.
 class SpriteRenderer {
@@ -3670,5 +3671,508 @@ class SpriteRenderer {
 
       canvas.restore();
     }
+  }
+
+  /// Draws the VVIP luxury car on the GT Highway with headlights, tinted glass,
+  /// 3 car models (Sedan, SUV, Vintage), curbside drop zone on sidewalk,
+  /// and bulk order progress bubble with 15s patience timer (M10).
+  static void drawVipCar(Canvas canvas, VipCar car) {
+    if (car.state == CarState.despawned) return;
+
+    // 1. Draw curbside drop zone on sidewalk if waiting for order
+    if (car.state == CarState.parkedWaitingOrder) {
+      _drawVipCarDropZone(canvas, car);
+    }
+
+    // 2. Draw ground shadow underneath the car
+    final shadowRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(car.position.x + 3.0, car.position.y + 6.0),
+        width: car.width + 10.0,
+        height: car.height + 8.0,
+      ),
+      const Radius.circular(20),
+    );
+    canvas.drawRRect(shadowRect, Paint()..color = Colors.black.withValues(alpha: 0.38));
+
+    // 3. Draw headlight beams on asphalt
+    _drawVipHeadlightBeams(canvas, car);
+
+    // 4. Draw stylized car body
+    canvas.save();
+    canvas.translate(car.position.x, car.position.y);
+    if (car.direction == CarDirection.westBound) {
+      canvas.scale(-1.0, 1.0); // Flip horizontally for west-bound travel
+    }
+
+    _drawVipCarChassisAndCabin(canvas, car);
+
+    canvas.restore();
+
+    // 5. Draw floating order bubble & patience bar above car
+    if (car.state == CarState.parkedWaitingOrder) {
+      _drawVipOrderSpeechBubble(canvas, car);
+    } else if (car.state == CarState.drivingOut) {
+      _drawVipDriveOutCelebration(canvas, car);
+    }
+  }
+
+  static void _drawVipCarDropZone(Canvas canvas, VipCar car) {
+    final zone = car.curbsideDropZone;
+    final pulse = 1.0 + math.sin(DateTime.now().millisecondsSinceEpoch * 0.007) * 0.06;
+
+    final zoneRect = RRect.fromRectAndRadius(zone, const Radius.circular(10));
+
+    // Soft animated cyan/mint glow fill
+    final glowPaint = Paint()..color = const Color(0x3300E5FF);
+    canvas.drawRRect(zoneRect, glowPaint);
+
+    // Border with neon cyan pulse
+    final borderPaint = Paint()
+      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.65 + 0.35 * pulse.clamp(0.0, 1.0))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+    canvas.drawRRect(zoneRect, borderPaint);
+
+    // Label badge on sidewalk
+    final labelBg = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(zone.center.dx, zone.center.dy),
+        width: 140,
+        height: 22,
+      ),
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(labelBg, Paint()..color = const Color(0xFF006064));
+    canvas.drawRRect(
+      labelBg,
+      Paint()
+        ..color = const Color(0xFF00E5FF)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2,
+    );
+
+    final textPainter = TextPainter(
+      text: const TextSpan(
+        text: '📦 VVIP LOAD ZONE',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+          fontSize: 9.5,
+          letterSpacing: 0.6,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    textPainter.paint(
+      canvas,
+      Offset(zone.center.dx - textPainter.width / 2, zone.center.dy - textPainter.height / 2),
+    );
+  }
+
+  static void _drawVipHeadlightBeams(Canvas canvas, VipCar car) {
+    final dirSign = car.direction == CarDirection.eastBound ? 1.0 : -1.0;
+    final startX = car.position.x + dirSign * (car.width / 2 - 4.0);
+    final beamLength = 130.0 * dirSign;
+
+    final beamPaint = Paint()
+      ..color = const Color(0x38FFF9C4)
+      ..style = PaintingStyle.fill;
+
+    // Top beam
+    final topBeam = Path()
+      ..moveTo(startX, car.position.y - car.height * 0.32)
+      ..lineTo(startX + beamLength, car.position.y - car.height * 0.60)
+      ..lineTo(startX + beamLength, car.position.y - car.height * 0.15)
+      ..close();
+    canvas.drawPath(topBeam, beamPaint);
+
+    // Bottom beam
+    final bottomBeam = Path()
+      ..moveTo(startX, car.position.y + car.height * 0.32)
+      ..lineTo(startX + beamLength, car.position.y + car.height * 0.15)
+      ..lineTo(startX + beamLength, car.position.y + car.height * 0.60)
+      ..close();
+    canvas.drawPath(bottomBeam, beamPaint);
+  }
+
+  static void _drawVipCarChassisAndCabin(Canvas canvas, VipCar car) {
+    final w = car.width;
+    final h = car.height;
+
+    // 1. Wheels (4 rubber tires with silver alloy rims)
+    final wheelPositions = [
+      Offset(w * 0.31, -h * 0.49),
+      Offset(w * 0.31, h * 0.49),
+      Offset(-w * 0.31, -h * 0.49),
+      Offset(-w * 0.31, h * 0.49),
+    ];
+
+    final tirePaint = Paint()..color = const Color(0xFF1E2124);
+    final rimPaint = Paint()..color = const Color(0xFFCFD8DC);
+    final hubPaint = Paint()..color = const Color(0xFF424242);
+
+    for (final pos in wheelPositions) {
+      final tireRect = RRect.fromRectAndRadius(
+        Rect.fromCenter(center: pos, width: 34, height: 14),
+        const Radius.circular(5),
+      );
+      canvas.drawRRect(tireRect, tirePaint);
+
+      final rimRect = RRect.fromRectAndRadius(
+        Rect.fromCenter(center: pos, width: 22, height: 8),
+        const Radius.circular(3),
+      );
+      canvas.drawRRect(rimRect, rimPaint);
+      canvas.drawCircle(pos, 2.5, hubPaint);
+    }
+
+    // 2. Main Car Chassis Body
+    final cornerRadius = car.model == CarModel.suv
+        ? 14.0
+        : (car.model == CarModel.vintage ? 24.0 : 18.0);
+
+    final bodyRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset.zero, width: w, height: h),
+      Radius.circular(cornerRadius),
+    );
+
+    // Base body paint
+    canvas.drawRRect(bodyRect, Paint()..color = car.color);
+
+    // Metallic gloss highlight across top
+    final highlightRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(-w / 2, -h / 2, w, h * 0.45),
+      Radius.circular(cornerRadius),
+    );
+    canvas.drawRRect(
+      highlightRect,
+      Paint()..color = Colors.white.withValues(alpha: 0.22),
+    );
+
+    // Depth shadow along bottom half
+    final shadowRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(-w / 2, 0, w, h / 2),
+      Radius.circular(cornerRadius),
+    );
+    canvas.drawRRect(
+      shadowRect,
+      Paint()..color = Colors.black.withValues(alpha: 0.18),
+    );
+
+    // Body crisp contour stroke
+    canvas.drawRRect(
+      bodyRect,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.35)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0,
+    );
+
+    // 3. Front Grille & Headlights (at +w/2)
+    final grilleRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(w / 2 - 2, 0), width: 6, height: h * 0.48),
+      const Radius.circular(2),
+    );
+    canvas.drawRRect(grilleRect, Paint()..color = const Color(0xFFB0BEC5));
+
+    // Dual front headlights
+    final headlightPaint = Paint()..color = const Color(0xFFE0F7FA);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(w / 2 - 2, -h * 0.30), width: 6, height: 11),
+        const Radius.circular(3),
+      ),
+      headlightPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(w / 2 - 2, h * 0.30), width: 6, height: 11),
+        const Radius.circular(3),
+      ),
+      headlightPaint,
+    );
+
+    // 4. Rear Taillights (at -w/2)
+    final taillightPaint = Paint()..color = const Color(0xFFFF1744);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(-w / 2 + 2, -h * 0.30), width: 5, height: 12),
+        const Radius.circular(2),
+      ),
+      taillightPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(-w / 2 + 2, h * 0.30), width: 5, height: 12),
+        const Radius.circular(2),
+      ),
+      taillightPaint,
+    );
+
+    // Dual chrome exhaust tips at rear
+    final exhaustPaint = Paint()..color = const Color(0xFFECEFF1);
+    canvas.drawCircle(Offset(-w / 2, -h * 0.16), 3, exhaustPaint);
+    canvas.drawCircle(Offset(-w / 2, h * 0.16), 3, exhaustPaint);
+
+    // 5. Side Mirrors
+    final mirrorPaint = Paint()..color = car.color;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(w * 0.16, -h / 2 - 4), width: 10, height: 5),
+        const Radius.circular(2),
+      ),
+      mirrorPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(w * 0.16, h / 2 + 4), width: 10, height: 5),
+        const Radius.circular(2),
+      ),
+      mirrorPaint,
+    );
+
+    // 6. Cabin / Glass Greenhouse (Windshield, side windows, rear glass)
+    final cabinRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(-w * 0.04, 0), width: w * 0.54, height: h * 0.68),
+      const Radius.circular(10),
+    );
+    canvas.drawRRect(cabinRect, Paint()..color = const Color(0xFF15191E));
+
+    // Windshield reflection slash
+    final glassShine = Paint()
+      ..color = const Color(0x44FFFFFF)
+      ..strokeWidth = 3.0;
+    canvas.drawLine(
+      Offset(w * 0.15, -h * 0.22),
+      Offset(w * 0.05, h * 0.22),
+      glassShine,
+    );
+
+    // 7. Roof panel styling based on CarModel
+    if (car.model == CarModel.suv) {
+      // Matte roof rack rails
+      final railPaint = Paint()
+        ..color = const Color(0xFF37474F)
+        ..strokeWidth = 3.0;
+      canvas.drawLine(
+        Offset(-w * 0.22, -h * 0.28),
+        Offset(w * 0.14, -h * 0.28),
+        railPaint,
+      );
+      canvas.drawLine(
+        Offset(-w * 0.22, h * 0.28),
+        Offset(w * 0.14, h * 0.28),
+        railPaint,
+      );
+      // Crossbars
+      canvas.drawLine(
+        Offset(-w * 0.12, -h * 0.28),
+        Offset(-w * 0.12, h * 0.28),
+        railPaint,
+      );
+      canvas.drawLine(
+        Offset(w * 0.04, -h * 0.28),
+        Offset(w * 0.04, h * 0.28),
+        railPaint,
+      );
+    } else if (car.model == CarModel.vintage) {
+      // Vintage cream roof insert
+      final vintageRoof = RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(-w * 0.04, 0), width: w * 0.40, height: h * 0.48),
+        const Radius.circular(6),
+      );
+      canvas.drawRRect(vintageRoof, Paint()..color = const Color(0xFFFFF9C4));
+      canvas.drawRRect(
+        vintageRoof,
+        Paint()
+          ..color = const Color(0xFFB0BEC5)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
+    } else {
+      // Modern Sedan Panoramic Sunroof
+      final sunroof = RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(-w * 0.04, 0), width: w * 0.38, height: h * 0.46),
+        const Radius.circular(5),
+      );
+      canvas.drawRRect(sunroof, Paint()..color = const Color(0xFF003049));
+      canvas.drawRRect(
+        sunroof,
+        Paint()
+          ..color = const Color(0xFF00B4D8).withValues(alpha: 0.5)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2,
+      );
+    }
+  }
+
+  static void _drawVipOrderSpeechBubble(Canvas canvas, VipCar car) {
+    const bubbleW = 144.0;
+    const bubbleH = 54.0;
+    final bubbleX = car.position.x;
+    final bubbleY = car.position.y - car.height / 2 - 42.0;
+
+    // 1. Drop shadow
+    final bubbleRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(bubbleX, bubbleY), width: bubbleW, height: bubbleH),
+      const Radius.circular(12),
+    );
+    canvas.drawRRect(
+      bubbleRect.shift(const Offset(0, 3)),
+      Paint()..color = Colors.black.withValues(alpha: 0.28),
+    );
+
+    // 2. White card fill with gold/cyan border
+    canvas.drawRRect(bubbleRect, Paint()..color = Colors.white);
+    canvas.drawRRect(
+      bubbleRect,
+      Paint()
+        ..color = const Color(0xFFFFB300)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5,
+    );
+
+    // 3. Pointer triangle towards car roof
+    final pointer = Path()
+      ..moveTo(bubbleX - 8, bubbleY + bubbleH / 2)
+      ..lineTo(bubbleX + 8, bubbleY + bubbleH / 2)
+      ..lineTo(bubbleX, bubbleY + bubbleH / 2 + 8)
+      ..close();
+    canvas.drawPath(pointer, Paint()..color = Colors.white);
+    canvas.drawPath(
+      pointer,
+      Paint()
+        ..color = const Color(0xFFFFB300)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0,
+    );
+
+    // 4. Content: Top Row (Remaining Chai & Paratha Badges)
+    final itemBadges = <String>[];
+    if (car.remainingChai > 0) {
+      itemBadges.add('☕ ${car.remainingChai}');
+    }
+    if (car.remainingParatha > 0) {
+      itemBadges.add('🫓 ${car.remainingParatha}');
+    }
+
+    final topRowText = itemBadges.join('   ');
+    final orderPainter = TextPainter(
+      text: TextSpan(
+        text: 'VVIP: $topRowText',
+        style: const TextStyle(
+          color: Color(0xFF263238),
+          fontWeight: FontWeight.w900,
+          fontSize: 11,
+          letterSpacing: 0.3,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    orderPainter.paint(
+      canvas,
+      Offset(bubbleX - orderPainter.width / 2, bubbleY - bubbleH / 2 + 7),
+    );
+
+    // 5. Bottom Row: Progress Bar & Items Loaded
+    const barW = 120.0;
+    const barH = 7.0;
+    final barLeft = bubbleX - barW / 2;
+    final barTop = bubbleY + 6.0;
+
+    // Progress bar track
+    final trackRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(barLeft, barTop, barW, barH),
+      const Radius.circular(3.5),
+    );
+    canvas.drawRRect(trackRect, Paint()..color = const Color(0xFFECEFF1));
+
+    // Progress bar fill (Green)
+    final fillW = barW * car.progress;
+    if (fillW > 0) {
+      final fillRect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(barLeft, barTop, fillW, barH),
+        const Radius.circular(3.5),
+      );
+      canvas.drawRRect(fillRect, Paint()..color = const Color(0xFF00C853));
+    }
+
+    // 6. Patience Indicator: 15s timer per item (dots / color warning)
+    final patienceFraction = (1.0 - (car.patienceTimer / car.patienceTime)).clamp(0.0, 1.0);
+    final isUrgent = car.patienceTime - car.patienceTimer <= 4.0;
+    final timerColor = isUrgent ? const Color(0xFFD50000) : const Color(0xFF00B0FF);
+
+    // Mini patience countdown bar under progress bar
+    final patienceTrack = RRect.fromRectAndRadius(
+      Rect.fromLTWH(barLeft, barTop + barH + 2.0, barW, 2.0),
+      const Radius.circular(1),
+    );
+    canvas.drawRRect(patienceTrack, Paint()..color = const Color(0xFFECEFF1));
+    if (patienceFraction > 0) {
+      final patienceFill = RRect.fromRectAndRadius(
+        Rect.fromLTWH(barLeft, barTop + barH + 2.0, barW * patienceFraction, 2.0),
+        const Radius.circular(1),
+      );
+      canvas.drawRRect(patienceFill, Paint()..color = timerColor);
+    }
+
+    final statusText = TextPainter(
+      text: TextSpan(
+        text: '${car.totalReceived}/${car.totalDesired} items   ⏱️ ${(car.patienceTime - car.patienceTimer).clamp(0, 15).toInt()}s',
+        style: TextStyle(
+          color: timerColor,
+          fontWeight: FontWeight.w800,
+          fontSize: 9,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    statusText.paint(
+      canvas,
+      Offset(bubbleX - statusText.width / 2, barTop + barH + 6),
+    );
+  }
+
+  static void _drawVipDriveOutCelebration(Canvas canvas, VipCar car) {
+    const badgeW = 160.0;
+    const badgeH = 26.0;
+    final badgeX = car.position.x;
+    final badgeY = car.position.y - car.height / 2 - 30.0;
+
+    final badgeRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(badgeX, badgeY), width: badgeW, height: badgeH),
+      const Radius.circular(8),
+    );
+
+    canvas.drawRRect(badgeRect, Paint()..color = const Color(0xFF006064));
+    canvas.drawRRect(
+      badgeRect,
+      Paint()
+        ..color = const Color(0xFF00E5FF)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0,
+    );
+
+    final text = TextPainter(
+      text: const TextSpan(
+        text: '💎 +3 GEMS CLAIMED! 🚗💨',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+          fontSize: 10,
+          letterSpacing: 0.5,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    text.paint(
+      canvas,
+      Offset(badgeX - text.width / 2, badgeY - text.height / 2),
+    );
   }
 }

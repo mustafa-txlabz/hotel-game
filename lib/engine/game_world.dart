@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show Color, VoidCallback;
 
 import '../data/balance.dart';
 import '../data/progression_config.dart';
@@ -8,6 +9,7 @@ import 'entities.dart';
 import 'ground_pad.dart';
 import 'staff_ai.dart';
 import 'stations.dart';
+import 'vip_car.dart';
 
 /// Pure Dart world simulation managing physical bounds, entities, stations, and collisions.
 class GameWorld {
@@ -117,11 +119,26 @@ class GameWorld {
       activeDeal?.type == DealType.vipHelper &&
       activeDealRemainingSeconds > 0.0;
 
+  // M10: VVIP Curbside Luxury Car & Gems Economy
+  int gems;
+  VipCar? activeVipCar;
+  int nextVipCarId = 1;
+  double vipCarSpawnCooldown = 210.0; // 3.5 minutes natural timer
+  double vipCarSpawnTimer = 180.0;
+  double? cinematicCameraTimer;
+  Vector2? cinematicCameraTarget;
+
+  // Callbacks for VVIP Car
+  void Function(VipCar car)? onVipCarArrived;
+  void Function(VipCar car)? onVipCarCompleted;
+  void Function(VipCar car)? onVipCarLeftUnhappy;
+
   GameWorld({
     this.worldWidth = 900.0,
     this.worldHeight = 1200.0,
     this.wallThickness = 32.0,
     double initialRupees = 0.0,
+    int initialGems = 0,
     double initialReputationPercent = 0.0,
     bool initialReputationLocked100 = false,
     bool initialStoreMasteredCelebrated = false,
@@ -139,6 +156,7 @@ class GameWorld {
     HRDesk? hr,
     List<StaffEntity>? staffMembers,
   }) : progressionConfig = config ?? StoreProgressionConfig.store1,
+       gems = initialGems,
        _reputationPercent = initialReputationPercent,
        isReputationLocked100 = initialReputationLocked100,
        isStoreMasteredCelebrated = initialStoreMasteredCelebrated,
@@ -433,6 +451,14 @@ class GameWorld {
         _resolveBoxCollision(table.position, table.width, table.height);
       }
     }
+    // Solid collision with parked/moving VVIP Car on GT Road (M10)
+    if (activeVipCar != null && activeVipCar!.state != CarState.despawned) {
+      _resolveBoxCollision(
+        activeVipCar!.position,
+        activeVipCar!.width,
+        activeVipCar!.height,
+      );
+    }
 
     // 5. Kitchen Pickup Zone detection (Chai Kettle & Paratha Tawa)
     _checkKettlePickup();
@@ -477,6 +503,9 @@ class GameWorld {
 
     // 16. M9: Rewarded Ad Deals & Boosts update
     _updateDealSystem(dt);
+
+    // 17. M10: VVIP Curbside Luxury Car update
+    _updateVipCarSystem(dt);
   }
 
   void _checkGroundPads(double dt) {
@@ -662,6 +691,17 @@ class GameWorld {
           table.height,
         );
       }
+    }
+
+    // 5. Solid collision with VVIP Luxury Car (M10)
+    if (activeVipCar != null && activeVipCar!.state != CarState.despawned) {
+      _resolveEntityBoxCollision(
+        staffMember.position,
+        staffMember.radius,
+        activeVipCar!.position,
+        activeVipCar!.width,
+        activeVipCar!.height,
+      );
     }
   }
 
@@ -1503,5 +1543,155 @@ class GameWorld {
     isDealPadActive = false;
     availableDeal = null;
     dealSpawnTimer = 45.0; // Respawns in 45s
+  }
+
+  // --- M10: VVIP Curbside Car Delivery & Gems Economy ---
+
+  void _updateVipCarSystem(double dt) {
+    // 1. Cinematic camera timer
+    if (cinematicCameraTimer != null && cinematicCameraTimer! > 0.0) {
+      cinematicCameraTimer = cinematicCameraTimer! - dt;
+      if (cinematicCameraTimer! <= 0.0) {
+        cinematicCameraTimer = null;
+        cinematicCameraTarget = null;
+      }
+    }
+
+    // 2. Active VIP car update
+    final car = activeVipCar;
+    if (car != null) {
+      car.update(dt);
+
+      if (car.state == CarState.parkedWaitingOrder) {
+        _checkVipCarCurbsideLoading();
+
+        // Check if patience expired (15s per item, resets to 0 upon every item loaded)
+        if (car.patienceTimer >= car.patienceTime) {
+          car.state = CarState.drivingOut;
+          if (!isReputationLocked100) {
+            reputationPercent = (reputationPercent - 3.0).clamp(0.0, 100.0);
+          }
+          floatingTexts.add(
+            FloatingTextEntity(
+              position: Vector2(
+                car.position.x,
+                car.position.y - 40.0,
+              ),
+              text: 'VVIP LEFT DISAPPOINTED! 😤',
+            ),
+          );
+          onVipCarLeftUnhappy?.call(car);
+        }
+      } else if (car.state == CarState.despawned) {
+        activeVipCar = null;
+        vipCarSpawnTimer = vipCarSpawnCooldown;
+      }
+    } else {
+      // Natural 3-4 minute spawn countdown
+      if (vipCarSpawnTimer > 0.0) {
+        vipCarSpawnTimer -= dt;
+        if (vipCarSpawnTimer <= 0.0) {
+          spawnVipCar();
+        }
+      }
+    }
+  }
+
+  void spawnVipCar({
+    CarDirection? direction,
+    CarModel? model,
+    Color? color,
+  }) {
+    if (activeVipCar != null && activeVipCar!.state != CarState.despawned) return;
+
+    final car = VipCar.createRandom(
+      id: nextVipCarId++,
+      forcedDirection: direction,
+      forcedModel: model,
+      forcedColor: color,
+    );
+    activeVipCar = car;
+
+    // Trigger 1.8s cinematic camera glance to car
+    cinematicCameraTarget = car.targetParkPosition.copy();
+    cinematicCameraTimer = 1.8;
+
+    onVipCarArrived?.call(car);
+  }
+
+  void _checkVipCarCurbsideLoading() {
+    final car = activeVipCar;
+    if (car == null || car.state != CarState.parkedWaitingOrder) return;
+
+    // 1. Check player loading at curbside drop zone
+    if (car.isInsideDropZone(player.position)) {
+      _transferItemsToCar(player.carriedItems, () {
+        player.wobbleAngle = 0.2;
+      });
+    }
+
+    // 2. Check helper staff loading at curbside drop zone
+    for (final member in staff) {
+      if ((member.role == StaffRole.helper || member.role == StaffRole.chotu) &&
+          car.isInsideDropZone(member.position)) {
+        _transferItemsToCar(member.carriedItems, () {
+          member.wobbleAngle = 0.2;
+        });
+      }
+    }
+  }
+
+  void _transferItemsToCar(
+    List<ItemType> items,
+    VoidCallback onTransferred,
+  ) {
+    final car = activeVipCar;
+    if (car == null || car.state != CarState.parkedWaitingOrder) return;
+
+    for (int i = items.length - 1; i >= 0; i--) {
+      final item = items[i];
+      if ((item == ItemType.chai && car.remainingChai > 0) ||
+          (item == ItemType.paratha && car.remainingParatha > 0)) {
+        items.removeAt(i);
+        car.receiveItem(item);
+        onTransferred();
+        onItemServed?.call(item);
+
+        floatingTexts.add(
+          FloatingTextEntity(
+            position: Vector2(car.position.x, car.position.y - 40.0),
+            text: item == ItemType.chai ? '+☕ VIP LOAD' : '+🫓 VIP LOAD',
+          ),
+        );
+
+        if (car.isOrderComplete) {
+          _completeVipOrder(car);
+          break;
+        }
+      }
+    }
+  }
+
+  void _completeVipOrder(VipCar car) {
+    car.state = CarState.drivingOut;
+    gems += car.gemsReward;
+    rupees += car.cashTip;
+    lifetimeRupees += car.cashTip;
+    reputationPercent = (reputationPercent + 5.0).clamp(0.0, 100.0);
+
+    floatingTexts.add(
+      FloatingTextEntity(
+        position: Vector2(car.position.x, car.position.y - 65.0),
+        text: '+${car.gemsReward} 💎 GEMS!',
+      ),
+    );
+    floatingTexts.add(
+      FloatingTextEntity(
+        position: Vector2(car.position.x, car.position.y - 95.0),
+        text: '+₹${car.cashTip.toInt()} VVIP TIP! 💰',
+      ),
+    );
+
+    onVipCarCompleted?.call(car);
   }
 }

@@ -50,6 +50,7 @@ class SaveService {
         'storeName': world.progressionConfig.storeName,
         'wallet': world.rupees,
         'lifetimeRupees': world.lifetimeRupees,
+        'gems': world.gems,
         'reputationPercent': world.reputationPercent,
         'isReputationLocked100': world.isReputationLocked100,
         'completedMissionIds': world.completedMissionIds.toList(),
@@ -105,6 +106,9 @@ class SaveService {
       }
       if (storeData.containsKey('lifetimeRupees')) {
         world.lifetimeRupees = (storeData['lifetimeRupees'] as num).toDouble();
+      }
+      if (storeData.containsKey('gems')) {
+        world.gems = (storeData['gems'] as num).toInt();
       }
 
       // 2. Restore Reputation Percent & 100% lock

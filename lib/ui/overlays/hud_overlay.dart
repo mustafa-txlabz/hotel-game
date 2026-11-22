@@ -7,6 +7,7 @@ import '../../core/theme.dart';
 /// Top HUD displaying currency balance, item carrying count, store reputation, and tutorial hints.
 class HudOverlay extends StatelessWidget {
   final double rupees;
+  final int gems;
   final int carriedCount;
   final int carryCapacity;
   final double reputationPercent;
@@ -20,6 +21,7 @@ class HudOverlay extends StatelessWidget {
   const HudOverlay({
     super.key,
     required this.rupees,
+    this.gems = 0,
     required this.carriedCount,
     required this.carryCapacity,
     this.reputationPercent = 0.0,
@@ -180,6 +182,56 @@ class HudOverlay extends StatelessWidget {
                               color: AppTheme.chaiDarkBrown,
                               fontWeight: FontWeight.w900,
                               fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 6),
+
+                    // Gems Wallet Badge (M10)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.cardBg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFF00E5FF),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF00B0FF),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.diamond_rounded,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            GameNumberFormat.format(gems.toDouble()),
+                            style: const TextStyle(
+                              color: AppTheme.chaiDarkBrown,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
                             ),
                           ),
                         ],

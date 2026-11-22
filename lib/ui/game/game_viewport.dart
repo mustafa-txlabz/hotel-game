@@ -90,9 +90,15 @@ class _GameViewportState extends State<GameViewport>
     // 1. Tick world simulation
     controller.tick(dt.clamp(0.0, 0.05)); // clamp to avoid huge lag spikes
 
-    // 2. Smooth camera follow (lerp towards player position)
-    final playerPos = controller.world.player.position;
-    final targetOffset = Offset(playerPos.x, playerPos.y);
+    // 2. Smooth camera follow (lerp towards cinematic target or player position)
+    final Offset targetOffset;
+    if (controller.world.cinematicCameraTarget != null) {
+      final camTarget = controller.world.cinematicCameraTarget!;
+      targetOffset = Offset(camTarget.x, camTarget.y);
+    } else {
+      final playerPos = controller.world.player.position;
+      targetOffset = Offset(playerPos.x, playerPos.y);
+    }
 
     setState(() {
       _cameraOffset = Offset.lerp(
@@ -208,6 +214,7 @@ class _GameViewportState extends State<GameViewport>
           // 3. Top HUD (Rupees, Carry Counter & Store Reputation Bar)
           HudOverlay(
             rupees: controller.rupees,
+            gems: controller.gems,
             carriedCount: controller.world.player.carriedCount,
             carryCapacity: controller.world.player.carryCapacity,
             reputationPercent: controller.world.reputationPercent,
@@ -272,6 +279,34 @@ class _GameViewportState extends State<GameViewport>
                             ),
                           ),
                           backgroundColor: AppTheme.chaiDarkBrown,
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  // M10: Call VVIP Luxury Car Test/Trigger Button
+                  _buildGlassIconButton(
+                    icon: Icons.directions_car_filled_rounded,
+                    iconColor: const Color(0xFF00E5FF),
+                    tooltip: 'Call VVIP Car',
+                    onTap: () {
+                      _resetJoystick();
+                      controller.world.spawnVipCar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text(
+                            '🚗 VVIP Luxury Car arriving outside! 📯',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          backgroundColor: const Color(0xFF006064),
                           behavior: SnackBarBehavior.floating,
                           duration: const Duration(seconds: 2),
                           shape: RoundedRectangleBorder(

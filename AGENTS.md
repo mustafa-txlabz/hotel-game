@@ -277,7 +277,7 @@ Add full Goal/Mission completion system driven by HUD Reputation Bar and Objecti
 3. **Big Victory Reward Bonus**: Player can claim a ₹1,000 victory reward bonus with coin collection sounds, floating text, and SharedPreferences persistence.
 *Done when: Completing all store goals triggers level-complete victory celebration with bonus rewards.*
 
-### **M9 — AdMob Rewarded Deals Pad, Boosts & VIP Helper** *(In Progress)*
+### **M9 — AdMob Rewarded Deals Pad, Boosts & VIP Helper** *(Completed)*
 Add AdMob Rewarded Ads monetization via interactive Ground Deal Pad and HUD Reward Badge:
 1. **Dedicated Ad IDs Service (`lib/services/ad_ids.dart`)**:
    - Clean, central file with `useTestAds = true` and Google's official Test Ad IDs for easy owner replacement with real AdMob IDs before release.
@@ -299,9 +299,36 @@ Add AdMob Rewarded Ads monetization via interactive Ground Deal Pad and HUD Rewa
    - When timer expires, boost ends and cooldown begins for the next deal.
 6. **Staff Speed Rebalancing**:
    - Fine-tune base and upgrade worker speed increments in `GameBalance` so 2x turbo boosts feel thrilling, smooth, and perfectly controllable without physics jitter.
+7. **Strict No Ad = No Reward Rule**:
+   - If ad fails to load, user is offline, or ad blocker is active, zero reward is granted and a warning is displayed.
 *Done when: Ground deal pad and HUD badge spawn deals, popup opens with animated gift, watching ad activates boost with ticking green circular clock timer, and VIP helper assists for 2 minutes.*
 
-### **Phase 2 (Milestone M10+) — Multi-Town Location Travel & Store 2 Expansion**
+### **M10 — VVIP Curbside Car Delivery & Gems Economy** *(Completed)*
+Add two-way moving VVIP luxury cars on GT Road, curbside bulk orders, solid car obstacle physics, cinematic camera pan, and Gems reward economy:
+1. **Two-Way Moving Luxury Cars & Multiple Models**:
+   - Cars spawn dynamically from either Left (East-bound) or Right (West-bound) on the exterior GT Road.
+   - 3 distinct car models: Executive VIP Sedan, Heavy VIP SUV, and Classic Vintage Dhaba Cruiser.
+   - 6 vibrant *Burger Please!* candy colors (Crimson Red, Sapphire Blue, Saffron Gold, Cyber Violet, Midnight Black, Emerald Green).
+   - Smooth drive-in, curbside braking, and forward drive-away physics.
+2. **Solid Physical Car Obstacle & Curbside Loading Zone**:
+   - Parked car has solid collision bounds so player, staff, and customers cannot walk through it.
+   - Dedicated Curbside Loading Trunk Zone on the sidewalk where player and helpers unload carried food.
+3. **Massive Bulk Orders & 15s Per-Item Reset Patience**:
+   - VVIP customers order large parties (25–40 items: mixed Chai & Parathas).
+   - Generous 15s patience timer that completely resets to 0 every single time an item is loaded into the car.
+   - Visual loading progress indicator on car roof (`XX / YY items loaded`).
+4. **Cinematic 1.8s Camera Glance & Audio Polish**:
+   - Smooth camera pan down to GT Road when VIP car pulls in, with top/bottom cinematic letterbox (`"⭐ VVIP ARRIVAL!"`), then smoothly glides back to player after 1.8s.
+   - Authentic sound effects: VIP car horn `🚗 📯`, hydraulic brake screech `🚗 🛑`, and motorized sliding door slide `🚪 💨`.
+5. **Gems Premium Currency Economy**:
+   - Fulfilling VVIP bulk orders rewards **3 GEMS (💎)** + big cash tip + reputation XP boost.
+   - Gems wallet counter displayed in the top HUD alongside Rupees.
+6. **Testing & Natural Spawning**:
+   - Left HUD debug button `[ 🚗 CALL VIP ]` for instant on-demand testing of car models, colors, and loading.
+   - Natural automatic timer spawns a VVIP car every 3–4 minutes (180s–240s) during normal gameplay.
+*Done when: Two-way cars arrive at the curb with horn/brakes and camera glance, player loads 30+ items at curbside with solid collision, and earns 3 Gems with full save persistence.*
+
+### **Phase 2 (Milestone M11+) — Multi-Town Location Travel & Store 2 Expansion**
 Unlock new locations and implement vibrant, multi-colored store/room aesthetics:
 1. **Multi-Town Location Travel**: Pack up earnings and travel to next city/town locations (Store 2: City Food Street, Store 3: Mall Bistro) with new layouts and higher profits.
 2. **Vibrant Burger Please Architectural & Color Palette**:
@@ -314,4 +341,4 @@ Unlock new locations and implement vibrant, multi-colored store/room aesthetics:
 
 ## 7. Current Step
 
-Milestone **M9 — AdMob Rewarded Deals Pad, Boosts & VIP Helper** is currently being implemented. Phase 2 (Multi-Town Travel, Store 2, Map & Settings) will follow upon completion of M9.
+Milestone **M10 — VVIP Curbside Car Delivery & Gems Economy** is completed and verified with 0 analyzer issues and all 135 unit & simulation tests passing. Phase 2 (Milestone M11+: Multi-Town Travel, Store 2, Map & Settings) is next when the owner is ready.

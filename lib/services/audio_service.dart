@@ -56,4 +56,26 @@ class AudioService {
       HapticFeedback.lightImpact();
     } catch (_) {}
   }
+
+  void playCarHorn() {
+    if (isMuted) return;
+    try {
+      HapticFeedback.heavyImpact();
+      SystemSound.play(SystemSoundType.alert);
+    } catch (_) {}
+  }
+
+  void playCarBrake() {
+    if (isMuted) return;
+    try {
+      HapticFeedback.mediumImpact();
+    } catch (_) {}
+  }
+
+  void playDoorSlide() {
+    if (isMuted) return;
+    try {
+      HapticFeedback.selectionClick();
+    } catch (_) {}
+  }
 }

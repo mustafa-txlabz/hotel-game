@@ -4,6 +4,7 @@ import '../../engine/customer_ai.dart';
 import '../../engine/entities.dart';
 import '../../engine/game_world.dart';
 import '../../engine/staff_ai.dart';
+import '../../engine/vip_car.dart';
 import 'sprite_renderer.dart';
 
 /// 60 FPS CustomPainter rendering the Dhaba world, stations, entities, cash bundles, and popups.
@@ -29,6 +30,12 @@ class WorldPainter extends CustomPainter {
       world.worldHeight,
       world.wallThickness,
     );
+
+    // 1.6 Draw VVIP Luxury Car on GT Highway (M10)
+    if (world.activeVipCar != null &&
+        world.activeVipCar!.state != CarState.despawned) {
+      SpriteRenderer.drawVipCar(canvas, world.activeVipCar!);
+    }
 
     // 2. Draw Floor
     SpriteRenderer.drawFloor(

@@ -63,6 +63,26 @@ class GameController extends ChangeNotifier {
       onDealRequested?.call(deal);
       notifyListeners();
     };
+
+    _world.onVipCarArrived = (car) {
+      this.audioService.playCarHorn();
+      this.audioService.playCarBrake();
+      _triggerHaptic(HapticFeedback.heavyImpact);
+      notifyListeners();
+    };
+
+    _world.onVipCarCompleted = (car) {
+      this.audioService.playMilestone();
+      this.audioService.playCoin();
+      _triggerHaptic(HapticFeedback.heavyImpact);
+      saveGame();
+      notifyListeners();
+    };
+
+    _world.onVipCarLeftUnhappy = (car) {
+      _triggerHaptic(HapticFeedback.mediumImpact);
+      notifyListeners();
+    };
   }
 
   /// Optional callback invoked when the player walks onto the Deal Pad
@@ -114,6 +134,7 @@ class GameController extends ChangeNotifier {
 
   GameWorld get world => _world;
   double get rupees => _world.rupees;
+  int get gems => _world.gems;
 
   /// Passes normalized joystick input (-1.0 to 1.0) to world simulation.
   void setJoystickInput(double dx, double dy) {
