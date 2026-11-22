@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme.dart';
 import '../../engine/customer_ai.dart';
+import '../../engine/deals.dart';
 import '../../engine/entities.dart';
 import '../../engine/ground_pad.dart';
 import '../../engine/staff_ai.dart';
@@ -2908,6 +2909,119 @@ class SpriteRenderer {
     }
   }
 
+  /// Draws the special Rewarded Ad Deal Ground Pad with glowing gold borders and gift badge.
+  static void drawDealPad(
+    Canvas canvas,
+    Vector2 position,
+    double width,
+    double height,
+    DhabaDeal deal,
+  ) {
+    final rect = Rect.fromCenter(
+      center: Offset(position.x, position.y),
+      width: width,
+      height: height,
+    );
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(12));
+
+    // Outer Glow / Shadow
+    final glowPaint = Paint()
+      ..color = const Color(0xFFFFD54F).withValues(alpha: 0.35)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    canvas.drawRRect(rrect, glowPaint);
+
+    // Background fill (Warm amber/wood tint)
+    final fillPaint = Paint()
+      ..color = const Color(0xFF2C1E14).withValues(alpha: 0.90);
+    canvas.drawRRect(rrect, fillPaint);
+
+    // Glowing Golden Border
+    final borderPaint = Paint()
+      ..color = AppTheme.goldYellow
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2;
+    canvas.drawRRect(rrect, borderPaint);
+
+    // Top text: "SPECIAL DEAL"
+    final titlePainter = TextPainter(
+      text: const TextSpan(
+        text: 'SPECIAL DEAL',
+        style: TextStyle(
+          color: AppTheme.goldYellow,
+          fontWeight: FontWeight.w900,
+          fontSize: 8.5,
+          letterSpacing: 0.6,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    titlePainter.paint(
+      canvas,
+      Offset(
+        position.x - titlePainter.width / 2,
+        position.y - height / 2 + 6,
+      ),
+    );
+
+    // Center Emoji/Icon & Deal Short Name
+    final contentPainter = TextPainter(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: '${deal.iconEmoji} ',
+            style: const TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: deal.type == DealType.instantCash
+                ? '₹${deal.cashReward.toInt()}'
+                : (deal.type == DealType.vipHelper
+                    ? 'VIP HELPER'
+                    : (deal.type == DealType.staffTurbo
+                        ? '2X SPEED'
+                        : (deal.type == DealType.kitchenBoost
+                            ? '2X COOK'
+                            : 'RUSH'))),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 10,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ],
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    contentPainter.paint(
+      canvas,
+      Offset(
+        position.x - contentPainter.width / 2,
+        position.y - contentPainter.height / 2 + 5,
+      ),
+    );
+
+    // Bottom "STEP OR TAP TO CLAIM" subtext
+    final subPainter = TextPainter(
+      text: const TextSpan(
+        text: 'STEP OR TAP TO CLAIM',
+        style: TextStyle(
+          color: Color(0xFF00E676),
+          fontWeight: FontWeight.w800,
+          fontSize: 7.0,
+          letterSpacing: 0.4,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    subPainter.paint(
+      canvas,
+      Offset(
+        position.x - subPainter.width / 2,
+        position.y + height / 2 - subPainter.height - 4,
+      ),
+    );
+  }
+
   /// Draws an unlocked wooden Dhaba dining table with chairs, customer meal,
   /// dirty trays, cash tips, and clean indicators.
   static void drawDiningTable(Canvas canvas, DiningTable table) {
@@ -3415,11 +3529,12 @@ class SpriteRenderer {
     // Body: White shalwar kameez
     canvas.drawCircle(const Offset(0, 2), 14, Paint()..color = const Color(0xFFF5F5F5));
 
-    // Cohesive Vibrant Yellow Uniform for all shop workers (Helpers)
-    const apronColor = Color(0xFFFFB300); // Warm Golden Yellow
-    const pocketColor = Color(0xFFF57F17); // Rich Amber Pocket Accent
-    const bandColor = Color(0xFFE65100); // Deep Amber / Runner Headband
-    const badgeBgColor = Color(0xFFE65100); // Deep Amber Badge
+    // Cohesive Vibrant Yellow Uniform for all shop workers (Helpers) or Glittering Gold for VIP Helper
+    final isVip = helper.isVip;
+    final apronColor = isVip ? const Color(0xFFFFD700) : const Color(0xFFFFB300);
+    final pocketColor = isVip ? const Color(0xFFFF6F00) : const Color(0xFFF57F17);
+    final bandColor = isVip ? const Color(0xFFFF8F00) : const Color(0xFFE65100);
+    final badgeBgColor = isVip ? const Color(0xFFFF6F00) : const Color(0xFFE65100);
 
     final apronRect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: const Offset(0, 3), width: 19, height: 14),
@@ -3460,14 +3575,16 @@ class SpriteRenderer {
 
     // 5. Name badge above head (if not carrying items)
     if (helper.carriedCount == 0) {
+      final badgeLabel = isVip ? '⭐ VIP' : helper.name;
+      final badgeWidth = isVip ? 38.0 : 44.0;
       final nameBadge = RRect.fromRectAndRadius(
-        Rect.fromCenter(center: const Offset(0, -25), width: 44, height: 14),
+        Rect.fromCenter(center: const Offset(0, -25), width: badgeWidth, height: 14),
         const Radius.circular(4),
       );
       canvas.drawRRect(nameBadge, Paint()..color = badgeBgColor);
       final nameText = TextPainter(
         text: TextSpan(
-          text: helper.name,
+          text: badgeLabel,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w900,

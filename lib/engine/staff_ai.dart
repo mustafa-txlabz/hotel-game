@@ -51,6 +51,7 @@ class StaffEntity {
   HelperDuty duty;
   int? assignedTableId;
   double stateTimer;
+  bool isVip;
 
   StaffEntity({
     required this.id,
@@ -62,6 +63,7 @@ class StaffEntity {
     this.carryCapacity = GameBalance.workerBaseCapacity,
     this.duty = HelperDuty.runner,
     this.assignedTableId,
+    this.isVip = false,
   }) : position = startPosition.copy(),
        targetPosition = startPosition.copy(),
        angle = math.pi / 2, // Facing down

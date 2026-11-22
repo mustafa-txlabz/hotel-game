@@ -277,21 +277,41 @@ Add full Goal/Mission completion system driven by HUD Reputation Bar and Objecti
 3. **Big Victory Reward Bonus**: Player can claim a ₹1,000 victory reward bonus with coin collection sounds, floating text, and SharedPreferences persistence.
 *Done when: Completing all store goals triggers level-complete victory celebration with bonus rewards.*
 
-### **M9 — Multi-Town Location Travel & Vibrant Store Architecture (Burger Please Theme)** *(Up Next)*
+### **M9 — AdMob Rewarded Deals Pad, Boosts & VIP Helper** *(In Progress)*
+Add AdMob Rewarded Ads monetization via interactive Ground Deal Pad and HUD Reward Badge:
+1. **Dedicated Ad IDs Service (`lib/services/ad_ids.dart`)**:
+   - Clean, central file with `useTestAds = true` and Google's official Test Ad IDs for easy owner replacement with real AdMob IDs before release.
+   - Safe test-fallback handling so game and tests run seamlessly in all environments.
+2. **Interactive Ground Deal Pad & Left HUD Reward Badge**:
+   - Spawns every 75–90s when no boost is active.
+   - Player can step onto the ground pad OR tap the left HUD Gift/Reward badge to open the deal preview.
+3. **Deal Preview Modal Popup (`lib/ui/overlays/deal_popup.dart`)**:
+   - Features a centered animated gift box / deal badge.
+   - Shows deal details, top-right `✕` dismiss button, and green `"WATCH AD & CLAIM"` button.
+4. **Random Dhaba Deals Pool**:
+   - ⚡ **2x Staff Turbo Speed (90s)**: Boosts owner and helper movement speeds.
+   - 🔥 **2x Kitchen Output & Speed (90s)**: Doubles Chai kettle and Paratha tawa cooking speeds.
+   - 👥 **Customer Rush (90s)**: Spawns customers at double frequency for a bustling dhaba rush.
+   - 💰 **Instant Cash Injection**: Instant ₹500–₹800 cash drop directly into wallet.
+   - 👷 **Golden VIP Helper (120s / 2 Mins)**: Summons an autonomous golden turbo helper to restock and clean.
+5. **Dynamic Circular Progress Clock Timer**:
+   - When a deal is claimed, ground pad vanishes and HUD icon transforms into a Clock Timer with an animated green circular border that sweeps down as seconds tick away.
+   - When timer expires, boost ends and cooldown begins for the next deal.
+6. **Staff Speed Rebalancing**:
+   - Fine-tune base and upgrade worker speed increments in `GameBalance` so 2x turbo boosts feel thrilling, smooth, and perfectly controllable without physics jitter.
+*Done when: Ground deal pad and HUD badge spawn deals, popup opens with animated gift, watching ad activates boost with ticking green circular clock timer, and VIP helper assists for 2 minutes.*
+
+### **Phase 2 (Milestone M10+) — Multi-Town Location Travel & Store 2 Expansion**
 Unlock new locations and implement vibrant, multi-colored store/room aesthetics:
 1. **Multi-Town Location Travel**: Pack up earnings and travel to next city/town locations (Store 2: City Food Street, Store 3: Mall Bistro) with new layouts and higher profits.
 2. **Vibrant Burger Please Architectural & Color Palette**:
    - Distinct colorful themed zones/cabins/rooms (Dining Hall, VIP Lounge, Drive-Thru/Takeaway, Kitchen), each with its own signature vibrant wall trims, floor tiles, and room accents.
    - Colorful machines, themed counters, vibrant custom chairs, and dining tables matching each room's aesthetic.
    - High-contrast, hyper-polished mobile arcade tycoon visual appeal and intuitive UX.
-*Done when: Players can travel to new store locations with distinct, vibrant multi-colored room/cabin architecture and upgraded equipment.*
-
-### **M10 — AdMob Rewarded Power-Ups, Offline Earnings & Release Prep**
-Add AdMob Rewarded Ads for instant boosts (Chai Rush 2x Speed, Free VIP Helper, 2x Offline Earnings on game launch), full SharedPreferences persistence (save & load), and final Google Play release readiness.
-*Done when: Full game saves/resumes, rewarded ads trigger power-ups, and the release build is ready.*
+3. **Map & Store Selection Screen**: Travel map connecting Highway Kadak Dhaba to City Food Street.
 
 ---
 
 ## 7. Current Step
 
-Milestone **M8 — Goals, Shop Completion Celebration & Reward Bonus** has been completed and fully verified with unit and simulation tests. Milestone **M9 — Multi-Town Location Travel & Vibrant Store Architecture (Burger Please Theme)** is up next upon user approval.
+Milestone **M9 — AdMob Rewarded Deals Pad, Boosts & VIP Helper** is currently being implemented. Phase 2 (Multi-Town Travel, Store 2, Map & Settings) will follow upon completion of M9.

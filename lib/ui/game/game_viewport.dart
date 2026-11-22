@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../data/balance.dart';
 import '../../state/game_controller.dart';
+import '../overlays/deal_popup.dart';
 import '../overlays/goals_overlay.dart';
 import '../overlays/hr_upgrade_sheet.dart';
 import '../overlays/hud_overlay.dart';
@@ -35,6 +36,7 @@ class _GameViewportState extends State<GameViewport>
   int? _activePointerId;
   bool _hasMovedOnce = false;
   bool _hasShownMasteryCelebration = false;
+  bool _isDealPopupOpen = false;
 
   @override
   void initState() {
@@ -50,6 +52,15 @@ class _GameViewportState extends State<GameViewport>
     if (controller.world.isStoreMasteredCelebrated) {
       _hasShownMasteryCelebration = true;
     }
+    controller.onDealRequested = (deal) {
+      if (!_isDealPopupOpen && mounted) {
+        _isDealPopupOpen = true;
+        _resetJoystick();
+        DealPopup.show(context, controller, deal).then((_) {
+          _isDealPopupOpen = false;
+        });
+      }
+    };
   }
 
   @override
@@ -270,11 +281,175 @@ class _GameViewportState extends State<GameViewport>
                       );
                     },
                   ),
+                  // 4. M9: Special Deal Gift Badge OR Active Countdown Timer
+                  if (controller.world.activeDeal != null) ...[
+                    const SizedBox(height: 14),
+                    _buildActiveDealTimerButton(context, controller),
+                  ] else if (controller.world.isDealAvailable) ...[
+                    const SizedBox(height: 14),
+                    _buildDealGiftButton(context, controller),
+                  ],
                 ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDealGiftButton(BuildContext context, GameController controller) {
+    return Tooltip(
+      message: 'Special Deal 🎁',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          _resetJoystick();
+          final deal = controller.world.availableDeal;
+          if (deal != null) {
+            DealPopup.show(context, controller, deal);
+          }
+        },
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: const Color(0xFF2C1E14).withValues(alpha: 0.90),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: AppTheme.goldYellow,
+              width: 2.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.goldYellow.withValues(alpha: 0.5),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              const Icon(
+                Icons.card_giftcard_rounded,
+                color: AppTheme.goldYellow,
+                size: 24,
+              ),
+              Positioned(
+                top: 2,
+                right: 2,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00E676),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'FREE',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 6.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveDealTimerButton(
+    BuildContext context,
+    GameController controller,
+  ) {
+    final deal = controller.world.activeDeal;
+    if (deal == null) return const SizedBox.shrink();
+
+    final total = controller.world.activeDealTotalSeconds > 0
+        ? controller.world.activeDealTotalSeconds
+        : 1.0;
+    final progress =
+        (controller.world.activeDealRemainingSeconds / total).clamp(0.0, 1.0);
+    final remainingSecs =
+        controller.world.activeDealRemainingSeconds.ceil().clamp(0, 999);
+
+    return Tooltip(
+      message: '${deal.title} (${remainingSecs}s)',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          _resetJoystick();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${deal.title} Active! (${remainingSecs}s remaining)',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              backgroundColor: AppTheme.chaiDarkBrown,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        },
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E140C).withValues(alpha: 0.92),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF00E676).withValues(alpha: 0.35),
+                blurRadius: 8,
+              ),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Circular countdown green border
+              SizedBox(
+                width: 46,
+                height: 46,
+                child: CircularProgressIndicator(
+                  value: progress,
+                  strokeWidth: 3.5,
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    Color(0xFF00E676),
+                  ),
+                  backgroundColor: Colors.white10,
+                ),
+              ),
+              // Inside: Icon & Remaining Seconds
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    deal.iconEmoji,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  Text(
+                    '${remainingSecs}s',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 8.5,
+                      height: 1.0,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

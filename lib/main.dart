@@ -3,10 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'app.dart';
+import 'services/ads_service.dart';
 
 void main() {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+
+    // Initialize Google Mobile Ads SDK (runs in background, graceful test fallback)
+    unawaited(AdsService.instance.initialize());
 
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);

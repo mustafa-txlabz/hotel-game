@@ -57,10 +57,10 @@ class GameBalance {
   static const List<double> playerCapacityUpgradeCosts = [80.0, 150.0, 250.0, 400.0];
 
   // Worker / Helper Stats & Upgrades
-  static const double workerBaseSpeed = 150.0;
+  static const double workerBaseSpeed = 135.0;
   static const int workerBaseCapacity = 2;
 
-  static const List<double> workerSpeedLevels = [150.0, 185.0, 220.0, 260.0];
+  static const List<double> workerSpeedLevels = [135.0, 155.0, 180.0, 210.0];
   static const List<double> workerSpeedUpgradeCosts = [75.0, 140.0, 240.0];
 
   static const List<int> workerCapacityLevels = [2, 3, 5, 8];

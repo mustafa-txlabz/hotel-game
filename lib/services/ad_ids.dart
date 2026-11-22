@@ -1,27 +1,72 @@
-/// Centralized AdMob configuration and Ad Unit IDs.
+/// Google AdMob Configuration & Ad Unit Identifiers.
 ///
-/// Toggle [useTestAds] to switch between Google's official test ad units
-/// and live production ad units before publishing to Google Play.
+/// NOTE FOR OWNER:
+/// When you are ready to publish on Google Play:
+/// 1. Set [useTestAds] to `false`.
+/// 2. Paste your real AdMob Ad Unit IDs into [realRewardedAdUnitIdAndroid]
+///    and [realInterstitialAdUnitIdAndroid].
+/// 3. In `android/app/src/main/AndroidManifest.xml`, replace the test Application ID
+///    with your real AdMob Application ID: [realAppIdAndroid].
 class AdIds {
-  /// Always true during development and testing.
-  /// Set to false when deploying with your live AdMob account credentials.
+  AdIds._();
+
+  /// Set to `false` when building for Google Play Store release.
+  /// Keep `true` during development and local device testing to avoid AdMob policy violations.
   static const bool useTestAds = true;
 
-  // Test Ad Unit IDs (Google official test IDs)
-  static const String testAndroidAppId =
+  // ===========================================================================
+  // GOOGLE OFFICIAL TEST AD UNIT IDENTIFIERS (SAFE FOR DEVELOPMENT)
+  // ===========================================================================
+  /// Official Google Sample App ID
+  static const String testAppIdAndroid =
       'ca-app-pub-3940256099942544~3347511713';
-  static const String testRewarded = 'ca-app-pub-3940256099942544/5224354917';
-  static const String testInterstitial =
+
+  /// Official Google Sample Rewarded Video Ad Unit ID
+  static const String testRewardedAdUnitIdAndroid =
+      'ca-app-pub-3940256099942544/5224354917';
+
+  /// Official Google Sample Interstitial Ad Unit ID
+  static const String testInterstitialAdUnitIdAndroid =
       'ca-app-pub-3940256099942544/1033173712';
-  static const String testBanner = 'ca-app-pub-3940256099942544/6300978111';
 
-  // Production Ad Unit IDs (Owner fills these in before Google Play release)
-  static const String liveRewarded = 'REPLACE_ME_LIVE_REWARDED_ID';
-  static const String liveInterstitial = 'REPLACE_ME_LIVE_INTERSTITIAL_ID';
-  static const String liveBanner = 'REPLACE_ME_LIVE_BANNER_ID';
+  // ===========================================================================
+  // REAL PRODUCTION AD UNIT IDENTIFIERS (REPLACE BEFORE STORE PUBLISH)
+  // ===========================================================================
+  /// Replace with your actual AdMob Application ID from AdMob Console
+  static const String realAppIdAndroid = 'YOUR_REAL_ADMOB_APP_ID_HERE';
 
-  static String get rewardedUnitId => useTestAds ? testRewarded : liveRewarded;
-  static String get interstitialUnitId =>
-      useTestAds ? testInterstitial : liveInterstitial;
-  static String get bannerUnitId => useTestAds ? testBanner : liveBanner;
+  /// Replace with your actual Rewarded Video Ad Unit ID from AdMob Console
+  static const String realRewardedAdUnitIdAndroid =
+      'YOUR_REAL_REWARDED_AD_UNIT_ID_HERE';
+
+  /// Replace with your actual Interstitial Ad Unit ID from AdMob Console
+  static const String realInterstitialAdUnitIdAndroid =
+      'YOUR_REAL_INTERSTITIAL_AD_UNIT_ID_HERE';
+
+  // ===========================================================================
+  // ACTIVE GETTERS (AUTOMATICALLY ROUTE TEST VS REAL)
+  // ===========================================================================
+  /// Active Rewarded Video Ad Unit ID
+  static String get rewardedAdUnitId {
+    if (useTestAds) {
+      return testRewardedAdUnitIdAndroid;
+    }
+    return realRewardedAdUnitIdAndroid;
+  }
+
+  /// Active Interstitial Ad Unit ID
+  static String get interstitialAdUnitId {
+    if (useTestAds) {
+      return testInterstitialAdUnitIdAndroid;
+    }
+    return realInterstitialAdUnitIdAndroid;
+  }
+
+  /// Active Application ID
+  static String get appId {
+    if (useTestAds) {
+      return testAppIdAndroid;
+    }
+    return realAppIdAndroid;
+  }
 }

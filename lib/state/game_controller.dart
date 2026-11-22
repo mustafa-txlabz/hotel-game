@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../engine/deals.dart';
 import '../engine/game_world.dart';
 import '../services/audio_service.dart';
 import '../services/save_service.dart';
@@ -57,7 +58,15 @@ class GameController extends ChangeNotifier {
       saveGame();
       notifyListeners();
     };
+
+    _world.onStepOnDealPad = (deal) {
+      onDealRequested?.call(deal);
+      notifyListeners();
+    };
   }
+
+  /// Optional callback invoked when the player walks onto the Deal Pad
+  void Function(DhabaDeal deal)? onDealRequested;
 
   Future<void> _initSave() async {
     await _saveService.loadStoreState(_world);
@@ -76,6 +85,20 @@ class GameController extends ChangeNotifier {
       saveGame();
       notifyListeners();
     }
+  }
+
+  /// Claims a rewarded ad power-up deal
+  void claimDeal(DhabaDeal deal) {
+    _world.activateDeal(deal);
+    audioService.playBuy();
+    saveGame();
+    notifyListeners();
+  }
+
+  /// Dismisses an active deal pad
+  void dismissDeal() {
+    _world.dismissDealPad();
+    notifyListeners();
   }
 
   SaveService get saveService => _saveService;

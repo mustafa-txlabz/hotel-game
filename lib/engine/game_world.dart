@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../data/balance.dart';
 import '../data/progression_config.dart';
 import 'customer_ai.dart';
+import 'deals.dart';
 import 'entities.dart';
 import 'ground_pad.dart';
 import 'staff_ai.dart';
@@ -80,6 +81,41 @@ class GameWorld {
   bool isStoreMasteredCelebrated;
   bool isMasteryRewardClaimed;
   double masteryRewardBonus;
+
+  // M9: Rewarded Ad Deals & Power-Up Boosts
+  DhabaDeal? availableDeal;
+  bool isDealPadActive = false;
+  final Vector2 dealPadPosition = Vector2(240.0, 520.0);
+  final double dealPadWidth = 84.0;
+  final double dealPadHeight = 56.0;
+  double dealSpawnCooldown = 60.0;
+  double dealSpawnTimer = 25.0; // Spawns initial deal after 25s
+
+  DhabaDeal? activeDeal;
+  double activeDealRemainingSeconds = 0.0;
+  double activeDealTotalSeconds = 0.0;
+  StaffEntity? vipHelper;
+
+  // Callbacks for Deals
+  void Function(DhabaDeal deal)? onStepOnDealPad;
+  void Function(DhabaDeal deal)? onDealSpawned;
+  void Function(DhabaDeal deal)? onDealActivated;
+  void Function()? onDealDeactivated;
+
+  bool get isDealAvailable =>
+      isDealPadActive && availableDeal != null && activeDeal == null;
+  bool get isStaffTurboActive =>
+      activeDeal?.type == DealType.staffTurbo &&
+      activeDealRemainingSeconds > 0.0;
+  bool get isKitchenBoostActive =>
+      activeDeal?.type == DealType.kitchenBoost &&
+      activeDealRemainingSeconds > 0.0;
+  bool get isCustomerRushActive =>
+      activeDeal?.type == DealType.customerRush &&
+      activeDealRemainingSeconds > 0.0;
+  bool get isVipHelperActive =>
+      activeDeal?.type == DealType.vipHelper &&
+      activeDealRemainingSeconds > 0.0;
 
   GameWorld({
     this.worldWidth = 900.0,
@@ -341,13 +377,18 @@ class GameWorld {
   void tick(double dt) {
     if (dt <= 0.0) return;
 
-    // 1. Update stations
-    chaiStation.update(dt);
-    parathaStation.update(dt);
+    // 1. Update stations (apply 2x kitchen speed when kitchen boost is active)
+    final kitchenDt = dt * (isKitchenBoostActive ? 2.0 : 1.0);
+    chaiStation.update(kitchenDt);
+    parathaStation.update(kitchenDt);
     counter.update(dt);
     trashBin.update(dt);
 
-    // 2. Update player physics
+    // 2. Update player physics (apply 1.65x speed when staff turbo is active)
+    final playerBaseSpeed =
+        GameBalance.playerSpeedLevels[playerSpeedLevel - 1];
+    player.speed =
+        isStaffTurboActive ? playerBaseSpeed * 1.65 : playerBaseSpeed;
     player.update(dt);
 
     // 2.5 Automatic Sliding Door proximity detection (door center: 450, 1184)
@@ -412,7 +453,9 @@ class GameWorld {
     }
 
     // 9. Customer AI, queue, patience, and cashier service transactions (M3)
-    customerSystem.update(dt, counter);
+    // Apply 1.8x frequency when Customer Rush is active
+    final customerDt = dt * (isCustomerRushActive ? 1.8 : 1.0);
+    customerSystem.update(customerDt, counter);
 
     // 10. Cash Collection detection (Right Section of Counter)
     _checkCashCollection();
@@ -431,6 +474,9 @@ class GameWorld {
 
     // 15. Floating text popups
     _updateFloatingTexts(dt);
+
+    // 16. M9: Rewarded Ad Deals & Boosts update
+    _updateDealSystem(dt);
   }
 
   void _checkGroundPads(double dt) {
@@ -1147,6 +1193,12 @@ class GameWorld {
   // --- Autonomous Helper / Waiter AI Logic (M6) ---
 
   void _updateHelperAI(StaffEntity helper, double dt) {
+    // Apply speed adjustment (and 1.8x when staff turbo boost is active)
+    final baseSpeed = helper.isVip
+        ? 230.0
+        : GameBalance.workerSpeedLevels[workerSpeedLevel - 1];
+    helper.speed = isStaffTurboActive ? baseSpeed * 1.8 : baseSpeed;
+
     helper.updateMovement(dt);
 
     // Natural lane offset based on worker ID so multiple helpers never overlap on identical tracks
@@ -1348,5 +1400,108 @@ class GameWorld {
     if (!helper.isMoving) {
       helper.angle = math.pi / 2; // Facing down towards the shop floor
     }
+  }
+
+  // --- M9: Rewarded Ad Deals & Boosts Mechanics ---
+
+  void _updateDealSystem(double dt) {
+    if (activeDeal != null) {
+      activeDealRemainingSeconds -= dt;
+      if (activeDealRemainingSeconds <= 0.0) {
+        deactivateDeal();
+      }
+    } else {
+      if (dealSpawnTimer > 0.0) {
+        dealSpawnTimer -= dt;
+        if (dealSpawnTimer <= 0.0) {
+          spawnRandomDeal();
+        }
+      }
+    }
+
+    // Check if player stepped onto the deal pad
+    if (isDealPadActive && availableDeal != null) {
+      final dx = (player.position.x - dealPadPosition.x).abs();
+      final dy = (player.position.y - dealPadPosition.y).abs();
+      if (dx < dealPadWidth / 2 + 12.0 && dy < dealPadHeight / 2 + 12.0) {
+        onStepOnDealPad?.call(availableDeal!);
+      }
+    }
+  }
+
+  void spawnRandomDeal({DhabaDeal? specificDeal}) {
+    if (activeDeal != null || isDealPadActive) return;
+
+    if (specificDeal != null) {
+      availableDeal = specificDeal;
+    } else {
+      final pool = DhabaDeal.defaultPool;
+      final rand = math.Random();
+      availableDeal = pool[rand.nextInt(pool.length)];
+    }
+    isDealPadActive = true;
+    onDealSpawned?.call(availableDeal!);
+  }
+
+  void activateDeal(DhabaDeal deal) {
+    isDealPadActive = false;
+    availableDeal = null;
+
+    if (deal.type == DealType.instantCash) {
+      rupees += deal.cashReward;
+      lifetimeRupees += deal.cashReward;
+      floatingTexts.add(
+        FloatingTextEntity(
+          position: Vector2(player.position.x, player.position.y - 45.0),
+          text: '+₹${deal.cashReward.toInt()} 💰',
+        ),
+      );
+      activeDeal = null;
+      activeDealRemainingSeconds = 0.0;
+      activeDealTotalSeconds = 0.0;
+      dealSpawnTimer = dealSpawnCooldown;
+      onDealActivated?.call(deal);
+      return;
+    }
+
+    activeDeal = deal;
+    activeDealRemainingSeconds = deal.durationSeconds.toDouble();
+    activeDealTotalSeconds = deal.durationSeconds.toDouble();
+
+    if (deal.type == DealType.vipHelper) {
+      // Spawn golden VIP helper
+      final vip = StaffEntity(
+        id: 999,
+        name: 'VIP Golden Chotu',
+        role: StaffRole.helper,
+        startPosition: Vector2(dealPadPosition.x, dealPadPosition.y),
+        speed: 230.0,
+        carryCapacity: 5,
+        duty: HelperDuty.runner,
+        isVip: true,
+      );
+      staff.add(vip);
+      vipHelper = vip;
+    }
+
+    onDealActivated?.call(deal);
+  }
+
+  void deactivateDeal() {
+    if (vipHelper != null) {
+      staff.remove(vipHelper);
+      vipHelper = null;
+    }
+    activeDeal = null;
+    activeDealRemainingSeconds = 0.0;
+    activeDealTotalSeconds = 0.0;
+    dealSpawnTimer = dealSpawnCooldown;
+    onDealDeactivated?.call();
+  }
+
+  void dismissDealPad() {
+    isDealPadActive = false;
+    availableDeal = null;
+    dealSpawnTimer = 45.0; // Respawns in 45s
   }
 }

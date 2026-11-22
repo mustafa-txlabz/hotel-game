@@ -43,6 +43,17 @@ class WorldPainter extends CustomPainter {
       SpriteRenderer.drawGroundPad(canvas, pad);
     }
 
+    // 3.5 Draw Ground Deal Pad (M9)
+    if (world.isDealPadActive && world.availableDeal != null) {
+      SpriteRenderer.drawDealPad(
+        canvas,
+        world.dealPadPosition,
+        world.dealPadWidth,
+        world.dealPadHeight,
+        world.availableDeal!,
+      );
+    }
+
     // 4. Draw Unlocked Dining Tables (M4)
     for (final table in world.diningTables) {
       SpriteRenderer.drawDiningTable(canvas, table);
