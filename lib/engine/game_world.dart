@@ -18,6 +18,7 @@ class GameWorld {
   // Entities & Stations
   final PlayerEntity player;
   final ChaiStation chaiStation;
+  final ParathaStation parathaStation;
   final ServingCounter counter;
   final TrashBin trashBin;
 
@@ -84,6 +85,7 @@ class GameWorld {
     Set<String>? initialCompletedMissions,
     StoreProgressionConfig? config,
     ChaiStation? station,
+    ParathaStation? parathaStation,
     ServingCounter? servingCounter,
     TrashBin? trash,
     CustomerSystem? customers,
@@ -97,6 +99,9 @@ class GameWorld {
        completedMissionIds = initialCompletedMissions ?? <String>{},
        player = PlayerEntity(startPosition: Vector2(450.0, 600.0)),
        chaiStation = station ?? ChaiStation(position: Vector2(260.0, 260.0)),
+       parathaStation =
+           parathaStation ??
+           ParathaStation(position: Vector2(510.0, 260.0), isUnlocked: false),
        counter =
            servingCounter ?? ServingCounter(position: Vector2(450.0, 720.0)),
        trashBin = trash ?? TrashBin(position: Vector2(100.0, 460.0)),
@@ -154,6 +159,8 @@ class GameWorld {
       addReputationPercent(progressionConfig.customerReputationDelta);
     };
 
+    customerSystem.canOrderParatha = () => this.parathaStation.isUnlocked;
+
     customerSystem.onCustomerLeftUnhappy = (customer) {
       addReputationPercent(progressionConfig.sadCustomerReputationDelta);
       floatingTexts.add(
@@ -165,8 +172,9 @@ class GameWorld {
     };
 
     customerSystem.onCustomerTableTimeout = (customer) {
-      // Customer waited 2.5s and no table was available: refund money and throw away chai
-      final refundAmount = GameBalance.chaiPrice * customer.receivedCount;
+      // Customer waited 2.5s and no table was available: refund money and throw away food
+      final refundAmount = (customer.receivedChai * GameBalance.chaiPrice) +
+          (customer.receivedParatha * GameBalance.parathaPrice);
       rupees = math.max(0.0, rupees - refundAmount);
 
       floatingTexts.add(
@@ -175,10 +183,13 @@ class GameWorld {
           text: '-Rs ${refundAmount.toInt()} 💸',
         ),
       );
+      final foodIcon = customer.isMixed
+          ? '☕🫓💥'
+          : (customer.hasParatha ? '🫓💥' : '☕💥');
       floatingTexts.add(
         FloatingTextEntity(
           position: Vector2(customer.position.x, customer.position.y - 65.0),
-          text: 'NO TABLE! ☕💥',
+          text: 'NO TABLE! $foodIcon',
         ),
       );
     };
@@ -211,6 +222,41 @@ class GameWorld {
         onLevelUp: (newLevel) {
           chaiStation.upgradeTo(newLevel);
           checkMissions();
+        },
+      );
+
+      final parathaPad = GroundPad(
+        id: 'paratha_station_pad',
+        type: PadType.machineUpgrade,
+        position: Vector2(615.0, 260.0),
+        title: 'PARATHA TAWA',
+        totalCost: GameBalance.parathaUnlockCost,
+        currentLevel: 0,
+        maxLevel: 5,
+        costForLevel: (targetLevel) {
+          switch (targetLevel) {
+            case 1:
+              return GameBalance.parathaUnlockCost;
+            case 2:
+              return GameBalance.parathaUpgradeCosts[0];
+            case 3:
+              return GameBalance.parathaUpgradeCosts[1];
+            case 4:
+              return GameBalance.parathaUpgradeCosts[2];
+            case 5:
+              return GameBalance.parathaUpgradeCosts[3];
+            default:
+              return 60.0;
+          }
+        },
+        titleForLevel: (targetLevel) =>
+            targetLevel == 1 ? 'PARATHA TAWA' : 'UPGRADE L$targetLevel',
+        onLevelUp: (newLevel) {
+          if (newLevel == 1) {
+            this.parathaStation.isUnlocked = true;
+          } else {
+            this.parathaStation.upgradeTo(newLevel);
+          }
         },
       );
 
@@ -262,7 +308,7 @@ class GameWorld {
         },
       );
 
-      groundPads.addAll([kettlePad, cashierPad, helperPad, table1Pad, table2Pad]);
+      groundPads.addAll([kettlePad, parathaPad, cashierPad, helperPad, table1Pad, table2Pad]);
     }
   }
 
@@ -286,6 +332,7 @@ class GameWorld {
 
     // 1. Update stations
     chaiStation.update(dt);
+    parathaStation.update(dt);
     counter.update(dt);
     trashBin.update(dt);
 
@@ -315,12 +362,19 @@ class GameWorld {
     // 3. Collision against perimeter boundary walls
     _clampPlayerToWorldBounds();
 
-    // 4. Solid collisions (kitchen kettle, serving counter, unlocked dining tables)
+    // 4. Solid collisions (kitchen kettle, paratha tawa, serving counter, unlocked dining tables)
     _resolveBoxCollision(
       chaiStation.position,
       chaiStation.width,
       chaiStation.height,
     );
+    if (parathaStation.isUnlocked) {
+      _resolveBoxCollision(
+        parathaStation.position,
+        parathaStation.width,
+        parathaStation.height,
+      );
+    }
     _resolveBoxCollision(counter.position, counter.width, counter.height);
     for (final table in diningTables) {
       if (table.isUnlocked) {
@@ -328,8 +382,9 @@ class GameWorld {
       }
     }
 
-    // 5. Kitchen Pickup Zone detection (Chai Kettle)
+    // 5. Kitchen Pickup Zone detection (Chai Kettle & Paratha Tawa)
     _checkKettlePickup();
+    _checkParathaPickup();
 
     // 6. Food Deposit Zone detection (Left Section of Counter)
     _checkFoodDeposit();
@@ -512,7 +567,7 @@ class GameWorld {
     if (staffMember.position.y < minY) staffMember.position.y = minY;
     if (staffMember.position.y > maxY) staffMember.position.y = maxY;
 
-    // 2. Kitchen machines (Chai Kettle)
+    // 2. Kitchen machines (Chai Kettle & Paratha Tawa)
     _resolveEntityBoxCollision(
       staffMember.position,
       staffMember.radius,
@@ -520,6 +575,15 @@ class GameWorld {
       chaiStation.width,
       chaiStation.height,
     );
+    if (parathaStation.isUnlocked) {
+      _resolveEntityBoxCollision(
+        staffMember.position,
+        staffMember.radius,
+        parathaStation.position,
+        parathaStation.width,
+        parathaStation.height,
+      );
+    }
 
     // 3. Serving Counter (solid for workers)
     _resolveEntityBoxCollision(
@@ -551,6 +615,17 @@ class GameWorld {
       if (chaiStation.tryTakeCup()) {
         player.addItem(ItemType.chai);
         onItemPickedUp?.call(ItemType.chai);
+      }
+    }
+  }
+
+  void _checkParathaPickup() {
+    if (player.isFull || !parathaStation.isUnlocked) return;
+
+    if (parathaStation.isInsidePickupZone(player.position)) {
+      if (parathaStation.tryTakeParatha()) {
+        player.addItem(ItemType.paratha);
+        onItemPickedUp?.call(ItemType.paratha);
       }
     }
   }
@@ -1061,8 +1136,8 @@ class GameWorld {
       return;
     }
 
-    // 2. If carrying chai cups (and not dumping trash), deliver to Serving Counter food towers!
-    if (helper.carriedItems.contains(ItemType.chai)) {
+    // 2. If carrying food items (Chai or Paratha) (and not dumping trash), deliver to Serving Counter food towers!
+    if (helper.carriedItems.any((item) => item != ItemType.dirtyTray)) {
       // Target the food deposit zone center (360, 668), safe from cashier boundary (396)
       final depositOffset = (helper.id % 2 == 0 ? -10.0 : 10.0);
       helper.targetPosition.x = counter.foodDepositZoneCenter.x + depositOffset;
@@ -1083,14 +1158,15 @@ class GameWorld {
           helper.targetPosition.x = trashBin.position.x + 25.0;
           helper.targetPosition.y = trashBin.position.y + laneOffset * 0.5;
         } else if (counter.canDepositFood()) {
-          final idx = helper.carriedItems.indexOf(ItemType.chai);
+          final idx = helper.carriedItems.lastIndexWhere((item) => item != ItemType.dirtyTray);
           if (idx != -1) {
-            if (counter.addFoodItem(ItemType.chai)) {
+            final foodItem = helper.carriedItems[idx];
+            if (counter.addFoodItem(foodItem)) {
               helper.carriedItems.removeAt(idx);
-              onItemDeposited?.call(ItemType.chai);
+              onItemDeposited?.call(foodItem);
             }
           }
-          if (!helper.carriedItems.contains(ItemType.chai)) {
+          if (!helper.carriedItems.any((item) => item != ItemType.dirtyTray)) {
             helper.taskState = HelperTaskState.idle;
           }
         }
@@ -1163,18 +1239,42 @@ class GameWorld {
       return;
     }
 
-    // 4. Counter needs restocking: fetch chai from Chai Kettle!
-    // Restock only when counter has room AND kettle has brewed cups ready!
-    final needsRestock = counter.hasFoodRoom && chaiStation.shelfCount > 0;
+    // 4. Counter needs restocking: fetch chai from Kettle or paratha from Tawa!
+    final chaiCount = counter.foodTowers.firstWhere((t) => t.itemType == ItemType.chai, orElse: () => CounterItemTower(itemType: ItemType.chai, count: 0)).count;
+    final parathaCount = counter.foodTowers.firstWhere((t) => t.itemType == ItemType.paratha, orElse: () => CounterItemTower(itemType: ItemType.paratha, count: 0)).count;
 
-    if (needsRestock && !helper.isFull) {
+    final canRestockChai = counter.hasFoodRoom && chaiStation.shelfCount > 0;
+    final canRestockParatha = parathaStation.isUnlocked && counter.hasFoodRoom && parathaStation.shelfCount > 0;
+
+    final shouldRestockParatha = canRestockParatha && (!canRestockChai || parathaCount < chaiCount);
+    final shouldRestockChai = canRestockChai && !shouldRestockParatha;
+
+    if (shouldRestockParatha && !helper.isFull) {
+      helper.assignedTableId = null;
+      helper.targetPosition.x = parathaStation.pickupZoneCenter.x + laneOffset;
+      helper.targetPosition.y = parathaStation.pickupZoneCenter.y;
+      helper.taskState = HelperTaskState.fetchingChai;
+
+      if (parathaStation.isInsidePickupZone(helper.position)) {
+        while (!helper.isFull && parathaStation.shelfCount > 0) {
+          parathaStation.shelfCount--;
+          helper.addItem(ItemType.paratha);
+          onItemPickedUp?.call(ItemType.paratha);
+        }
+        if (helper.carriedCount > 0) {
+          helper.taskState = HelperTaskState.deliveringChai;
+        } else {
+          helper.taskState = HelperTaskState.idle;
+        }
+      }
+      return;
+    } else if (shouldRestockChai && !helper.isFull) {
       helper.assignedTableId = null;
       helper.targetPosition.x = chaiStation.pickupZoneCenter.x + laneOffset;
       helper.targetPosition.y = chaiStation.pickupZoneCenter.y;
       helper.taskState = HelperTaskState.fetchingChai;
 
       if (chaiStation.isInsidePickupZone(helper.position)) {
-        // Pick up chai cups up to Helper's full upgraded capacity!
         while (!helper.isFull && chaiStation.shelfCount > 0) {
           chaiStation.shelfCount--;
           helper.addItem(ItemType.chai);

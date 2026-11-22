@@ -54,6 +54,8 @@ class SaveService {
         'isReputationLocked100': world.isReputationLocked100,
         'completedMissionIds': world.completedMissionIds.toList(),
         'kettleLevel': world.chaiStation.level,
+        'parathaUnlocked': world.parathaStation.isUnlocked,
+        'parathaLevel': world.parathaStation.level,
         'unlockedTableIds': world.diningTables
             .where((t) => t.isUnlocked)
             .map((t) => t.id)
@@ -131,6 +133,19 @@ class SaveService {
         for (final pad in world.groundPads) {
           if (pad.id == 'kettle_upgrade') {
             pad.setLevel(level);
+          }
+        }
+      }
+
+      // 4.5 Restore Paratha Tawa Level & Unlock State
+      if (storeData.containsKey('parathaUnlocked') &&
+          storeData['parathaUnlocked'] == true) {
+        world.parathaStation.isUnlocked = true;
+        final pLevel = (storeData['parathaLevel'] as num?)?.toInt() ?? 1;
+        world.parathaStation.upgradeTo(pLevel);
+        for (final pad in world.groundPads) {
+          if (pad.id == 'paratha_station_pad') {
+            pad.setLevel(pLevel);
           }
         }
       }

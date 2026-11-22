@@ -1,8 +1,9 @@
 import 'dart:math' as math;
 
+import '../data/balance.dart';
 import 'entities.dart';
 
-enum ItemType { chai, burger, samosa, dirtyTray }
+enum ItemType { chai, paratha, burger, samosa, dirtyTray }
 
 /// Kitchen Chai Brewing Kettle station producing hot chai cups onto an output shelf.
 class ChaiStation {
@@ -107,6 +108,120 @@ class ChaiStation {
   /// Attempts to take one chai cup from the shelf.
   bool tryTakeCup() {
     if (shelfCount > 0 && pickupTimer <= 0.0) {
+      shelfCount--;
+      pickupTimer = pickupInterval;
+      return true;
+    }
+    return false;
+  }
+}
+
+/// Kitchen Tawa Paratha station producing hot crispy lachha parathas onto an output shelf.
+class ParathaStation {
+  final Vector2 position;
+  final double width;
+  final double height;
+  bool isUnlocked;
+
+  // Pickup zone around the station (accessible from front, behind, left, or right)
+  final Vector2 pickupZoneCenter;
+  final double pickupZoneRadius;
+  final double pickupReach;
+
+  // Cooking properties
+  double cookTime;
+  double cookTimer;
+  int shelfCapacity;
+  int shelfCount;
+  int level;
+  final int maxLevel;
+
+  // Transfer cooldown for snappy tactile pickup
+  double pickupInterval;
+  double pickupTimer;
+
+  ParathaStation({
+    Vector2? position,
+    this.width = 120.0,
+    this.height = 70.0,
+    this.isUnlocked = false,
+    this.cookTime = GameBalance.parathaBaseCookTime,
+    this.shelfCapacity = GameBalance.parathaBaseShelfCapacity,
+    this.pickupInterval = 0.14,
+    this.pickupReach = 55.0,
+    this.level = 1,
+    this.maxLevel = 5,
+    int initialShelfCount = 0,
+  }) : position = position ?? Vector2(510.0, 260.0),
+       pickupZoneCenter = Vector2(
+         (position?.x ?? 510.0),
+         (position?.y ?? 260.0) + 60.0,
+       ),
+       pickupZoneRadius = 55.0,
+       cookTimer = 0.0,
+       shelfCount = initialShelfCount,
+       pickupTimer = 0.0;
+
+  /// Upgrades tawa capacity and cooking speed.
+  void upgradeTo(int newLevel) {
+    level = newLevel;
+    shelfCapacity = 6 + (newLevel - 1) * 2; // 6, 8, 10, 12, 14
+    cookTime = math.max(
+      0.50,
+      GameBalance.parathaBaseCookTime - (newLevel - 1) * 0.25,
+    ); // 1.6s, 1.35s, 1.10s, 0.85s, 0.60s
+  }
+
+  double get cookProgress => (cookTimer / cookTime).clamp(0.0, 1.0);
+
+  /// Progresses tawa cooking timer and shelf inventory.
+  void update(double dt) {
+    if (dt <= 0.0 || !isUnlocked) return;
+
+    if (pickupTimer > 0.0) {
+      pickupTimer -= dt;
+    }
+
+    if (shelfCount < shelfCapacity) {
+      cookTimer += dt;
+      while (cookTimer >= cookTime && shelfCount < shelfCapacity) {
+        cookTimer -= cookTime;
+        shelfCount++;
+      }
+      if (shelfCount >= shelfCapacity) {
+        cookTimer = 0.0;
+      }
+    } else {
+      cookTimer = 0.0;
+    }
+  }
+
+  /// Checks if character position is within pickup range.
+  bool isInsidePickupZone(Vector2 characterPos) {
+    if (!isUnlocked) return false;
+    final halfW = width / 2;
+    final halfH = height / 2;
+    final left = position.x - halfW;
+    final right = position.x + halfW;
+    final top = position.y - halfH;
+    final bottom = position.y + halfH;
+
+    final dx = math.max(
+      0.0,
+      math.max(left - characterPos.x, characterPos.x - right),
+    );
+    final dy = math.max(
+      0.0,
+      math.max(top - characterPos.y, characterPos.y - bottom),
+    );
+    final dist = math.sqrt(dx * dx + dy * dy);
+
+    return dist <= pickupReach;
+  }
+
+  /// Attempts to take one paratha plate from the shelf.
+  bool tryTakeParatha() {
+    if (isUnlocked && shelfCount > 0 && pickupTimer <= 0.0) {
       shelfCount--;
       pickupTimer = pickupInterval;
       return true;
@@ -296,6 +411,13 @@ class ServingCounter {
     return false;
   }
 
+  bool hasFoodItem(ItemType desiredType) {
+    for (final tower in foodTowers) {
+      if (tower.itemType == desiredType && tower.count > 0) return true;
+    }
+    return false;
+  }
+
   ItemType? takeFoodItem(ItemType desiredType) {
     for (int i = foodTowers.length - 1; i >= 0; i--) {
       final tower = foodTowers[i];
@@ -371,6 +493,8 @@ class TableSeat {
   bool isSeated;
   bool hasDirtyTray;
   double cashTip;
+  bool mealHasChai;
+  bool mealHasParatha;
 
   TableSeat({
     required this.index,
@@ -380,6 +504,8 @@ class TableSeat {
     this.isSeated = false,
     this.hasDirtyTray = false,
     this.cashTip = 0.0,
+    this.mealHasChai = true,
+    this.mealHasParatha = false,
   });
 
   bool get isAvailable => !isOccupied && !hasDirtyTray;

@@ -142,6 +142,8 @@ class SpriteRenderer {
       final item = player.carriedItems[i];
       if (item == ItemType.dirtyTray) {
         _drawCarriedDirtyTray(canvas);
+      } else if (item == ItemType.paratha) {
+        _drawCarriedParatha(canvas);
       } else {
         _drawChaiCup(canvas);
       }
@@ -453,13 +455,17 @@ class SpriteRenderer {
     canvas.drawCircle(const Offset(-13, 2), 4.5, handPaint);
     canvas.drawCircle(const Offset(13, 2), 4.5, handPaint);
 
-    // If walking to table, waiting for table, or leaving happy from takeaway (not after dine-in meal), carry a cup of chai in hand!
+    // If walking to table, waiting for table, or leaving happy from takeaway (not after dine-in meal), carry food in hand!
     if (customer.state == CustomerState.walkingToTable ||
         customer.state == CustomerState.waitingForTable ||
         (customer.state == CustomerState.leavingHappy && !customer.hasDinedIn)) {
       canvas.save();
       canvas.translate(0, 12);
-      _drawChaiCup(canvas, 0.65);
+      if (customer.hasParatha && !customer.hasChai) {
+        _drawParathaPlate(canvas, 0.65);
+      } else {
+        _drawChaiCup(canvas, 0.65);
+      }
       canvas.restore();
     }
 
@@ -511,10 +517,13 @@ class SpriteRenderer {
       ..close();
     canvas.drawPath(tail, Paint()..color = Colors.white);
 
+    final reactionText = customer.isMixed
+        ? '☕🫓😋'
+        : (customer.hasParatha ? '🫓😋' : '☕😋');
     final textPainter = TextPainter(
-      text: const TextSpan(
-        text: '☕😋',
-        style: TextStyle(fontSize: 10),
+      text: TextSpan(
+        text: reactionText,
+        style: const TextStyle(fontSize: 10),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
@@ -578,8 +587,17 @@ class SpriteRenderer {
   }
 
   static void _drawOrderSpeechBubble(Canvas canvas, CustomerEntity customer) {
-    final remaining = customer.desiredCount - customer.receivedCount;
-    final bubbleWidth = remaining >= 10 ? 50.0 : 44.0;
+    final remC = customer.remainingChai;
+    final remP = customer.remainingParatha;
+    final isMixed = remC > 0 && remP > 0;
+
+    final double bubbleWidth;
+    if (isMixed) {
+      bubbleWidth = 66.0;
+    } else {
+      final rem = remC > 0 ? remC : remP;
+      bubbleWidth = rem >= 10 ? 50.0 : 44.0;
+    }
     const bubbleHeight = 24.0;
     const bubbleY = -34.0;
 
@@ -617,25 +635,77 @@ class SpriteRenderer {
         ..strokeWidth = 1.5,
     );
 
-    // Miniature Cup icon
-    canvas.save();
-    canvas.translate(-10, bubbleY - 2);
-    _drawChaiCup(canvas, 0.55);
-    canvas.restore();
+    if (isMixed) {
+      // Draw both Chai and Paratha order icons and remaining counts
+      final textSpan = TextSpan(
+        children: [
+          const TextSpan(text: '☕', style: TextStyle(fontSize: 9)),
+          TextSpan(
+            text: '$remC ',
+            style: const TextStyle(
+              color: Color(0xFF263238),
+              fontWeight: FontWeight.w900,
+              fontSize: 9,
+            ),
+          ),
+          const TextSpan(text: '🫓', style: TextStyle(fontSize: 9)),
+          TextSpan(
+            text: '$remP',
+            style: const TextStyle(
+              color: Color(0xFF263238),
+              fontWeight: FontWeight.w900,
+              fontSize: 9,
+            ),
+          ),
+        ],
+      );
+      final textPainter = TextPainter(
+        text: textSpan,
+        textDirection: TextDirection.ltr,
+      )..layout();
+      textPainter.paint(
+        canvas,
+        Offset(-textPainter.width / 2, bubbleY - textPainter.height / 2),
+      );
+    } else if (remP > 0) {
+      // Paratha only
+      canvas.save();
+      canvas.translate(-10, bubbleY - 1);
+      _drawParathaPlate(canvas, 0.45);
+      canvas.restore();
 
-    // Order count text
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: 'x$remaining',
-        style: const TextStyle(
-          color: Color(0xFF263238),
-          fontWeight: FontWeight.w900,
-          fontSize: 10,
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: 'x$remP',
+          style: const TextStyle(
+            color: Color(0xFF263238),
+            fontWeight: FontWeight.w900,
+            fontSize: 10,
+          ),
         ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    textPainter.paint(canvas, Offset(4, bubbleY - textPainter.height / 2));
+        textDirection: TextDirection.ltr,
+      )..layout();
+      textPainter.paint(canvas, Offset(4, bubbleY - textPainter.height / 2));
+    } else {
+      // Chai only
+      canvas.save();
+      canvas.translate(-10, bubbleY - 2);
+      _drawChaiCup(canvas, 0.55);
+      canvas.restore();
+
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: 'x$remC',
+          style: const TextStyle(
+            color: Color(0xFF263238),
+            fontWeight: FontWeight.w900,
+            fontSize: 10,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      textPainter.paint(canvas, Offset(4, bubbleY - textPainter.height / 2));
+    }
   }
 
   static void _drawUnhappyReaction(Canvas canvas) {
@@ -727,6 +797,326 @@ class SpriteRenderer {
     );
 
     canvas.restore();
+  }
+
+  /// Draws a hot, crispy golden Lachha Paratha on a stainless steel plate.
+  static void _drawParathaPlate(Canvas canvas, [double scale = 1.0]) {
+    canvas.save();
+    canvas.scale(scale, scale);
+
+    // Subtle drop shadow
+    final shadowPaint = Paint()..color = const Color(0x33000000);
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(0, 4), width: 26, height: 12),
+      shadowPaint,
+    );
+
+    // Stainless steel plate base
+    final platePaint = Paint()..color = const Color(0xFFCFD8DC);
+    final plateRim = Paint()
+      ..color = const Color(0xFF90A4AE)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset.zero, width: 24, height: 12),
+      platePaint,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset.zero, width: 24, height: 12),
+      plateRim,
+    );
+
+    // Golden Lachha Paratha
+    final parathaPaint = Paint()..color = const Color(0xFFE6A143);
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset.zero, width: 20, height: 10),
+      parathaPaint,
+    );
+
+    // Crispy flaky toasted concentric spirals
+    final spiralPaint = Paint()
+      ..color = const Color(0xFFB06018)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(0.5, 0), width: 14, height: 6.5),
+      spiralPaint,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(-0.5, 0), width: 8, height: 3.5),
+      spiralPaint,
+    );
+
+    // Toasted brown spots
+    final spotPaint = Paint()..color = const Color(0xFF8D4004);
+    canvas.drawCircle(const Offset(-4, -1), 1.0, spotPaint);
+    canvas.drawCircle(const Offset(3, 1), 1.2, spotPaint);
+    canvas.drawCircle(const Offset(1, -2), 0.8, spotPaint);
+
+    // Butter / Ghee glaze dot in center
+    final gheePaint = Paint()..color = const Color(0xFFFFEE58);
+    canvas.drawCircle(const Offset(0, 0), 1.8, gheePaint);
+
+    canvas.restore();
+  }
+
+  /// Draws a carried hot paratha with rising aromatic steam.
+  static void _drawCarriedParatha(Canvas canvas, [double scale = 1.0]) {
+    _drawParathaPlate(canvas, scale);
+
+    final steamPhase =
+        (DateTime.now().millisecondsSinceEpoch * 0.005) % (math.pi * 2);
+    final steamPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    final steamX = math.sin(steamPhase) * 2.0;
+    canvas.drawLine(
+      Offset(steamX - 3, -6),
+      Offset(steamX - 3, -13),
+      steamPaint,
+    );
+    canvas.drawLine(
+      Offset(-steamX + 3, -6),
+      Offset(-steamX + 3, -12),
+      steamPaint,
+    );
+  }
+
+  /// Draws the Tawa Paratha cooking station (crispy lachha parathas).
+  static void drawParathaStation(Canvas canvas, ParathaStation station) {
+    if (!station.isUnlocked) {
+      // Locked state: Draw subtle dashed blueprint table showing future station spot
+      final left = station.position.x - station.width / 2;
+      final top = station.position.y - station.height / 2;
+      final blueprintBorder = Paint()
+        ..color = const Color(0xFFE65100).withValues(alpha: 0.4)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      final blueprintFill = Paint()
+        ..color = const Color(0xFFFF9800).withValues(alpha: 0.05);
+
+      final rrect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(left, top, station.width, station.height),
+        const Radius.circular(8),
+      );
+      canvas.drawRRect(rrect, blueprintFill);
+      canvas.drawRRect(rrect, blueprintBorder);
+
+      final lockPainter = TextPainter(
+        text: const TextSpan(
+          text: '🔒 TAWA PARATHA',
+          style: TextStyle(
+            color: Color(0xFFBF360C),
+            fontWeight: FontWeight.bold,
+            fontSize: 9,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      lockPainter.paint(
+        canvas,
+        Offset(
+          station.position.x - lockPainter.width / 2,
+          station.position.y - lockPainter.height / 2,
+        ),
+      );
+      return;
+    }
+
+    // 1. All-Around Interactive Floor Pickup Pad (accessible from front, behind, left, right)
+    final padRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(station.position.x, station.position.y),
+        width: station.width + 60.0,
+        height: station.height + 60.0,
+      ),
+      const Radius.circular(20.0),
+    );
+
+    final padFill = Paint()
+      ..color = const Color(0xFFFF9800).withValues(alpha: 0.16);
+    canvas.drawRRect(padRect, padFill);
+
+    final padBorder = Paint()
+      ..color = const Color(0xFFE65100)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawRRect(padRect, padBorder);
+
+    // Front pickup label
+    final pzCenter = station.pickupZoneCenter;
+    final pzText = TextPainter(
+      text: const TextSpan(
+        text: '🫓 PICKUP PARATHA',
+        style: TextStyle(
+          color: Color(0xFFBF360C),
+          fontWeight: FontWeight.w900,
+          fontSize: 9,
+          letterSpacing: 0.5,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    pzText.paint(
+      canvas,
+      Offset(
+        pzCenter.x - pzText.width / 2,
+        pzCenter.y + 14 - pzText.height / 2,
+      ),
+    );
+
+    final left = station.position.x - station.width / 2;
+    final top = station.position.y - station.height / 2;
+
+    // Station shadow
+    final tableShadow = Paint()..color = const Color(0x33000000);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(left - 4, top + 6, station.width + 8, station.height + 6),
+        const Radius.circular(8),
+      ),
+      tableShadow,
+    );
+
+    // Counter mahogany base
+    final woodPaint = Paint()..color = const Color(0xFF5D4037);
+    final woodBorder = Paint()
+      ..color = const Color(0xFF3E2723)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    final tableRRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(left, top, station.width, station.height),
+      const Radius.circular(8),
+    );
+    canvas.drawRRect(tableRRect, woodPaint);
+    canvas.drawRRect(tableRRect, woodBorder);
+
+    // Stainless steel preparation top
+    final steelPaint = Paint()..color = const Color(0xFFCFD8DC);
+    final steelRRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(left + 6, top + 6, station.width - 12, station.height - 12),
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(steelRRect, steelPaint);
+
+    // Heavy Cast Iron Tawa (round black hot cooking plate)
+    final tawaX = left + 34.0;
+    final tawaY = top + station.height / 2;
+
+    final tawaBasePaint = Paint()..color = const Color(0xFF212121);
+    final tawaRimPaint = Paint()
+      ..color = const Color(0xFF455A64)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    canvas.drawCircle(Offset(tawaX, tawaY), 18, tawaBasePaint);
+    canvas.drawCircle(Offset(tawaX, tawaY), 18, tawaRimPaint);
+
+    // Tawa handle
+    final handlePaint = Paint()
+      ..color = const Color(0xFF5D4037)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.5;
+    canvas.drawLine(
+      Offset(tawaX - 12, tawaY - 6),
+      Offset(tawaX - 22, tawaY - 14),
+      handlePaint,
+    );
+
+    // Paratha cooking on tawa with sizzling oil and steam
+    canvas.save();
+    canvas.translate(tawaX, tawaY);
+    _drawParathaPlate(canvas, 0.65);
+
+    // Active cooking sizzle sparks
+    final sizzlePhase =
+        (DateTime.now().millisecondsSinceEpoch * 0.01) % (math.pi * 2);
+    final sparkPaint = Paint()
+      ..color = const Color(0xFFFFD54F).withValues(alpha: 0.8)
+      ..style = PaintingStyle.fill;
+    final sparkX = math.sin(sizzlePhase) * 6.0;
+    final sparkY = math.cos(sizzlePhase) * 4.0;
+    canvas.drawCircle(Offset(sparkX, sparkY), 1.2, sparkPaint);
+    canvas.drawCircle(Offset(-sparkX, -sparkY), 0.9, sparkPaint);
+    canvas.restore();
+
+    // Circular cooking progress ring around tawa
+    final progressPaint = Paint()
+      ..color = const Color(0xFFFF9800)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: Offset(tawaX, tawaY), radius: 23),
+      -math.pi / 2,
+      station.cookProgress * (math.pi * 2),
+      false,
+      progressPaint,
+    );
+
+    // Output Shelf Tray for cooked Parathas (Right side of station)
+    final shelfStartX = left + 72.0;
+    final shelfBaseY = top + station.height - 18.0;
+
+    final trayPaint = Paint()..color = const Color(0xFF90A4AE);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(shelfStartX + 8, top + station.height / 2),
+          width: 44,
+          height: station.height - 16,
+        ),
+        const Radius.circular(4),
+      ),
+      trayPaint,
+    );
+
+    // Stacking parathas upwards on the shelf
+    for (int i = 0; i < station.shelfCount; i++) {
+      final col = i % 2;
+      final layer = i ~/ 2;
+      final itemX = shelfStartX + (col * 16.0);
+      final itemY = shelfBaseY - (layer * 5.0);
+
+      canvas.save();
+      canvas.translate(itemX, itemY);
+      _drawParathaPlate(canvas, 0.58);
+      canvas.restore();
+    }
+
+    // Shelf Inventory Badge
+    final countPainter = TextPainter(
+      text: TextSpan(
+        text: '🫓 ${station.shelfCount}/${station.shelfCapacity}',
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 10,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final tagBg = Paint()..color = const Color(0xFFBF360C);
+    final tagRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(station.position.x, top - 8),
+        width: countPainter.width + 12,
+        height: countPainter.height + 6,
+      ),
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(tagRect, tagBg);
+    countPainter.paint(
+      canvas,
+      Offset(
+        station.position.x - countPainter.width / 2,
+        top - 8 - countPainter.height / 2,
+      ),
+    );
   }
 
   /// Draws the Chai Brewing Kettle station.
@@ -1122,16 +1512,23 @@ class SpriteRenderer {
           final itemY = towerBaseY - (i * 6.5);
           canvas.save();
           canvas.translate(towerBaseX, itemY);
-          _drawChaiCup(canvas, 0.65);
+          if (tower.itemType == ItemType.paratha) {
+            _drawParathaPlate(canvas, 0.65);
+          } else {
+            _drawChaiCup(canvas, 0.65);
+          }
           canvas.restore();
         }
 
         // Tower Count Badge above the stack
         final topY = towerBaseY - (tower.count * 6.5) - 14.0;
+        final badgeLabel = tower.itemType == ItemType.paratha
+            ? '🫓 ${tower.count}'
+            : '☕ ${tower.count}';
         _drawMiniCountBadge(
           canvas,
           Offset(towerBaseX, topY),
-          '☕ ${tower.count}',
+          badgeLabel,
         );
       }
     }
@@ -2622,11 +3019,25 @@ class SpriteRenderer {
       final surfaceY =
           seat.facingAngle > 0 ? (table.position.y - 14.0) : (table.position.y + 14.0);
 
-      // Active diner eating chai at this seat (only visible once diner has reached and sat at the table!)
+      // Active diner eating at this seat (only visible once diner has reached and sat at the table!)
       if (seat.isOccupied && seat.isSeated) {
         canvas.save();
         canvas.translate(surfaceX, surfaceY);
-        _drawChaiCup(canvas, 0.65);
+        if (seat.mealHasParatha && !seat.mealHasChai) {
+          _drawParathaPlate(canvas, 0.65);
+        } else if (seat.mealHasParatha && seat.mealHasChai) {
+          // Mixed meal on table: draw cup and plate side by side
+          canvas.save();
+          canvas.translate(-7, 0);
+          _drawChaiCup(canvas, 0.50);
+          canvas.restore();
+          canvas.save();
+          canvas.translate(7, 0);
+          _drawParathaPlate(canvas, 0.50);
+          canvas.restore();
+        } else {
+          _drawChaiCup(canvas, 0.65);
+        }
         canvas.restore();
       }
 
@@ -3088,6 +3499,8 @@ class SpriteRenderer {
       final item = staff.carriedItems[i];
       if (item == ItemType.dirtyTray) {
         _drawCarriedDirtyTray(canvas);
+      } else if (item == ItemType.paratha) {
+        _drawCarriedParatha(canvas);
       } else {
         _drawChaiCup(canvas);
       }

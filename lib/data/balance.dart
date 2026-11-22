@@ -16,17 +16,26 @@ class GameBalance {
   static const double joystickRadius = 60.0;
   static const double knobRadius = 26.0;
 
-  // Customer & Economy Settings (M3 & M5)
+  // Customer & Economy Settings (M3, M5, M7)
   static const double customerSpeed = 135.0;
   static const double customerSpawnInterval = 4.0;
   static const int maxQueueCapacity = 8;
   static const double customerPatienceTime = 15.0;
   static const double chaiPrice = 10.0;
+  static const double parathaPrice = 20.0;
   static const double customerEatDuration = 5.0;
   static const double dineInTip = 25.0;
+  static const double dineInTipParatha = 30.0;
+  static const double dineInTipMixed = 40.0;
   static const int maxCustomerOrderItems = 10;
   static const int maxDineInOrderItems = 3;
   static const double customerTableWaitDuration = 2.5;
+
+  // Food Station Settings (M1 & M7)
+  static const double parathaUnlockCost = 100.0;
+  static const double parathaBaseCookTime = 1.6;
+  static const int parathaBaseShelfCapacity = 6;
+  static const List<double> parathaUpgradeCosts = [60.0, 120.0, 220.0, 360.0];
 
   // Staff Hiring & HR Upgrades (M6)
   static const int maxWorkersLevel1 = 3;

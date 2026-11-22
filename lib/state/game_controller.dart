@@ -2,23 +2,30 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../engine/game_world.dart';
+import '../services/audio_service.dart';
 import '../services/save_service.dart';
 
 /// Central game controller binding [GameWorld] simulation to Flutter UI.
 class GameController extends ChangeNotifier {
   final GameWorld _world;
   final SaveService _saveService;
+  final AudioService audioService;
 
   DateTime _lastHapticTime = DateTime.fromMillisecondsSinceEpoch(0);
   double _autoSaveTimer = 0.0;
   bool _isInitialized = false;
 
-  GameController({GameWorld? world, SaveService? saveService})
-      : _world = world ?? GameWorld(),
-        _saveService = saveService ?? SaveService() {
+  GameController({
+    GameWorld? world,
+    SaveService? saveService,
+    AudioService? audioService,
+  })  : _world = world ?? GameWorld(),
+        _saveService = saveService ?? SaveService(),
+        audioService = audioService ?? AudioService() {
     _initSave();
 
     _world.onItemPickedUp = (_) {
+      this.audioService.playPour();
       _triggerHaptic(HapticFeedback.lightImpact);
       notifyListeners();
     };
@@ -29,11 +36,13 @@ class GameController extends ChangeNotifier {
     };
 
     _world.onItemServed = (_) {
+      this.audioService.playServe();
       _triggerHaptic(HapticFeedback.mediumImpact);
       notifyListeners();
     };
 
     _world.onCashCollected = (_) {
+      this.audioService.playCoin();
       _triggerHaptic(HapticFeedback.selectionClick);
       notifyListeners();
     };

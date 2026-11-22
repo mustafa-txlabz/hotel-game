@@ -27,9 +27,10 @@ class CustomerEntity {
   double angle; // Facing angle in radians
 
   CustomerState state;
-  final ItemType desiredItem;
-  final int desiredCount;
-  int receivedCount;
+  int desiredChai;
+  int receivedChai;
+  int desiredParatha;
+  int receivedParatha;
 
   // Background patience timer (only counts down when at front of queue without cashier)
   final double patienceTime;
@@ -44,7 +45,7 @@ class CustomerEntity {
   DiningTable? assignedTable;
   TableSeat? assignedSeat;
   double eatTimer;
-  final double eatDuration;
+  double eatDuration;
   bool hasDinedIn;
 
   // Table waiting state (when tables are occupied for 1-3 cups orders)
@@ -63,27 +64,58 @@ class CustomerEntity {
     required this.targetPosition,
     this.speed = GameBalance.customerSpeed,
     this.radius = 18.0,
-    this.desiredItem = ItemType.chai,
-    this.desiredCount = 1,
+    int? desiredChai,
+    int? desiredParatha,
+    ItemType desiredItem = ItemType.chai,
+    int desiredCount = 1,
     this.patienceTime = GameBalance.customerPatienceTime,
-    this.eatDuration = GameBalance.customerEatDuration,
+    double? eatDuration,
     this.tableWaitDuration = GameBalance.customerTableWaitDuration,
     this.variant = 0,
   }) : position = startPosition.copy(),
        angle = -math.pi / 2, // Facing North (towards counter)
        state = CustomerState.spawning,
-       receivedCount = 0,
        patienceTimer = 0.0,
        walkCycle = 0.0,
        isMoving = false,
        eatTimer = 0.0,
+       eatDuration = eatDuration ?? GameBalance.customerEatDuration,
        tableWaitTimer = 0.0,
        assignedTable = null,
        assignedSeat = null,
        hasDinedIn = false,
-       isAtFrontOfQueue = false;
+       isAtFrontOfQueue = false,
+       receivedChai = 0,
+       receivedParatha = 0,
+       desiredChai = desiredChai ?? (desiredItem == ItemType.paratha ? 0 : desiredCount),
+       desiredParatha = desiredParatha ?? (desiredItem == ItemType.paratha ? desiredCount : 0);
 
-  bool get isOrderComplete => receivedCount >= desiredCount;
+  int get desiredCount => desiredChai + desiredParatha;
+  int get receivedCount => receivedChai + receivedParatha;
+  bool get isOrderComplete =>
+      receivedChai >= desiredChai && receivedParatha >= desiredParatha;
+
+  bool get hasChai => desiredChai > 0;
+  bool get hasParatha => desiredParatha > 0;
+  bool get isMixed => hasChai && hasParatha;
+
+  int get remainingChai => math.max(0, desiredChai - receivedChai);
+  int get remainingParatha => math.max(0, desiredParatha - receivedParatha);
+
+  ItemType get desiredItem {
+    if (remainingChai > 0) return ItemType.chai;
+    if (remainingParatha > 0) return ItemType.paratha;
+    return ItemType.chai;
+  }
+
+  void receiveItem(ItemType item) {
+    if (item == ItemType.paratha) {
+      receivedParatha++;
+    } else {
+      receivedChai++;
+    }
+  }
+
   bool get isLeaving =>
       state == CustomerState.leavingHappy ||
       state == CustomerState.leavingUnhappy;
@@ -225,6 +257,7 @@ class CustomerSystem {
   double spawnInterval;
   double spawnTimer;
   int nextCustomerId;
+  bool Function()? canOrderParatha;
 
   // Event callbacks
   void Function(CustomerEntity, ItemType)? onCustomerServed;
@@ -275,6 +308,8 @@ class CustomerSystem {
   CustomerEntity? spawnCustomer({
     ItemType item = ItemType.chai,
     int count = 1,
+    int? desiredChai,
+    int? desiredParatha,
   }) {
     if (queue.isFull) return null;
 
@@ -292,6 +327,8 @@ class CustomerSystem {
       targetPosition: slotTarget,
       desiredItem: item,
       desiredCount: count,
+      desiredChai: desiredChai,
+      desiredParatha: desiredParatha,
       variant: (nextCustomerId) % 4,
     );
 
@@ -335,8 +372,36 @@ class CustomerSystem {
     if (!queue.isFull) {
       if (spawnTimer >= spawnInterval) {
         spawnTimer = 0.0;
-        final orderCount = _determineOrderCount();
-        spawnCustomer(item: ItemType.chai, count: orderCount);
+        final allowParatha = canOrderParatha?.call() ?? false;
+        if (!allowParatha) {
+          final orderCount = _determineOrderCount();
+          spawnCustomer(item: ItemType.chai, count: orderCount);
+        } else {
+          final rng = math.Random().nextDouble();
+          if (rng < 0.40) {
+            // 40%: Chai only (1 to 10 cups)
+            final orderCount = _determineOrderCount();
+            spawnCustomer(desiredChai: orderCount, desiredParatha: 0);
+          } else if (rng < 0.70) {
+            // 30%: Paratha only (1 to 6 parathas)
+            final pCount = (math.Random().nextDouble() < 0.70)
+                ? 1 + math.Random().nextInt(3)
+                : 4 + math.Random().nextInt(3);
+            spawnCustomer(desiredChai: 0, desiredParatha: pCount);
+          } else {
+            // 30%: Mixed Combo! (Chai + Paratha)
+            final isDineIn = math.Random().nextDouble() < 0.75;
+            if (isDineIn) {
+              final c = 1 + math.Random().nextInt(3);
+              final p = 1 + math.Random().nextInt(3);
+              spawnCustomer(desiredChai: c, desiredParatha: p);
+            } else {
+              final c = 2 + math.Random().nextInt(4);
+              final p = 1 + math.Random().nextInt(4);
+              spawnCustomer(desiredChai: c, desiredParatha: p);
+            }
+          }
+        }
       }
     } else {
       // Queue is full: customers occasionally arrive, see the crowd, and turn away
@@ -379,15 +444,18 @@ class CustomerSystem {
           // Table seat opened up! Claim it and walk over
           freeSeat.isOccupied = true;
           freeSeat.isSeated = false;
+          freeSeat.mealHasChai = customer.hasChai;
+          freeSeat.mealHasParatha = customer.hasParatha;
           customer.assignedTable = freeTable;
           customer.assignedSeat = freeSeat;
+          customer.eatDuration = 2.0 + (customer.receivedCount * 1.2);
           customer.state = CustomerState.walkingToTable;
           customer.targetPosition = freeSeat.position.copy();
           onCustomerDinedIn?.call(customer, freeTable);
         } else {
           customer.tableWaitTimer += dt;
           if (customer.tableWaitTimer >= customer.tableWaitDuration) {
-            // Waited 2.5s and still no table: throw away chai, get angry, and leave!
+            // Waited 2.5s and still no table: throw away food, get angry, and leave!
             _setCustomerLeaving(customer, CustomerState.leavingUnhappy);
             onCustomerTableTimeout?.call(customer);
             onCustomerLeftUnhappy?.call(customer);
@@ -404,7 +472,14 @@ class CustomerSystem {
             seat.isOccupied = false;
             seat.isSeated = false;
             seat.hasDirtyTray = true;
-            seat.cashTip = GameBalance.dineInTip; // Leave Rs 25 tip at this seat!
+            // Mixed combo customer leaves bigger tip!
+            if (customer.isMixed) {
+              seat.cashTip = GameBalance.dineInTipMixed;
+            } else if (customer.hasParatha) {
+              seat.cashTip = GameBalance.dineInTipParatha;
+            } else {
+              seat.cashTip = GameBalance.dineInTip;
+            }
           }
           if (table != null) {
             onCustomerFinishedEating?.call(customer, table);
@@ -440,68 +515,81 @@ class CustomerSystem {
           }
 
           if (counter.canServe()) {
-            final served = counter.takeFoodItem(headCustomer.desiredItem);
-            if (served != null) {
-              wasServed = true;
-              headCustomer.patienceTimer = 0.0; // Reset patience when served an item
-              counter.addCashBundle(); // Cash bundle placed on counter's right cash tray!
-              headCustomer.receivedCount++;
-              onCustomerServed?.call(headCustomer, served);
+            ItemType? toServe;
+            if (headCustomer.remainingChai > 0 && counter.hasFoodItem(ItemType.chai)) {
+              toServe = ItemType.chai;
+            } else if (headCustomer.remainingParatha > 0 && counter.hasFoodItem(ItemType.paratha)) {
+              toServe = ItemType.paratha;
+            }
 
-              if (headCustomer.isOrderComplete) {
-              final hasUnlockedTables = diningTables.any((t) => t.isUnlocked);
-              final wantsDineIn = hasUnlockedTables &&
-                  headCustomer.desiredCount <= GameBalance.maxDineInOrderItems;
+            if (toServe != null) {
+              final served = counter.takeFoodItem(toServe);
+              if (served != null) {
+                wasServed = true;
+                headCustomer.patienceTimer = 0.0; // Reset patience when served an item
+                counter.addCashBundle(); // Cash bundle placed on counter's right cash tray!
+                headCustomer.receiveItem(served);
+                onCustomerServed?.call(headCustomer, served);
 
-              if (wantsDineIn) {
-                // Find first available seat across all unlocked dining tables (M5)
-                TableSeat? targetSeat;
-                DiningTable? targetTable;
-                for (final table in diningTables) {
-                  if (table.isUnlocked) {
-                    final freeSeat = table.firstAvailableSeat;
-                    if (freeSeat != null) {
-                      targetSeat = freeSeat;
-                      targetTable = table;
-                      break;
+                if (headCustomer.isOrderComplete) {
+                  final hasUnlockedTables = diningTables.any((t) => t.isUnlocked);
+                  final wantsDineIn = hasUnlockedTables &&
+                      headCustomer.desiredChai <= GameBalance.maxDineInOrderItems &&
+                      headCustomer.desiredParatha <= GameBalance.maxDineInOrderItems;
+
+                  if (wantsDineIn) {
+                    // Find first available seat across all unlocked dining tables (M5)
+                    TableSeat? targetSeat;
+                    DiningTable? targetTable;
+                    for (final table in diningTables) {
+                      if (table.isUnlocked) {
+                        final freeSeat = table.firstAvailableSeat;
+                        if (freeSeat != null) {
+                          targetSeat = freeSeat;
+                          targetTable = table;
+                          break;
+                        }
+                      }
                     }
-                  }
-                }
 
-                if (targetSeat != null && targetTable != null) {
-                  // Customer claims specific seat and walks to sit down
-                  targetSeat.isOccupied = true;
-                  targetSeat.isSeated = false;
-                  headCustomer.assignedTable = targetTable;
-                  headCustomer.assignedSeat = targetSeat;
-                  headCustomer.state = CustomerState.walkingToTable;
-                  headCustomer.targetPosition = targetSeat.position.copy();
-                  queue.dequeue();
-                  onCustomerDinedIn?.call(headCustomer, targetTable);
+                    if (targetSeat != null && targetTable != null) {
+                      // Customer claims specific seat and walks to sit down
+                      targetSeat.isOccupied = true;
+                      targetSeat.isSeated = false;
+                      targetSeat.mealHasChai = headCustomer.hasChai;
+                      targetSeat.mealHasParatha = headCustomer.hasParatha;
+                      headCustomer.assignedTable = targetTable;
+                      headCustomer.assignedSeat = targetSeat;
+                      headCustomer.eatDuration = 2.0 + (headCustomer.receivedCount * 1.2);
+                      headCustomer.state = CustomerState.walkingToTable;
+                      headCustomer.targetPosition = targetSeat.position.copy();
+                      queue.dequeue();
+                      onCustomerDinedIn?.call(headCustomer, targetTable);
+                    } else {
+                      // Tables are full or locked! Customer steps to waiting area to wait 2.5s for table
+                      final isLeft = (headCustomer.id % 2 == 0);
+                      final sideX = isLeft ? 270.0 : 630.0;
+                      final offsetX = ((headCustomer.id % 3) - 1) * 20.0;
+                      headCustomer.targetPosition = Vector2(sideX + offsetX, 860.0);
+                      headCustomer.state = CustomerState.waitingForTable;
+                      headCustomer.tableWaitTimer = 0.0;
+                      queue.dequeue();
+                    }
+                  } else {
+                    // Large order (> 3 cups): Strictly Takeaway to go!
+                    _setCustomerLeaving(headCustomer, CustomerState.leavingHappy);
+                    queue.dequeue();
+                  }
                 } else {
-                  // Tables are full or locked! Customer steps to waiting area to wait 2.5s for table
-                  final isLeft = (headCustomer.id % 2 == 0);
-                  final sideX = isLeft ? 270.0 : 630.0;
-                  final offsetX = ((headCustomer.id % 3) - 1) * 20.0;
-                  headCustomer.targetPosition = Vector2(sideX + offsetX, 860.0);
-                  headCustomer.state = CustomerState.waitingForTable;
-                  headCustomer.tableWaitTimer = 0.0;
-                  queue.dequeue();
+                  // Order has more items remaining: prepare next item!
+                  counter.triggerService();
                 }
-              } else {
-                // Large order (> 3 cups): Strictly Takeaway to go!
-                _setCustomerLeaving(headCustomer, CustomerState.leavingHappy);
-                queue.dequeue();
               }
-            } else {
-              // Order has more items remaining: prepare next item!
-              counter.triggerService();
             }
           }
+        } else if (!counter.isCashierPresent || counter.totalFoodCount == 0) {
+          headCustomer.state = CustomerState.waitingInQueue;
         }
-      } else if (!counter.isCashierPresent || counter.totalFoodCount == 0) {
-        headCustomer.state = CustomerState.waitingInQueue;
-      }
 
         // If customer was NOT served on this tick, patience timer progresses
         if (!wasServed && !headCustomer.isLeaving) {

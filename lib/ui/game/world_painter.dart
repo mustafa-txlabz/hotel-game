@@ -65,8 +65,9 @@ class WorldPainter extends CustomPainter {
       world.doorOpenFactor,
     );
 
-    // 6. Draw Stations (Chai Kettle, Serving Counter, Trash Bin)
+    // 6. Draw Stations (Chai Kettle, Paratha Tawa, Serving Counter, Trash Bin)
     SpriteRenderer.drawChaiStation(canvas, world.chaiStation);
+    SpriteRenderer.drawParathaStation(canvas, world.parathaStation);
     SpriteRenderer.drawServingCounter(canvas, world.counter);
     SpriteRenderer.drawTrashBin(canvas, world.trashBin);
 

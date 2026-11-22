@@ -247,11 +247,30 @@ Implement per-store reputation progression, dynamic customer scaling, goal check
    - Auto-saves on interval & app pause; restores exact state and customer rate on game restart.
 *Done when: Progress saves/loads seamlessly across restarts, HUD Trophy button displays live reputation bar & mission checklist, and reputation dynamically drives customer flow and difficulty.*
 
-### **M7 — Food Variety (Burger Grill / Samosa) & Audio Polish** *(Up Next)*
-Unlock additional food machines (Burger Grill / Samosa Fryer) with separate, dedicated food towers on the counter. Customers place mixed orders (`☕ + 🍔`). Add lively sound effects, sizzling audio, and haptic polish.
-*Done when: Multiple food types are brewed, stacked in distinct counter towers, and sold to customers.*
+### **M7 — Food Variety (Authentic Tawa Paratha) & Audio Polish** *(Completed)*
+Add authentic Pakistani Dhaba food variety with Tawa Paratha cooking station and sound/haptics:
+1. **Tawa Paratha Cooking Station**:
+   - In-place unlock ground pad (Rs 100) and upgrade curve (L1-L5, expanding shelf capacity from 6 to 14, and cook time from 1.6s to 0.60s).
+   - Hot cast iron Tawa with circular cook progress ring, sizzling butter/oil sparks, wooden handle, and aromatic rising steam.
+   - Output shelf tray holding crispy flaky golden Lachha Parathas on stainless steel plates.
+2. **Three-Part Counter Dedicated Food Towers**:
+   - Strictly separates food types into single-item towers: Chai cups on Chai towers (`☕ N`), and Paratha plates on dedicated Paratha towers (`🫓 N`).
+3. **Customer Mixed Orders & Dynamic Dining**:
+   - Customers can order Chai only, Paratha only (Rs 20 each), or Mixed Combos (`☕ xN 🫓 xM`).
+   - Counter order bubbles show combined items when at front of line.
+   - Customers ordering $\le 3$ Chai AND $\le 3$ Parathas sit at dining tables; bulk orders are takeaway.
+   - Eating duration scales dynamically with item count (`2.0s + total_items * 1.2s`).
+   - Seated diners display their actual meal (cup, plate, or side-by-side mixed meal) on table.
+   - Bigger tips for mixed orders (`Rs 40` mixed, `Rs 30` paratha, `Rs 25` chai), and timeout refund calculates exact cost of items received.
+4. **Autonomous Helper Restocking**:
+   - Helpers automatically fetch Parathas from Tawa or Chai from Kettle based on which counter tower has fewer items.
+5. **Audio & Haptic Feedback Polish**:
+   - Tactile feedback and audio hooks for cooking sizzle, pickup pour, cashier serve, coin vacuum, and purchases.
+6. **Multi-Store Persistence**:
+   - Saves & restores Paratha Station unlock state and upgrade level in SharedPreferences JSON.
+*Done when: Multiple authentic food types are cooked, stacked in distinct counter towers, sold to customers with mixed orders, and progress is saved.*
 
-### **M8 — Goals, Shop Completion Celebration & Reward Bonus**
+### **M8 — Goals, Shop Completion Celebration & Reward Bonus** *(Up Next)*
 Add full Goal/Mission completion system driven by HUD Reputation Bar and Objectives Sheet:
 1. **Shop Milestones & Level Objectives**: Clear targets to complete the level (tracked in the top HUD reputation bar & objectives sheet).
 2. **Level Complete Celebration**: Fireworks, confetti particle effects, and big reward bonus modal upon clearing all store objectives.
@@ -274,4 +293,4 @@ Add AdMob Rewarded Ads for instant boosts (Chai Rush 2x Speed, Free VIP Helper, 
 
 ## 7. Current Step
 
-Milestone **M6.1 — Per-Store Reputation System, Goals Overlay & Multi-Store Persistence** has been completed and fully verified with unit and simulation tests. Milestone **M7 — Food Variety (Burger Grill / Samosa) & Audio Polish** is up next upon user approval.
+Milestone **M7 — Food Variety (Authentic Tawa Paratha) & Audio Polish** has been completed and fully verified with unit and simulation tests. Milestone **M8 — Goals, Shop Completion Celebration & Reward Bonus** is up next upon user approval.
