@@ -185,8 +185,16 @@ class HudOverlay extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            // Row 2: Sleek Store Reputation Bar (Right under Header)
-            _buildReputationBar(context),
+            // Row 2: Sleek Store Reputation Bar (Centered with side spacing)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 360),
+                  child: _buildReputationBar(context),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -246,11 +254,11 @@ class HudOverlay extends StatelessWidget {
     return GestureDetector(
       onTap: onReputationTap,
       child: Container(
-        height: 32,
+        height: 28,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
         decoration: BoxDecoration(
           color: const Color(0xFF2C1E14).withValues(alpha: 0.88), // Sleek Dhaba dark glass
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isMax
                 ? AppTheme.goldYellow
@@ -269,23 +277,23 @@ class HudOverlay extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Left: Star Icon & Rating Level (1 to 5 Stars)
+            // Left: Title & Icon (REPUTATION)
             Row(
               mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.star_rounded,
+              children: const [
+                Icon(
+                  Icons.verified_rounded,
                   color: AppTheme.goldYellow,
-                  size: 18,
+                  size: 14,
                 ),
-                const SizedBox(width: 3),
+                SizedBox(width: 4),
                 Text(
-                  '★ $reputationLevel',
-                  style: const TextStyle(
-                    color: AppTheme.goldYellow,
+                  'REPUTATION',
+                  style: TextStyle(
+                    color: AppTheme.cream,
                     fontWeight: FontWeight.w900,
-                    fontSize: 12,
-                    letterSpacing: 0.2,
+                    fontSize: 10,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ],
@@ -299,10 +307,10 @@ class HudOverlay extends StatelessWidget {
                 children: [
                   // Track background
                   Container(
-                    height: 9,
+                    height: 8,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(5),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
 
@@ -317,7 +325,7 @@ class HudOverlay extends StatelessWidget {
                         duration: const Duration(milliseconds: 350),
                         curve: Curves.easeOutCubic,
                         width: fillWidth,
-                        height: 9,
+                        height: 8,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [
@@ -325,7 +333,7 @@ class HudOverlay extends StatelessWidget {
                               AppTheme.goldYellow,
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(5),
+                          borderRadius: BorderRadius.circular(4),
                           boxShadow: [
                             BoxShadow(
                               color: AppTheme.goldYellow.withValues(alpha: 0.5),
@@ -341,26 +349,15 @@ class HudOverlay extends StatelessWidget {
             ),
             const SizedBox(width: 8),
 
-            // Right: Single Clean Percentage Display & Trophy Icon
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  displayPercent,
-                  style: TextStyle(
-                    color: isMax ? AppTheme.goldYellow : Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 12,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Icon(
-                  Icons.emoji_events_rounded,
-                  color: AppTheme.goldYellow,
-                  size: 15,
-                ),
-              ],
+            // Right: Single Clean Percentage Display (No Trophy Icon)
+            Text(
+              displayPercent,
+              style: TextStyle(
+                color: isMax ? AppTheme.goldYellow : Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 11,
+                letterSpacing: 0.3,
+              ),
             ),
           ],
         ),
