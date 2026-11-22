@@ -51,6 +51,12 @@ class GameController extends ChangeNotifier {
       _triggerHaptic(HapticFeedback.lightImpact);
       notifyListeners();
     };
+
+    _world.onStoreMastered = () {
+      this.audioService.playMilestone();
+      saveGame();
+      notifyListeners();
+    };
   }
 
   Future<void> _initSave() async {
@@ -61,6 +67,15 @@ class GameController extends ChangeNotifier {
 
   Future<void> saveGame() async {
     await _saveService.saveStoreState(_world);
+  }
+
+  /// Claims the 100% store mastery reward bonus (₹1,000)
+  void claimMasteryReward() {
+    if (_world.claimMasteryReward()) {
+      audioService.playBuy();
+      saveGame();
+      notifyListeners();
+    }
   }
 
   SaveService get saveService => _saveService;

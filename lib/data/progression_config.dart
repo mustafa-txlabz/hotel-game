@@ -7,6 +7,7 @@ enum GoalType {
   hireWorkers,
   unlockTables,
   upgradeKettle,
+  unlockParatha,
   reachReputation,
   earnRevenue,
 }
@@ -103,6 +104,14 @@ class StoreProgressionConfig {
         type: GoalType.unlockTables,
         targetValue: 2,
         icon: '🪑',
+      ),
+      StoreGoal(
+        id: 'unlock_paratha',
+        title: 'Unlock Tawa Paratha',
+        description: 'Cook crispy golden parathas for customers',
+        type: GoalType.unlockParatha,
+        targetValue: 1,
+        icon: '🫓',
       ),
       StoreGoal(
         id: 'upgrade_kettle_5',

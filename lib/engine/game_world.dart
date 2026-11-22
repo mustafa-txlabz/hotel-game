@@ -74,6 +74,12 @@ class GameWorld {
   void Function(double amount)? onCashCollected;
   void Function(double amount)? onCashPoured;
   void Function()? onItemDiscarded;
+  void Function()? onStoreMastered;
+
+  // M8: Store Mastery Celebration & Reward Bonus
+  bool isStoreMasteredCelebrated;
+  bool isMasteryRewardClaimed;
+  double masteryRewardBonus;
 
   GameWorld({
     this.worldWidth = 900.0,
@@ -82,6 +88,9 @@ class GameWorld {
     double initialRupees = 0.0,
     double initialReputationPercent = 0.0,
     bool initialReputationLocked100 = false,
+    bool initialStoreMasteredCelebrated = false,
+    bool initialMasteryRewardClaimed = false,
+    this.masteryRewardBonus = 1000.0,
     Set<String>? initialCompletedMissions,
     StoreProgressionConfig? config,
     ChaiStation? station,
@@ -96,6 +105,8 @@ class GameWorld {
   }) : progressionConfig = config ?? StoreProgressionConfig.store1,
        _reputationPercent = initialReputationPercent,
        isReputationLocked100 = initialReputationLocked100,
+       isStoreMasteredCelebrated = initialStoreMasteredCelebrated,
+       isMasteryRewardClaimed = initialMasteryRewardClaimed,
        completedMissionIds = initialCompletedMissions ?? <String>{},
        player = PlayerEntity(startPosition: Vector2(450.0, 600.0)),
        chaiStation = station ?? ChaiStation(position: Vector2(260.0, 260.0)),
@@ -1069,6 +1080,9 @@ class GameWorld {
         case GoalType.upgradeKettle:
           isMet = chaiStation.level >= goal.targetValue;
           break;
+        case GoalType.unlockParatha:
+          isMet = parathaStation.isUnlocked;
+          break;
         case GoalType.reachReputation:
           isMet = reputationPercent >= goal.targetValue;
           break;
@@ -1087,6 +1101,36 @@ class GameWorld {
         );
       }
     }
+
+    // Check if store was fully mastered (100% reputation + all missions complete)
+    if (isStoreMastered && !isStoreMasteredCelebrated) {
+      isStoreMasteredCelebrated = true;
+      onStoreMastered?.call();
+      floatingTexts.add(
+        FloatingTextEntity(
+          position: Vector2(player.position.x, player.position.y - 60.0),
+          text: 'STORE MASTERED! 🏆🎉',
+        ),
+      );
+    }
+  }
+
+  /// Claims the big store mastery victory bonus (e.g. +Rs 1,000)
+  bool claimMasteryReward() {
+    if (isStoreMastered && !isMasteryRewardClaimed) {
+      isMasteryRewardClaimed = true;
+      rupees += masteryRewardBonus;
+      lifetimeRupees += masteryRewardBonus;
+      floatingTexts.add(
+        FloatingTextEntity(
+          position: Vector2(player.position.x, player.position.y - 45.0),
+          text: '+Rs ${masteryRewardBonus.toInt()} 🏆🎉',
+        ),
+      );
+      onCashCollected?.call(masteryRewardBonus);
+      return true;
+    }
+    return false;
   }
 
   bool _isTableClaimedByOther(int tableId, int currentWorkerId) {

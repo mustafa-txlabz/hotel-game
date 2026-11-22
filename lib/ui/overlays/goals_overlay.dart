@@ -161,6 +161,11 @@ class _GoalsOverlayState extends State<GoalsOverlay> {
                     // 2. Goals List
                     ...config.goals.map((goal) => _buildGoalCard(world, goal)),
 
+                    if (world.isStoreMastered) ...[
+                      const SizedBox(height: 8),
+                      _buildMasteryCelebrationCard(world),
+                    ],
+
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -292,6 +297,107 @@ class _GoalsOverlayState extends State<GoalsOverlay> {
     );
   }
 
+  Widget _buildMasteryCelebrationCard(dynamic world) {
+    final isClaimed = world.isMasteryRewardClaimed;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFE65100), Color(0xFFFF8F00)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE65100).withValues(alpha: 0.35),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const Text(
+            '🎉 STORE MASTERED! 🏆',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+              letterSpacing: 0.6,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${world.progressionConfig.storeName} has reached 100% 5-Star Glory! All goals complete.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (!isClaimed)
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.goldYellow,
+                foregroundColor: AppTheme.chaiDarkBrown,
+                elevation: 4,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              onPressed: () {
+                widget.controller.claimMasteryReward();
+                setState(() {});
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.stars_rounded, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'CLAIM ₹${world.masteryRewardBonus.toInt()} REWARD BONUS',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                  SizedBox(width: 6),
+                  Text(
+                    '₹1,000 BONUS CLAIMED ✅',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   String _getGoalProgress(dynamic world, StoreGoal goal) {
     switch (goal.type) {
       case GoalType.hireCashier:
@@ -302,6 +408,8 @@ class _GoalsOverlayState extends State<GoalsOverlay> {
         return '${world.unlockedTableCount}/${goal.targetValue}';
       case GoalType.upgradeKettle:
         return 'Lvl ${world.chaiStation.level}/${goal.targetValue}';
+      case GoalType.unlockParatha:
+        return world.parathaStation.isUnlocked ? '1/1' : '0/1';
       case GoalType.reachReputation:
         return '${world.reputationPercent.toInt()}%/${goal.targetValue}%';
       case GoalType.earnRevenue:

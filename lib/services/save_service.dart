@@ -53,6 +53,8 @@ class SaveService {
         'reputationPercent': world.reputationPercent,
         'isReputationLocked100': world.isReputationLocked100,
         'completedMissionIds': world.completedMissionIds.toList(),
+        'isStoreMasteredCelebrated': world.isStoreMasteredCelebrated,
+        'isMasteryRewardClaimed': world.isMasteryRewardClaimed,
         'kettleLevel': world.chaiStation.level,
         'parathaUnlocked': world.parathaStation.isUnlocked,
         'parathaLevel': world.parathaStation.level,
@@ -124,6 +126,15 @@ class SaveService {
         world.completedMissionIds
           ..clear()
           ..addAll(list.map((e) => e.toString()));
+      }
+
+      if (storeData.containsKey('isStoreMasteredCelebrated')) {
+        world.isStoreMasteredCelebrated =
+            storeData['isStoreMasteredCelebrated'] as bool;
+      }
+      if (storeData.containsKey('isMasteryRewardClaimed')) {
+        world.isMasteryRewardClaimed =
+            storeData['isMasteryRewardClaimed'] as bool;
       }
 
       // 4. Restore Kettle Level

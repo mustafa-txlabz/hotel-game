@@ -9,6 +9,7 @@ import '../overlays/goals_overlay.dart';
 import '../overlays/hr_upgrade_sheet.dart';
 import '../overlays/hud_overlay.dart';
 import '../overlays/joystick_widget.dart';
+import '../overlays/level_complete_dialog.dart';
 import 'world_painter.dart';
 
 /// Interactive game viewport with 60 FPS Ticker loop, smooth camera follow,
@@ -33,12 +34,22 @@ class _GameViewportState extends State<GameViewport>
   Offset? _joystickCurrent;
   int? _activePointerId;
   bool _hasMovedOnce = false;
+  bool _hasShownMasteryCelebration = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _ticker = createTicker(_onTick)..start();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final controller = Provider.of<GameController>(context, listen: false);
+    if (controller.world.isStoreMasteredCelebrated) {
+      _hasShownMasteryCelebration = true;
+    }
   }
 
   @override
@@ -79,6 +90,17 @@ class _GameViewportState extends State<GameViewport>
         GameBalance.cameraLerpFactor,
       )!;
     });
+
+    // 3. Trigger Store Mastery Victory Celebration (M8)
+    if (controller.world.isStoreMastered && !_hasShownMasteryCelebration) {
+      _hasShownMasteryCelebration = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _resetJoystick();
+          LevelCompleteDialog.show(context, controller);
+        }
+      });
+    }
   }
 
   void _handlePointerDown(PointerDownEvent event) {

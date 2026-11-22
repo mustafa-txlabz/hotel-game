@@ -270,13 +270,14 @@ Add authentic Pakistani Dhaba food variety with Tawa Paratha cooking station and
    - Saves & restores Paratha Station unlock state and upgrade level in SharedPreferences JSON.
 *Done when: Multiple authentic food types are cooked, stacked in distinct counter towers, sold to customers with mixed orders, and progress is saved.*
 
-### **M8 — Goals, Shop Completion Celebration & Reward Bonus** *(Up Next)*
+### **M8 — Goals, Shop Completion Celebration & Reward Bonus** *(Completed)*
 Add full Goal/Mission completion system driven by HUD Reputation Bar and Objectives Sheet:
-1. **Shop Milestones & Level Objectives**: Clear targets to complete the level (tracked in the top HUD reputation bar & objectives sheet).
-2. **Level Complete Celebration**: Fireworks, confetti particle effects, and big reward bonus modal upon clearing all store objectives.
+1. **Shop Milestones & Level Objectives**: Clear 6-goal target checklist (Hire Cashier, Hire 3 Workers, Unlock 2 Dining Tables, Unlock Tawa Paratha, Master Kadak Kettle, 100% Reputation).
+2. **Level Complete Celebration**: Fireworks, confetti particle system (`ConfettiOverlay`), sound effects, and celebratory modal (`LevelCompleteDialog`) with pulsing golden trophy upon clearing all store objectives.
+3. **Big Victory Reward Bonus**: Player can claim a ₹1,000 victory reward bonus with coin collection sounds, floating text, and SharedPreferences persistence.
 *Done when: Completing all store goals triggers level-complete victory celebration with bonus rewards.*
 
-### **M9 — Multi-Town Location Travel & Vibrant Store Architecture (Burger Please Theme)**
+### **M9 — Multi-Town Location Travel & Vibrant Store Architecture (Burger Please Theme)** *(Up Next)*
 Unlock new locations and implement vibrant, multi-colored store/room aesthetics:
 1. **Multi-Town Location Travel**: Pack up earnings and travel to next city/town locations (Store 2: City Food Street, Store 3: Mall Bistro) with new layouts and higher profits.
 2. **Vibrant Burger Please Architectural & Color Palette**:
@@ -293,4 +294,4 @@ Add AdMob Rewarded Ads for instant boosts (Chai Rush 2x Speed, Free VIP Helper, 
 
 ## 7. Current Step
 
-Milestone **M7 — Food Variety (Authentic Tawa Paratha) & Audio Polish** has been completed and fully verified with unit and simulation tests. Milestone **M8 — Goals, Shop Completion Celebration & Reward Bonus** is up next upon user approval.
+Milestone **M8 — Goals, Shop Completion Celebration & Reward Bonus** has been completed and fully verified with unit and simulation tests. Milestone **M9 — Multi-Town Location Travel & Vibrant Store Architecture (Burger Please Theme)** is up next upon user approval.
