@@ -21,6 +21,10 @@ class AdIds {
   static const String testAppIdAndroid =
       'ca-app-pub-3940256099942544~3347511713';
 
+  /// Official Google Sample Banner Ad Unit ID
+  static const String testBannerAdUnitIdAndroid =
+      'ca-app-pub-3940256099942544/6300978111';
+
   /// Official Google Sample Rewarded Video Ad Unit ID
   static const String testRewardedAdUnitIdAndroid =
       'ca-app-pub-3940256099942544/5224354917';
@@ -35,6 +39,10 @@ class AdIds {
   /// Replace with your actual AdMob Application ID from AdMob Console
   static const String realAppIdAndroid = 'YOUR_REAL_ADMOB_APP_ID_HERE';
 
+  /// Replace with your actual Banner Ad Unit ID from AdMob Console
+  static const String realBannerAdUnitIdAndroid =
+      'YOUR_REAL_BANNER_AD_UNIT_ID_HERE';
+
   /// Replace with your actual Rewarded Video Ad Unit ID from AdMob Console
   static const String realRewardedAdUnitIdAndroid =
       'YOUR_REAL_REWARDED_AD_UNIT_ID_HERE';
@@ -46,6 +54,14 @@ class AdIds {
   // ===========================================================================
   // ACTIVE GETTERS (AUTOMATICALLY ROUTE TEST VS REAL)
   // ===========================================================================
+  /// Active Banner Ad Unit ID
+  static String get bannerAdUnitId {
+    if (useTestAds) {
+      return testBannerAdUnitIdAndroid;
+    }
+    return realBannerAdUnitIdAndroid;
+  }
+
   /// Active Rewarded Video Ad Unit ID
   static String get rewardedAdUnitId {
     if (useTestAds) {

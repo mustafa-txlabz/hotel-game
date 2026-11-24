@@ -44,7 +44,7 @@ Read this whole file before writing any code. Follow the milestones in order.
 > 
 > **4. How to switch from Test Ads to Live AdMob before release:**
 > - In `android/app/src/main/AndroidManifest.xml`, replace the test App ID with your real AdMob App ID.
-> - In `lib/services/ad_ids.dart`, set `useTestAds = false` and paste your real Rewarded and Interstitial Ad Unit IDs.
+> - In `lib/services/ad_ids.dart`, set `useTestAds = false` and paste your real Banner, Rewarded, and Interstitial Ad Unit IDs.
 > - Configure release keystore signing in `android/key.properties` (as guided in Milestone M8).
 
 ---
@@ -339,11 +339,12 @@ Build the game's launch presentation and primary entry menu matching the dhaba c
    - Automatically initializes save state, sound services, and transitions seamlessly to Home Screen.
 2. **Clean Minimalist Main Menu Home Screen**:
    - Bold 3D cartoon game title (*Dhaba Tycoon: Arcade Idle*) with app icon badge.
-   - Centered clean layout: Big glowing **PLAY** button in the center, and directly below it the **MAP** button.
+   - Centered clean layout: Big glowing **PLAY** button in the center, and directly below it the **MAP** button, lifted slightly to accommodate bottom banner ad.
    - Top-right settings shortcut button.
    - Completely removed store progression card and global currency headers (clean, uncluttered mobile arcade style).
+   - **AdMob Banner Ad**: Anchored at the bottom (320x50 `AdSize.banner`) with 45s auto-refresh timer, background pause/resume lifecycle observer, and safe fallback.
    - **Per-Store Isolated Economy**: Both cash (₹) and gems (💎) are strictly stored and tracked per individual store so every store starts completely fresh!
-*Done when: Launching the app shows the animated splash with custom icon & loading bar, transitions to the clean Home Screen with central Play and Map buttons, and tapping Play starts the game arena.*
+*Done when: Launching the app shows the animated splash with custom icon & loading bar, transitions to the clean Home Screen with central Play and Map buttons, bottom banner ad with 45s refresh, and tapping Play starts the game arena.*
 
 ### **M12 — Settings Modal & Audio/Haptics Controls** *(Pending)*
 Add fully functional Settings modal accessible from both the Home Screen and in-game HUD:

@@ -7,9 +7,15 @@ import 'package:chai_dhaba_empire/state/game_controller.dart';
 import 'package:chai_dhaba_empire/ui/game/game_viewport.dart';
 import 'package:chai_dhaba_empire/ui/screens/home_screen.dart';
 import 'package:chai_dhaba_empire/ui/screens/splash_screen.dart';
+import 'package:chai_dhaba_empire/ui/widgets/banner_ad_widget.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    BannerAdWidget.testMode = true;
+    BannerAdWidget.testMockLoaded = true;
+  });
 
   group('SplashScreen Tests (M11)', () {
     testWidgets('SplashScreen renders title, app icon, progress bar, and quotes', (
@@ -84,10 +90,11 @@ void main() {
       expect(find.text(AppStrings.appTitle.toUpperCase()), findsOneWidget);
       expect(find.text('ARCADE IDLE TYCOON'), findsOneWidget);
 
-      // Verify Clean Main Action Buttons
+      // Verify Clean Main Action Buttons & Bottom Banner Ad
       expect(find.text('PLAY'), findsOneWidget);
       expect(find.text('MAP'), findsOneWidget);
       expect(find.byIcon(Icons.settings_rounded), findsOneWidget);
+      expect(find.byType(BannerAdWidget), findsOneWidget);
 
       // Verify no store progression or currency clutter on home screen
       expect(find.text('Highway Kadak Dhaba'), findsNothing);

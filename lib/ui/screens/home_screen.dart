@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/strings.dart';
 import '../../core/theme.dart';
 import '../game/game_viewport.dart';
+import '../widgets/banner_ad_widget.dart';
 
 /// Clean, punchy Main Menu / Home Screen for Dhaba Tycoon Empire.
 /// Features central PLAY button and MAP button with game branding.
@@ -220,17 +221,17 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
 
-                    const Spacer(flex: 3),
+                    const Spacer(flex: 2),
 
-                    // Big Juicy Green PLAY Button
+                    // Big Juicy Green PLAY Button (lifted higher for bottom banner)
                     _buildPlayButton(context),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
                     // Amber/Gold MAP Button
                     _buildMapButton(context),
 
-                    const Spacer(flex: 2),
+                    const Spacer(flex: 1),
 
                     // Version Footer
                     const Text(
@@ -241,7 +242,11 @@ class HomeScreen extends StatelessWidget {
                         letterSpacing: 0.5,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
+
+                    // AdMob Banner Ad (320x50 with auto-refresh every 45s)
+                    const BannerAdWidget(),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
