@@ -234,7 +234,7 @@ class _GameViewportState extends State<GameViewport>
             showTutorial: !_hasMovedOnce,
           ),
 
-          // 4. Left-Side Action Badges (HR & Upgrades, Goals, Settings)
+          // 4. Left-Side Action Badges (Home, HR & Upgrades, Goals, Settings)
           Positioned(
             left: 16,
             top: 0,
@@ -243,6 +243,16 @@ class _GameViewportState extends State<GameViewport>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  _buildGlassIconButton(
+                    icon: Icons.home_rounded,
+                    iconColor: AppTheme.cream,
+                    tooltip: 'Home Menu',
+                    onTap: () {
+                      _resetJoystick();
+                      Navigator.of(context).maybePop();
+                    },
+                  ),
+                  const SizedBox(height: 14),
                   _buildGlassIconButton(
                     icon: Icons.assignment_ind_rounded,
                     iconColor: AppTheme.goldYellow,

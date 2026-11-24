@@ -7,7 +7,7 @@ void main() {
   testWidgets('Arcade Viewport Smoke Test: renders canvas and handles touch', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const ChaiDhabaEmpireApp());
+    await tester.pumpWidget(const ChaiDhabaEmpireApp(home: GameViewport()));
     await tester.pump();
 
     // Verify viewport and HUD title
@@ -29,7 +29,7 @@ void main() {
   testWidgets('Tapping on HR button opens HR sheet without spawning joystick', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const ChaiDhabaEmpireApp());
+    await tester.pumpWidget(const ChaiDhabaEmpireApp(home: GameViewport()));
     await tester.pump();
 
     final hrButton = find.byTooltip('HR & Upgrades');
@@ -45,7 +45,7 @@ void main() {
   testWidgets('Tapping on Goals button opens Goals sheet without spawning joystick', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const ChaiDhabaEmpireApp());
+    await tester.pumpWidget(const ChaiDhabaEmpireApp(home: GameViewport()));
     await tester.pump();
 
     final goalsButton = find.byTooltip('Goals & Expansion');

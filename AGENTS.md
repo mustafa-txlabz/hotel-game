@@ -328,17 +328,57 @@ Add two-way moving VVIP luxury cars on GT Road, curbside bulk orders, solid car 
    - Natural automatic timer spawns a VVIP car every 3–4 minutes (180s–240s) during normal gameplay.
 *Done when: Two-way cars arrive at the curb with horn/brakes and camera glance, player loads 30+ items at curbside with solid collision, and earns 3 Gems with full save persistence.*
 
-### **Phase 2 (Milestone M11+) — Multi-Town Location Travel & Store 2 Expansion**
-Unlock new locations and implement vibrant, multi-colored store/room aesthetics:
-1. **Multi-Town Location Travel**: Pack up earnings and travel to next city/town locations (Store 2: City Food Street, Store 3: Mall Bistro) with new layouts and higher profits.
-2. **Vibrant Burger Please Architectural & Color Palette**:
-   - Distinct colorful themed zones/cabins/rooms (Dining Hall, VIP Lounge, Drive-Thru/Takeaway, Kitchen), each with its own signature vibrant wall trims, floor tiles, and room accents.
-   - Colorful machines, themed counters, vibrant custom chairs, and dining tables matching each room's aesthetic.
-   - High-contrast, hyper-polished mobile arcade tycoon visual appeal and intuitive UX.
-3. **Map & Store Selection Screen**: Travel map connecting Highway Kadak Dhaba to City Food Street.
+### **Phase 2 (Milestones M11–M14) — Franchise Empire, Map, Settings & Store 2 Expansion**
+
+### **M11 — Splash / Loading Screen & Main Menu Home Screen** *(Completed)*
+Build the game's launch presentation and primary entry menu matching the dhaba cartoon art style:
+1. **Animated Splash / Loading Screen**:
+   - Uses the custom designed app icon (`assets/icon/app_icon_512.png`) centered with a warm golden glow.
+   - Deep rich Chai-brown backdrop with stylized subtle pattern.
+   - Smooth animated loading progress bar (0% to 100%) with randomized dhaba loading quotes:
+     - *"Kadak Chai ubaal rahe hain... ☕"*
+     - *"Tawa garam ho raha hai... 🫓"*
+     - *"Gup shup aur karahi tayyar hai... 🔥"*
+     - *"Dhaba khul raha hai... ✨"*
+   - Automatically initializes save state, sound services, and transitions seamlessly to Home Screen.
+2. **Main Menu Home Screen (Title Screen)**:
+   - Bold 3D cartoon game title (*Dhaba Tycoon: Arcade Idle*) with steam & sparkling gold badge.
+   - Active store status card (showing current store name, wallet balance ₹, and global gems 💎).
+   - Big pulsating green **"▶ PLAY / RESUME"** button with haptic tap to launch directly into the dhaba arena.
+   - **"🗺️ LOCATIONS / MAP"** button (navigates to city map selector).
+   - **"⚙️ SETTINGS"** modal button.
+*Done when: Launching the app shows the animated splash with custom icon & loading bar, transitions to the polished Home Screen, and tapping Play starts the game arena.*
+
+### **M12 — Settings Modal & Audio/Haptics Controls** *(Pending)*
+Add fully functional Settings modal accessible from both the Home Screen and in-game HUD:
+1. Sound FX toggle (Mute / Unmute) with live persistence.
+2. Haptic Feedback toggle (Vibration On / Off).
+3. Game version, credits, and support info.
+*Done when: Settings button opens modal on both Home Screen and HUD, and toggling options persists across game restarts.*
+
+### **M13 — Interactive City Travel Map Screen** *(Pending)*
+Add visual franchise travel map connecting Dhaba locations:
+1. Visual route map displaying:
+   - 📍 **Store 1: Highway Kadak Dhaba (GT Road)** — [Active / Mastered]
+   - 📍 **Store 2: City Food Street (Karachi Burns Road / Lahore Anarkali Theme)** — Unlocks via Store 1 mastery or milestone!
+   - 📍 **Store 3: Mega Mall Rooftop Bistro** — [Locked preview]
+2. Store information card: completion stars, reputation percentage, store wallet, and "TRAVEL" button with car journey transition.
+*Done when: Player can view city travel map, inspect stores, and travel between unlocked locations.*
+
+### **M14 — Store 2 Expansion: City Food Street Dhaba** *(Pending)*
+Build the second major dhaba location with multi-room layout and new food variety:
+1. **Multi-Room *Burger Please!* Vibrant Aesthetic**:
+   - **Kitchen Area**: Commercial tiled floor and stainless steel counters.
+   - **Main Dining Hall**: Cozy terracotta/wood tiles, booths, pendant lamps.
+   - **VIP Lounge**: Luxury red carpet, golden rope dividers, executive round tables.
+2. **New Food Station**:
+   - Authentic **Bun Kabab / Dhaba Burger Grill** cooking station + Chai Kettle.
+3. **Multi-Store Shared Economy**:
+   - Shared global Gems (💎) across all stores, with independent store wallet (₹) and equipment levels.
+*Done when: Player can manage Store 2 with multi-room layout, cook bun kababs, serve urban customers, and earn shared gems.*
 
 ---
 
 ## 7. Current Step
 
-Milestone **M10 — VVIP Curbside Car Delivery & Gems Economy** is completed and verified with 0 analyzer issues and all 135 unit & simulation tests passing. Phase 2 (Milestone M11+: Multi-Town Travel, Store 2, Map & Settings) is next when the owner is ready.
+Phase 2 is underway! Milestone **M11 — Splash / Loading Screen & Main Menu Home Screen** is completed and verified with 0 analyzer issues and all 143 tests passing. Next milestone: **M12 — Settings Modal & Audio/Haptics Controls**.

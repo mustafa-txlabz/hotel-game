@@ -4,11 +4,13 @@ import 'package:provider/provider.dart';
 import 'core/strings.dart';
 import 'core/theme.dart';
 import 'state/game_controller.dart';
-import 'ui/game/game_viewport.dart';
+import 'ui/screens/splash_screen.dart';
 
 /// Root game application widget.
 class ChaiDhabaEmpireApp extends StatelessWidget {
-  const ChaiDhabaEmpireApp({super.key});
+  final Widget? home;
+
+  const ChaiDhabaEmpireApp({super.key, this.home});
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +20,7 @@ class ChaiDhabaEmpireApp extends StatelessWidget {
         title: AppStrings.appTitle,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const GameViewport(),
+        home: home ?? const SplashScreen(),
       ),
     );
   }
