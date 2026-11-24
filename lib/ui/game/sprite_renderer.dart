@@ -2444,10 +2444,7 @@ class SpriteRenderer {
       whiteLine,
     );
 
-    // Directional Painted Road Arrows on asphalt
-    _drawRoadArrow(canvas, 270.0, asphaltTop + 100.0, pointingEast: true);
-    _drawRoadArrow(canvas, 640.0, asphaltTop + 255.0, pointingEast: false);
-
+    // Note: Directional road arrows removed per user feedback for clean two-way GT Highway
     // Note: Vehicles (truck, rickshaw) temporarily removed per user request for empty highway
 
     // 7. Far Roadside Verge & Greenery (y: 1660.0 to 1850.0)
@@ -2580,30 +2577,6 @@ class SpriteRenderer {
 
     final lanternPaint = Paint()..color = AppTheme.goldYellow;
     canvas.drawCircle(Offset(cx - 22, cy - 30), 5.0, lanternPaint);
-  }
-
-  static void _drawRoadArrow(
-    Canvas canvas,
-    double cx,
-    double cy, {
-    required bool pointingEast,
-  }) {
-    final arrowPaint = Paint()..color = const Color(0xAAFFFFFF);
-    final dir = pointingEast ? 1.0 : -1.0;
-
-    final shaft = Rect.fromCenter(
-      center: Offset(cx - dir * 8.0, cy),
-      width: 28.0,
-      height: 4.5,
-    );
-    canvas.drawRect(shaft, arrowPaint);
-
-    final headPath = Path()
-      ..moveTo(cx + dir * 16.0, cy)
-      ..lineTo(cx + dir * 4.0, cy - 8.0)
-      ..lineTo(cx + dir * 4.0, cy + 8.0)
-      ..close();
-    canvas.drawPath(headPath, arrowPaint);
   }
 
   /// Draws an authentic Pakistani Bedford Truck with traditional truck art.

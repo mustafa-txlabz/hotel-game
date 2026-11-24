@@ -64,10 +64,20 @@ class GameController extends ChangeNotifier {
       notifyListeners();
     };
 
+    _world.onDoorOpened = () {
+      this.audioService.playDoorSlide();
+      notifyListeners();
+    };
+
     _world.onVipCarArrived = (car) {
       this.audioService.playCarHorn();
-      this.audioService.playCarBrake();
       _triggerHaptic(HapticFeedback.heavyImpact);
+      notifyListeners();
+    };
+
+    _world.onVipCarParked = (car) {
+      this.audioService.playCarBrake();
+      _triggerHaptic(HapticFeedback.mediumImpact);
       notifyListeners();
     };
 

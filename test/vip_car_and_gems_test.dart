@@ -231,4 +231,43 @@ void main() {
       expect(find.text('Rs 2.50K'), findsOneWidget);
     });
   });
+
+  group('Automatic Sliding Doors & Audio Polish Tests', () {
+    test('Automatic door triggers onDoorOpened callback with pneumatic hiss', () {
+      final world = GameWorld();
+      bool doorOpenedFired = false;
+      world.onDoorOpened = () {
+        doorOpenedFired = true;
+      };
+
+      // Player approaches south entrance door (doorCenter is (450, 1200))
+      world.player.position.x = 450.0;
+      world.player.position.y = 1180.0;
+
+      // Tick world to trigger sensor and door opening
+      world.tick(0.05);
+
+      expect(world.doorOpenFactor, greaterThan(0.08));
+      expect(doorOpenedFired, isTrue);
+    });
+
+    test('VIP car parking triggers onVipCarParked callback for brake screech', () {
+      final world = GameWorld();
+      bool carParkedFired = false;
+      world.onVipCarParked = (car) {
+        carParkedFired = true;
+      };
+
+      world.spawnVipCar();
+      final car = world.activeVipCar!;
+      // Place car right before park position
+      car.position.x = 445.0;
+
+      // Tick simulation to park car at curb
+      world.tick(0.1);
+
+      expect(car.state, CarState.parkedWaitingOrder);
+      expect(carParkedFired, isTrue);
+    });
+  });
 }

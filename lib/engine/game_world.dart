@@ -78,6 +78,9 @@ class GameWorld {
   void Function(double amount)? onCashPoured;
   void Function()? onItemDiscarded;
   void Function()? onStoreMastered;
+  void Function()? onDoorOpened;
+  void Function()? onDoorClosed;
+  double _prevDoorOpenFactor = 0.0;
 
   // M8: Store Mastery Celebration & Reward Bonus
   bool isStoreMasteredCelebrated;
@@ -130,6 +133,7 @@ class GameWorld {
 
   // Callbacks for VVIP Car
   void Function(VipCar car)? onVipCarArrived;
+  void Function(VipCar car)? onVipCarParked;
   void Function(VipCar car)? onVipCarCompleted;
   void Function(VipCar car)? onVipCarLeftUnhappy;
 
@@ -425,9 +429,15 @@ class GameWorld {
 
     final targetDoorFactor = isSomeoneNearDoor ? 1.0 : 0.0;
     final lerpSpeed = isSomeoneNearDoor ? 8.0 : 4.5;
+    final wasDoorClosed = _prevDoorOpenFactor <= 0.05;
     doorOpenFactor +=
         (targetDoorFactor - doorOpenFactor) * (dt * lerpSpeed).clamp(0.0, 1.0);
     doorOpenFactor = doorOpenFactor.clamp(0.0, 1.0);
+
+    if (wasDoorClosed && doorOpenFactor > 0.08) {
+      onDoorOpened?.call();
+    }
+    _prevDoorOpenFactor = doorOpenFactor;
 
     // 3. Collision against perimeter boundary walls
     _clampPlayerToWorldBounds();
@@ -1560,7 +1570,12 @@ class GameWorld {
     // 2. Active VIP car update
     final car = activeVipCar;
     if (car != null) {
+      final wasDrivingIn = car.state == CarState.drivingIn;
       car.update(dt);
+
+      if (wasDrivingIn && car.state == CarState.parkedWaitingOrder) {
+        onVipCarParked?.call(car);
+      }
 
       if (car.state == CarState.parkedWaitingOrder) {
         _checkVipCarCurbsideLoading();
