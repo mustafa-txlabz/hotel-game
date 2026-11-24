@@ -346,12 +346,24 @@ Build the game's launch presentation and primary entry menu matching the dhaba c
    - **Per-Store Isolated Economy**: Both cash (₹) and gems (💎) are strictly stored and tracked per individual store so every store starts completely fresh!
 *Done when: Launching the app shows the animated splash with custom icon & loading bar, transitions to the clean Home Screen with central Play and Map buttons, bottom banner ad with 45s refresh, and tapping Play starts the game arena.*
 
-### **M12 — Settings Modal & Audio/Haptics Controls** *(Pending)*
+### **M12 — Settings Modal & Audio/Haptics Controls** *(Completed)*
 Add fully functional Settings modal accessible from both the Home Screen and in-game HUD:
-1. Sound FX toggle (Mute / Unmute) with live persistence.
-2. Haptic Feedback toggle (Vibration On / Off).
-3. Game version, credits, and support info.
-*Done when: Settings button opens modal on both Home Screen and HUD, and toggling options persists across game restarts.*
+1. **Sound FX & Haptics Toggles with SharedPreferences Persistence**:
+   - Sound FX toggle (Mute / Unmute) with live persistence.
+   - Haptic Feedback toggle (Vibration On / Off) with tactile feedback.
+2. **Legal & Compliance (# URLs for Vercel Deployment)**:
+   - Privacy Policy, Terms of Use, and Help & Player Support linked to `#` via `lib/services/legal_links.dart`.
+   - In-app interactive bottom sheets providing full disclosures and bullet summaries.
+   - Standalone deployment-ready HTML files in `web_legal/`:
+     - `web_legal/privacy-policy.html` (Google Play & AdMob compliant).
+     - `web_legal/terms-of-service.html` (In-game virtual economy and gameplay license).
+     - `web_legal/support.html` (FAQ and support email contact).
+     - `web_legal/index.html` (Legal Hub landing page).
+     - `web_legal/vercel.json` (Vercel clean routing configuration).
+3. **Game Info & Danger Zone Reset**:
+   - Version `v1.0.0 (Build 1)`, package identifier, and developer attribution.
+   - Reset Game Progress button with double confirmation dialog to reset store to Level 1.
+*Done when: Settings button opens modal on both Home Screen and HUD, toggles persist across game restarts, legal links show # modal sheets, and standalone HTML files are prepared in web_legal/.*
 
 ### **M13 — Interactive City Travel Map Screen** *(Pending)*
 Add visual franchise travel map connecting Dhaba locations:
@@ -378,4 +390,4 @@ Build the second major dhaba location with multi-room layout and new food variet
 
 ## 7. Current Step
 
-Phase 2 is underway! Milestone **M11 — Splash / Loading Screen & Main Menu Home Screen** is completed and verified with 0 analyzer issues and all 143 tests passing. Next milestone: **M12 — Settings Modal & Audio/Haptics Controls**.
+Phase 2 is underway! Milestone **M12 — Settings Modal & Audio/Haptics Controls** is completed and verified with 0 analyzer issues and all 158 tests passing. Next milestone: **M13 — Interactive City Travel Map Screen**.

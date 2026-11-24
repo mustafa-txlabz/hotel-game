@@ -8,11 +8,45 @@ import '../engine/game_world.dart';
 class SaveService {
   static const String saveKey = 'dhaba_save_v1';
   static const String corruptSaveKey = 'dhaba_save_v1_corrupt';
+  static const String soundEnabledKey = 'setting_sound_enabled';
+  static const String hapticsEnabledKey = 'setting_haptics_enabled';
 
   SharedPreferences? _prefs;
 
   Future<void> init() async {
     _prefs ??= await SharedPreferences.getInstance();
+  }
+
+  /// Saves the sound enabled preference.
+  Future<bool> saveSoundEnabled(bool enabled) async {
+    await init();
+    return await _prefs?.setBool(soundEnabledKey, enabled) ?? false;
+  }
+
+  /// Loads the sound enabled preference (default true).
+  Future<bool> loadSoundEnabled({bool defaultValue = true}) async {
+    await init();
+    return _prefs?.getBool(soundEnabledKey) ?? defaultValue;
+  }
+
+  /// Saves the haptics enabled preference.
+  Future<bool> saveHapticsEnabled(bool enabled) async {
+    await init();
+    return await _prefs?.setBool(hapticsEnabledKey, enabled) ?? false;
+  }
+
+  /// Loads the haptics enabled preference (default true).
+  Future<bool> loadHapticsEnabled({bool defaultValue = true}) async {
+    await init();
+    return _prefs?.getBool(hapticsEnabledKey) ?? defaultValue;
+  }
+
+  /// Clears all game and settings data (complete fresh reset).
+  Future<bool> clearAllData() async {
+    await init();
+    await _prefs?.remove(soundEnabledKey);
+    await _prefs?.remove(hapticsEnabledKey);
+    return await _prefs?.remove(saveKey) ?? false;
   }
 
   /// Saves the current store state into SharedPreferences.

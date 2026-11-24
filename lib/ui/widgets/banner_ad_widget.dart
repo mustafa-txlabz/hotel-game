@@ -109,6 +109,7 @@ class BannerAdWidgetState extends State<BannerAdWidget>
   }
 
   void _startRefreshTimer() {
+    if (BannerAdWidget.testMode) return;
     _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(widget.refreshInterval, (_) {
       if (_isAppActive && mounted) {

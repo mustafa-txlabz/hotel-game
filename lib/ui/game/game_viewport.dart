@@ -11,6 +11,7 @@ import '../overlays/hr_upgrade_sheet.dart';
 import '../overlays/hud_overlay.dart';
 import '../overlays/joystick_widget.dart';
 import '../overlays/level_complete_dialog.dart';
+import '../overlays/settings_dialog.dart';
 import 'world_painter.dart';
 
 /// Interactive game viewport with 60 FPS Ticker loop, smooth camera follow,
@@ -279,23 +280,7 @@ class _GameViewportState extends State<GameViewport>
                     tooltip: 'Settings',
                     onTap: () {
                       _resetJoystick();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text(
-                            'Settings coming soon! ⚙️',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          backgroundColor: AppTheme.chaiDarkBrown,
-                          behavior: SnackBarBehavior.floating,
-                          duration: const Duration(seconds: 2),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      );
+                      SettingsDialog.show(context, controller);
                     },
                   ),
                   const SizedBox(height: 14),

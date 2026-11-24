@@ -1,9 +1,12 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/strings.dart';
 import '../../core/theme.dart';
+import '../../state/game_controller.dart';
 import '../game/game_viewport.dart';
+import '../overlays/settings_dialog.dart';
 import '../widgets/banner_ad_widget.dart';
 
 /// Clean, punchy Main Menu / Home Screen for Dhaba Tycoon Empire.
@@ -44,23 +47,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _openSettings(BuildContext context) async {
     HapticFeedback.selectionClick();
-    await ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          '⚙️ Settings modal coming in M12!',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: const Color(0xFF2E170A),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    ).closed;
+    final controller = Provider.of<GameController>(context, listen: false);
+    await SettingsDialog.show(context, controller);
     _bannerKey.currentState?.refreshAd();
   }
 
