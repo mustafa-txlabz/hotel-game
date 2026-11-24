@@ -168,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Spacer(flex: 2),
+                          const Spacer(flex: 3),
 
                           // App Logo Icon with warm gold glow
                           Container(
@@ -260,7 +260,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
 
-                          const Spacer(flex: 2),
+                          // Compact gap: lifts PLAY & MAP buttons closer to badge
+                          const Spacer(flex: 1),
 
                           // Big Juicy Green PLAY Button (lifted higher)
                           _buildPlayButton(context),
@@ -270,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           // Amber/Gold MAP Button
                           _buildMapButton(context),
 
-                          const Spacer(flex: 1),
+                          const Spacer(flex: 2),
 
                           // Version Footer
                           const Text(
