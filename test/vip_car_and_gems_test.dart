@@ -251,6 +251,27 @@ void main() {
       expect(doorOpenedFired, isTrue);
     });
 
+    test('Automatic door triggers onDoorClosed callback when player moves away', () {
+      final world = GameWorld();
+      bool doorClosedFired = false;
+      world.onDoorClosed = () {
+        doorClosedFired = true;
+      };
+
+      // 1. Player approaches door to open it
+      world.player.position.x = 450.0;
+      world.player.position.y = 1180.0;
+      world.tick(0.2);
+      expect(world.doorOpenFactor, greaterThan(0.5));
+
+      // 2. Player moves away inside dhaba
+      world.player.position.x = 450.0;
+      world.player.position.y = 800.0;
+      world.tick(0.05);
+
+      expect(doorClosedFired, isTrue);
+    });
+
     test('VIP car parking triggers onVipCarParked callback for brake screech', () {
       final world = GameWorld();
       bool carParkedFired = false;

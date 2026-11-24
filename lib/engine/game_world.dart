@@ -80,7 +80,7 @@ class GameWorld {
   void Function()? onStoreMastered;
   void Function()? onDoorOpened;
   void Function()? onDoorClosed;
-  double _prevDoorOpenFactor = 0.0;
+  bool _isDoorCurrentlyOpening = false;
 
   // M8: Store Mastery Celebration & Reward Bonus
   bool isStoreMasteredCelebrated;
@@ -429,15 +429,21 @@ class GameWorld {
 
     final targetDoorFactor = isSomeoneNearDoor ? 1.0 : 0.0;
     final lerpSpeed = isSomeoneNearDoor ? 8.0 : 4.5;
-    final wasDoorClosed = _prevDoorOpenFactor <= 0.05;
     doorOpenFactor +=
         (targetDoorFactor - doorOpenFactor) * (dt * lerpSpeed).clamp(0.0, 1.0);
     doorOpenFactor = doorOpenFactor.clamp(0.0, 1.0);
 
-    if (wasDoorClosed && doorOpenFactor > 0.08) {
-      onDoorOpened?.call();
+    if (isSomeoneNearDoor) {
+      if (!_isDoorCurrentlyOpening) {
+        _isDoorCurrentlyOpening = true;
+        onDoorOpened?.call();
+      }
+    } else {
+      if (_isDoorCurrentlyOpening && doorOpenFactor > 0.15) {
+        _isDoorCurrentlyOpening = false;
+        onDoorClosed?.call();
+      }
     }
-    _prevDoorOpenFactor = doorOpenFactor;
 
     // 3. Collision against perimeter boundary walls
     _clampPlayerToWorldBounds();

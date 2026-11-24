@@ -65,7 +65,12 @@ class GameController extends ChangeNotifier {
     };
 
     _world.onDoorOpened = () {
-      this.audioService.playDoorSlide();
+      this.audioService.playDoorOpen();
+      notifyListeners();
+    };
+
+    _world.onDoorClosed = () {
+      this.audioService.playDoorClose();
       notifyListeners();
     };
 

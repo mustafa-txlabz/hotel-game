@@ -6,7 +6,8 @@ class AudioService {
   bool isMuted = false;
   AudioPlayer? _hornPlayer;
   AudioPlayer? _brakePlayer;
-  AudioPlayer? _doorPlayer;
+  AudioPlayer? _doorOpenPlayer;
+  AudioPlayer? _doorClosePlayer;
 
   void playTap() {
     if (isMuted) return;
@@ -81,19 +82,33 @@ class AudioService {
     } catch (_) {}
   }
 
-  /// Pneumatic / hydraulic automatic sliding doors "wiss / pssshhh" gas release sound
-  void playDoorSlide() {
+  /// Sleek modern automatic sliding door opening sound (servo motor glide + air whoosh)
+  void playDoorOpen() {
     if (isMuted) return;
     try {
       HapticFeedback.selectionClick();
-      _doorPlayer ??= AudioPlayer();
-      _doorPlayer?.play(AssetSource('audio/door_whoosh.wav'), volume: 0.9);
+      _doorOpenPlayer ??= AudioPlayer();
+      _doorOpenPlayer?.play(AssetSource('audio/door_open.wav'), volume: 0.95);
     } catch (_) {}
   }
+
+  /// Sleek modern automatic sliding door closing sound (descending glide + soft rubber seal)
+  void playDoorClose() {
+    if (isMuted) return;
+    try {
+      HapticFeedback.selectionClick();
+      _doorClosePlayer ??= AudioPlayer();
+      _doorClosePlayer?.play(AssetSource('audio/door_close.wav'), volume: 0.90);
+    } catch (_) {}
+  }
+
+  /// Backward-compatible alias
+  void playDoorSlide() => playDoorOpen();
 
   void dispose() {
     _hornPlayer?.dispose();
     _brakePlayer?.dispose();
-    _doorPlayer?.dispose();
+    _doorOpenPlayer?.dispose();
+    _doorClosePlayer?.dispose();
   }
 }
