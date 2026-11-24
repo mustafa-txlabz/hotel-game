@@ -129,6 +129,12 @@ class GameWorld {
   double storeCapacityRemainingSeconds = 0.0;
   int temporaryWorkerCapacityBoost = 0;
 
+  // Cooldowns per store deal ID (default 120s / 2 minutes after purchase)
+  final Map<String, double> storeDealCooldowns = {};
+
+  double getDealCooldown(String dealId) => storeDealCooldowns[dealId] ?? 0.0;
+  bool isDealOnCooldown(String dealId) => getDealCooldown(dealId) > 0.0;
+
   bool get isStoreStaffSpeedActive => storeStaffSpeedRemainingSeconds > 0.0;
   bool get isStoreEarningsActive => storeEarningsRemainingSeconds > 0.0;
   bool get isStoreCapacityActive => storeCapacityRemainingSeconds > 0.0;
@@ -1784,9 +1790,18 @@ class GameWorld {
         _syncWorkerCapacities();
       }
     }
+    // Update store deal cooldowns
+    storeDealCooldowns.forEach((id, remaining) {
+      if (remaining > 0.0) {
+        storeDealCooldowns[id] = math.max(0.0, remaining - dt);
+      }
+    });
   }
 
   bool activateCatalogDeal(CatalogDealItem deal) {
+    // Start 2-minute (120s) cooldown for this offer
+    storeDealCooldowns[deal.id] = DealsCatalog.storeDealCooldownSeconds;
+
     switch (deal.id) {
       case 'store_staff_speed':
         storeStaffSpeedRemainingSeconds += deal.durationSeconds;
@@ -1833,12 +1848,14 @@ class GameWorld {
   }
 
   bool buyCatalogDealWithGems(CatalogDealItem deal) {
+    if (isDealOnCooldown(deal.id)) return false;
     if (gems < deal.gemsCost) return false;
     gems -= deal.gemsCost;
     return activateCatalogDeal(deal);
   }
 
   bool claimCatalogDealWithAd(CatalogDealItem deal) {
+    if (isDealOnCooldown(deal.id)) return false;
     return activateCatalogDeal(deal);
   }
 }

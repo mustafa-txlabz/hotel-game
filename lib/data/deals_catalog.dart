@@ -84,6 +84,9 @@ class DealsCatalog {
   // ===========================================================================
   // 2. REWARD CENTER / STORE DEALS (ON-DEMAND: 1 AD OR GEMS)
   // ===========================================================================
+  /// Default cooldown in seconds after any store deal is purchased (2 minutes).
+  static const double storeDealCooldownSeconds = 120.0;
+
   static const List<CatalogDealItem> rewardStoreDeals = [
     CatalogDealItem(
       id: 'store_staff_speed',

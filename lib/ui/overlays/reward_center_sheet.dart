@@ -1,20 +1,21 @@
-import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme.dart';
 import '../../data/deals_catalog.dart';
-import '../../services/ads_service.dart';
 import '../../state/game_controller.dart';
+import 'insufficient_gems_dialog.dart';
 
 /// Modal bottom sheet for the Dhaba Reward Center / Shop.
 ///
-/// Features:
-/// - Prominently displays store Gems balance (💎 X GEMS).
-/// - Shows utility deals from [DealsCatalog.rewardStoreDeals].
-/// - Offers two purchase routes for every deal:
-///     1. Buy instantly with Store Gems (💎).
-///     2. Watch a Rewarded Ad (🎬 FREE).
-/// - Live ticking timer badges for currently active boosts.
+/// Designed in the clean, horizontal HR-Desk card style:
+/// - Header with live Gems balance.
+/// - Each offer has:
+///     - Left: 44x44 emoji icon container.
+///     - Middle: Deal title, active timer badge, and description.
+///     - Right: Single action button showing Gems price (`💎 X`).
+/// - Direct purchase if player has sufficient Gems -> starts 2-minute cooldown, closes sheet, and shows confirmation!
+/// - If Gems are insufficient -> opens [InsufficientGemsDialog] to watch an ad and activate for FREE!
+/// - If on 2-minute cooldown -> displays live countdown (`⏳ MM:SS`).
 class RewardCenterSheet extends StatefulWidget {
   final GameController controller;
 
@@ -34,8 +35,6 @@ class RewardCenterSheet extends StatefulWidget {
 }
 
 class _RewardCenterSheetState extends State<RewardCenterSheet> {
-  bool _isWatchingAd = false;
-
   @override
   void initState() {
     super.initState();
@@ -52,52 +51,38 @@ class _RewardCenterSheetState extends State<RewardCenterSheet> {
     super.dispose();
   }
 
-  void _buyWithGems(CatalogDealItem deal) {
+  void _onTapDeal(CatalogDealItem deal) {
     final world = widget.controller.world;
-    if (world.gems < deal.gemsCost) {
+
+    // 1. Check if offer is on 2-minute cooldown
+    if (world.isDealOnCooldown(deal.id)) {
+      final remaining = world.getDealCooldown(deal.id).ceil();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Need ${deal.gemsCost} 💎! Serve VVIP cars to earn more Gems.',
+            '⏳ ${deal.title} is on cooldown! Ready in ${remaining}s.',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           backgroundColor: AppTheme.chaiDarkBrown,
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
         ),
       );
       return;
     }
 
-    final success = widget.controller.buyStoreDealWithGems(deal);
-    if (success && mounted) {
-      setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '🎉 ${deal.title} Activated with ${deal.gemsCost} 💎!',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: const Color(0xFF00C853),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  }
+    // 2. If player has enough gems, purchase immediately!
+    if (world.gems >= deal.gemsCost) {
+      final success = widget.controller.buyStoreDealWithGems(deal);
+      if (success) {
+        // Close modal sheet
+        Navigator.of(context).pop();
 
-  void _watchAdForDeal(CatalogDealItem deal) {
-    if (_isWatchingAd) return;
-    setState(() => _isWatchingAd = true);
-
-    AdsService.instance.showRewardedAd(
-      onUserEarnedReward: () {
-        if (!mounted) return;
-        widget.controller.claimStoreDealWithAd(deal);
-        setState(() => _isWatchingAd = false);
+        // Show confirmation message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '🎬 FREE REWARD CLAIMED: ${deal.title}!',
+              '🎉 ${deal.title} Activated for ${deal.gemsCost} 💎!',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             backgroundColor: const Color(0xFF00C853),
@@ -105,32 +90,28 @@ class _RewardCenterSheetState extends State<RewardCenterSheet> {
             duration: const Duration(seconds: 2),
           ),
         );
-      },
-      onAdDismissed: () {
+      }
+      return;
+    }
+
+    // 3. Insufficient gems -> Open InsufficientGemsDialog to watch Ad for FREE!
+    InsufficientGemsDialog.show(
+      context,
+      widget.controller,
+      deal,
+      onRewardClaimed: () {
         if (mounted) {
-          setState(() => _isWatchingAd = false);
-        }
-      },
-      onAdFailed: () {
-        if (mounted) {
-          setState(() => _isWatchingAd = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Video ad not ready. Please check your internet connection! 📶',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              backgroundColor: AppTheme.chaiDarkBrown,
-              behavior: SnackBarBehavior.floating,
-              duration: Duration(seconds: 3),
-            ),
-          );
+          Navigator.of(context).pop(); // Close the sheet as well
         }
       },
     );
+  }
+
+  String _formatCooldown(double seconds) {
+    final s = seconds.ceil().clamp(0, 9999);
+    final mins = s ~/ 60;
+    final secs = s % 60;
+    return '⏳ ${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -141,7 +122,7 @@ class _RewardCenterSheetState extends State<RewardCenterSheet> {
     return Container(
       margin: const EdgeInsets.only(top: 60),
       decoration: const BoxDecoration(
-        color: Color(0xFFFBF8EE), // Dhaba warm cream
+        color: Color(0xFFFBF8EE), // Dhaba warm cream card
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
           BoxShadow(
@@ -168,7 +149,7 @@ class _RewardCenterSheetState extends State<RewardCenterSheet> {
             ),
             const SizedBox(height: 12),
 
-            // Header Row
+            // Header Row: Storefront Icon, Title, Gems Badge, Close Button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
@@ -255,7 +236,7 @@ class _RewardCenterSheetState extends State<RewardCenterSheet> {
 
             // Banner Tip
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -270,11 +251,11 @@ class _RewardCenterSheetState extends State<RewardCenterSheet> {
                 ),
                 child: const Row(
                   children: [
-                    Text('💡', style: TextStyle(fontSize: 18)),
+                    Text('⚡', style: TextStyle(fontSize: 18)),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Boost your dhaba anytime! Buy with Gems or watch a quick Ad for FREE!',
+                        'Buy boosts with Gems, or watch an Ad if you run out of Gems!',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -287,7 +268,7 @@ class _RewardCenterSheetState extends State<RewardCenterSheet> {
               ),
             ),
 
-            // Deals List
+            // Deals List (HR Desk Layout)
             Flexible(
               child: ListView.separated(
                 shrinkWrap: true,
@@ -297,10 +278,10 @@ class _RewardCenterSheetState extends State<RewardCenterSheet> {
                   vertical: 10,
                 ),
                 itemCount: deals.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   final deal = deals[index];
-                  return _buildDealCard(deal, world);
+                  return _buildHrStyleDealCard(deal, world);
                 },
               ),
             ),
@@ -311,212 +292,165 @@ class _RewardCenterSheetState extends State<RewardCenterSheet> {
     );
   }
 
-  Widget _buildDealCard(CatalogDealItem deal, dynamic world) {
-    // Check active status
-    bool isActive = false;
-    int remainingSecs = 0;
+  Widget _buildHrStyleDealCard(CatalogDealItem deal, dynamic world) {
+    // 1. Boost active state
+    bool isBoostActive = false;
+    int remainingBoostSecs = 0;
 
     if (deal.id == 'store_staff_speed') {
-      isActive = world.isStoreStaffSpeedActive;
-      remainingSecs = world.storeStaffSpeedRemainingSeconds.ceil();
+      isBoostActive = world.isStoreStaffSpeedActive;
+      remainingBoostSecs = world.storeStaffSpeedRemainingSeconds.ceil();
     } else if (deal.id == 'store_double_earnings') {
-      isActive = world.isStoreEarningsActive;
-      remainingSecs = world.storeEarningsRemainingSeconds.ceil();
+      isBoostActive = world.isStoreEarningsActive;
+      remainingBoostSecs = world.storeEarningsRemainingSeconds.ceil();
     } else if (deal.id == 'store_worker_capacity') {
-      isActive = world.isStoreCapacityActive;
-      remainingSecs = world.storeCapacityRemainingSeconds.ceil();
+      isBoostActive = world.isStoreCapacityActive;
+      remainingBoostSecs = world.storeCapacityRemainingSeconds.ceil();
     }
 
-    final canAffordWithGems = world.gems >= deal.gemsCost;
+    // 2. Cooldown state (2 minutes / 120s)
+    final isOnCooldown = world.isDealOnCooldown(deal.id);
+    final cooldownRemaining = world.getDealCooldown(deal.id);
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isActive
+          color: isBoostActive
               ? const Color(0xFF00C853)
-              : const Color(0xFFE8DFCE),
-          width: isActive ? 1.8 : 1.2,
+              : const Color(0xFFE5DAC7),
+          width: isBoostActive ? 1.8 : 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: isActive
+            color: isBoostActive
                 ? const Color(0xFF00C853).withValues(alpha: 0.12)
                 : Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          // Row 1: Emoji, Title, and Active Badge
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFBF8EE),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFE0D7C6)),
-                ),
-                child: Text(
-                  deal.emoji,
-                  style: const TextStyle(fontSize: 22),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          // Left: 44x44 Emoji Icon Container (HR Style)
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFBF8EE),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE0D7C6)),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              deal.emoji,
+              style: const TextStyle(fontSize: 22),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // Middle: Title, Badges & Description
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Text(
-                      deal.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 15,
-                        color: AppTheme.chaiDarkBrown,
-                      ),
-                    ),
-                    if (deal.id == 'store_permanent_worker')
-                      Text(
-                        'Current Helpers: ${world.helperCount}',
+                    Flexible(
+                      child: Text(
+                        deal.title,
                         style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0277BD),
+                          color: AppTheme.chaiDarkBrown,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                  ],
-                ),
-              ),
-              if (isActive)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5E9),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: const Color(0xFF00C853),
-                      width: 1,
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        '⏱️',
-                        style: TextStyle(fontSize: 10),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${remainingSecs}s',
-                        style: const TextStyle(
-                          color: Color(0xFF2E7D32),
-                          fontWeight: FontWeight.w900,
-                          fontSize: 11,
+                    if (isBoostActive) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFF00C853)),
+                        ),
+                        child: Text(
+                          '⏱️ ${remainingBoostSecs}s',
+                          style: const TextStyle(
+                            color: Color(0xFF2E7D32),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 10,
+                          ),
                         ),
                       ),
                     ],
-                  ),
+                  ],
                 ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Description
-          Text(
-            deal.description,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF6D4C41),
-              fontWeight: FontWeight.w500,
+                const SizedBox(height: 2),
+                if (deal.id == 'store_permanent_worker')
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(
+                      'Helpers: ${world.helperCount} / 6',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0277BD),
+                      ),
+                    ),
+                  ),
+                Text(
+                  deal.description,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 11,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(width: 8),
 
-          // Action Buttons: Gems (💎) OR Ad (🎬 FREE)
-          Row(
-            children: [
-              // 1. Buy with Gems
-              Expanded(
-                child: SizedBox(
-                  height: 38,
-                  child: ElevatedButton(
-                    onPressed: canAffordWithGems
-                        ? () => _buyWithGems(deal)
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: canAffordWithGems
-                          ? const Color(0xFF0091EA)
-                          : const Color(0xFFCFD8DC),
-                      foregroundColor: Colors.white,
-                      elevation: canAffordWithGems ? 2 : 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                    ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        canAffordWithGems
-                            ? '💎 ${deal.gemsCost} GEMS'
-                            : 'Need ${deal.gemsCost} 💎',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 12,
-                          color: canAffordWithGems
-                              ? Colors.white
-                              : const Color(0xFF78909C),
-                        ),
-                      ),
-                    ),
-                  ),
+          // Right: Single Action Button (HR Style: Price or Cooldown)
+          SizedBox(
+            height: 38,
+            child: ElevatedButton(
+              onPressed: () => _onTapDeal(deal),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isOnCooldown
+                    ? const Color(0xFFCFD8DC)
+                    : const Color(0xFF0091EA),
+                foregroundColor: Colors.white,
+                elevation: isOnCooldown ? 0 : 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+              ),
+              child: Text(
+                isOnCooldown
+                    ? _formatCooldown(cooldownRemaining)
+                    : '💎 ${deal.gemsCost}',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                  color: isOnCooldown
+                      ? const Color(0xFF546E7A)
+                      : Colors.white,
                 ),
               ),
-              const SizedBox(width: 10),
-
-              // 2. Watch Ad (FREE)
-              Expanded(
-                child: SizedBox(
-                  height: 38,
-                  child: ElevatedButton(
-                    onPressed: _isWatchingAd
-                        ? null
-                        : () => _watchAdForDeal(deal),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF6D00),
-                      foregroundColor: Colors.white,
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                    ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        _isWatchingAd ? 'LOADING...' : '🎬 FREE (AD)',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 12,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),

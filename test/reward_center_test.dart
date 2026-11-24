@@ -10,6 +10,7 @@ import 'package:chai_dhaba_empire/engine/staff_ai.dart';
 import 'package:chai_dhaba_empire/services/ads_service.dart';
 import 'package:chai_dhaba_empire/state/game_controller.dart';
 import 'package:chai_dhaba_empire/ui/game/game_viewport.dart';
+import 'package:chai_dhaba_empire/ui/overlays/insufficient_gems_dialog.dart';
 import 'package:chai_dhaba_empire/ui/overlays/reward_center_sheet.dart';
 
 void main() {
@@ -36,6 +37,28 @@ void main() {
       world.tick(0.1);
       expect(world.player.speed, greaterThan(initialPlayerSpeed));
       expect(world.player.speed, closeTo(initialPlayerSpeed * 1.5, 0.5));
+    });
+
+    test('Purchasing an offer triggers a 2-minute (120s) cooldown and blocks repeat purchase', () {
+      final deal = DealsCatalog.rewardStoreDeals.firstWhere((d) => d.id == 'store_staff_speed');
+      expect(world.isDealOnCooldown(deal.id), isFalse);
+
+      final success = world.buyCatalogDealWithGems(deal);
+      expect(success, isTrue);
+      expect(world.isDealOnCooldown(deal.id), isTrue);
+      expect(world.getDealCooldown(deal.id), DealsCatalog.storeDealCooldownSeconds);
+
+      // Attempt repeat purchase during cooldown
+      final repeat = world.buyCatalogDealWithGems(deal);
+      expect(repeat, isFalse); // Blocked by cooldown!
+
+      // Fast forward past cooldown (120.1s)
+      world.tick(120.1);
+      expect(world.isDealOnCooldown(deal.id), isFalse);
+
+      // Can now purchase again
+      final canBuyAgain = world.buyCatalogDealWithGems(deal);
+      expect(canBuyAgain, isTrue);
     });
 
     test('Store Double Earnings deal doubles collected cash bundle value', () {
@@ -102,17 +125,18 @@ void main() {
       expect(world.isStoreStaffSpeedActive, isFalse);
     });
 
-    test('Claiming deal via Ad activates deal without deducting gems', () {
+    test('Claiming deal via Ad activates deal without deducting gems and starts cooldown', () {
       world.gems = 2;
       final deal = DealsCatalog.rewardStoreDeals.firstWhere((d) => d.id == 'store_double_earnings');
       final success = world.claimCatalogDealWithAd(deal);
       expect(success, isTrue);
       expect(world.gems, 2); // Untouched!
       expect(world.isStoreEarningsActive, isTrue);
+      expect(world.isDealOnCooldown(deal.id), isTrue);
     });
   });
 
-  group('RewardCenterSheet Widget Tests', () {
+  group('RewardCenterSheet HR-Style Widget Tests', () {
     late GameWorld world;
     late GameController controller;
 
@@ -127,7 +151,7 @@ void main() {
       AdsService.instance.testMockReward = false;
     });
 
-    testWidgets('RewardCenterSheet renders header, gems counter, and all deals', (tester) async {
+    testWidgets('RewardCenterSheet renders header, gems counter, and HR-style cards with price buttons', (tester) async {
       tester.view.physicalSize = const Size(800, 1400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -147,47 +171,106 @@ void main() {
       expect(find.text('2X EARNINGS BOOST'), findsOneWidget);
       expect(find.text('EXTRA WORKER CONTRACT'), findsOneWidget);
       expect(find.text('+2 WORKER CAPACITY'), findsOneWidget);
+
+      // Right-side HR-style price buttons
+      expect(find.widgetWithText(ElevatedButton, '💎 2'), findsNWidgets(2)); // Staff speed & worker capacity
+      expect(find.widgetWithText(ElevatedButton, '💎 3'), findsOneWidget); // 2X earnings
+      expect(find.widgetWithText(ElevatedButton, '💎 5'), findsOneWidget); // Permanent worker
     });
 
-    testWidgets('Can buy affordable deal with Gems and triggers boost', (tester) async {
+    testWidgets('Tapping price button with sufficient gems buys, starts cooldown, and closes sheet', (tester) async {
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: RewardCenterSheet(controller: controller),
+            body: Builder(
+              builder: (ctx) => ElevatedButton(
+                onPressed: () => RewardCenterSheet.show(ctx, controller),
+                child: const Text('OPEN STORE'),
+              ),
+            ),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      // Tap "💎 2 GEMS" on 1.5x staff speed (first deal)
-      final gemButtons = find.widgetWithText(ElevatedButton, '💎 2 GEMS');
-      expect(gemButtons, findsAtLeastNWidgets(1));
-
-      await tester.tap(gemButtons.first);
+      // Open store sheet
+      await tester.tap(find.text('OPEN STORE'));
       await tester.pumpAndSettle();
 
+      expect(find.byType(RewardCenterSheet), findsOneWidget);
+
+      // Tap "💎 2" button (first deal)
+      final priceButtons = find.widgetWithText(ElevatedButton, '💎 2');
+      await tester.tap(priceButtons.first);
+      await tester.pumpAndSettle();
+
+      // Modal sheet should be closed
+      expect(find.byType(RewardCenterSheet), findsNothing);
+
+      // Gems deducted
       expect(world.gems, 2); // 4 - 2
       expect(world.isStoreStaffSpeedActive, isTrue);
-      expect(find.text('2 GEMS'), findsOneWidget);
+
+      // Deal is now on 2-minute cooldown
+      expect(world.isDealOnCooldown('store_staff_speed'), isTrue);
     });
 
-    testWidgets('Shows disabled state when Gems are insufficient', (tester) async {
-      world.gems = 1;
+    testWidgets('Tapping price button with insufficient gems opens InsufficientGemsDialog', (tester) async {
+      world.gems = 1; // Can't afford 2 gems deal
+
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: RewardCenterSheet(controller: controller),
+            body: Builder(
+              builder: (ctx) => ElevatedButton(
+                onPressed: () => RewardCenterSheet.show(ctx, controller),
+                child: const Text('OPEN STORE'),
+              ),
+            ),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Need 2 💎'), findsAtLeastNWidgets(1));
-      expect(find.text('Need 3 💎'), findsOneWidget);
-      expect(find.text('Need 5 💎'), findsOneWidget);
+      // Open store sheet
+      await tester.tap(find.text('OPEN STORE'));
+      await tester.pumpAndSettle();
+
+      // Tap "💎 2"
+      final priceButtons = find.widgetWithText(ElevatedButton, '💎 2');
+      await tester.tap(priceButtons.first);
+      await tester.pumpAndSettle();
+
+      // InsufficientGemsDialog is displayed!
+      expect(find.byType(InsufficientGemsDialog), findsOneWidget);
+      expect(find.text('NOT ENOUGH GEMS!'), findsOneWidget);
+      expect(find.text('🎬 WATCH AD & ACTIVATE'), findsOneWidget);
+
+      // Tap "WATCH AD & ACTIVATE"
+      await tester.tap(find.text('🎬 WATCH AD & ACTIVATE'));
+      await tester.pumpAndSettle();
+
+      // Deal is activated for free via ad!
+      expect(world.isStoreStaffSpeedActive, isTrue);
+      expect(world.gems, 1); // Gems not deducted!
+      expect(world.isDealOnCooldown('store_staff_speed'), isTrue); // Cooldown started!
+
+      // Dialog is dismissed
+      expect(find.byType(InsufficientGemsDialog), findsNothing);
     });
 
-    testWidgets('Watch Ad button claims deal for free via Rewarded Ad', (tester) async {
+    testWidgets('Deal on cooldown displays countdown timer on button', (tester) async {
+      // Put deal on cooldown
+      world.storeDealCooldowns['store_staff_speed'] = 110.0;
+
       tester.view.physicalSize = const Size(800, 1400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -201,15 +284,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final adButtons = find.widgetWithText(ElevatedButton, '🎬 FREE (AD)');
-      expect(adButtons, findsNWidgets(4));
-
-      // Tap ad button on 2X earnings
-      await tester.tap(adButtons.at(1));
-      await tester.pumpAndSettle();
-
-      expect(world.isStoreEarningsActive, isTrue);
-      expect(world.gems, 4); // Gems not spent!
+      // Button should display countdown (110s = 01:50)
+      expect(find.text('⏳ 01:50'), findsOneWidget);
     });
   });
 
@@ -228,7 +304,7 @@ void main() {
       AdsService.instance.testMockReward = false;
     });
 
-    testWidgets('GameViewport displays storefront icon replacing settings icon', (tester) async {
+    testWidgets('GameViewport displays storefront icon without Home button', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: ChangeNotifierProvider<GameController>.value(
@@ -243,7 +319,8 @@ void main() {
 
       // Reward Center storefront icon is present
       expect(find.byIcon(Icons.storefront_rounded), findsOneWidget);
-      // Settings icon is NOT on GameViewport action bar
+      // Home and Settings icons are NOT on GameViewport action bar
+      expect(find.byIcon(Icons.home_rounded), findsNothing);
       expect(find.byIcon(Icons.settings_rounded), findsNothing);
 
       // Tapping storefront icon opens RewardCenterSheet
