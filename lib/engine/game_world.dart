@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' show Color, VoidCallback;
 
 import '../data/balance.dart';
+import '../data/deals_catalog.dart';
 import '../data/progression_config.dart';
 import 'customer_ai.dart';
 import 'deals.dart';
@@ -121,6 +122,20 @@ class GameWorld {
   bool get isVipHelperActive =>
       activeDeal?.type == DealType.vipHelper &&
       activeDealRemainingSeconds > 0.0;
+
+  // Reward Center / Store Boosts (On-Demand via 1 Ad OR Gems)
+  double storeStaffSpeedRemainingSeconds = 0.0;
+  double storeEarningsRemainingSeconds = 0.0;
+  double storeCapacityRemainingSeconds = 0.0;
+  int temporaryWorkerCapacityBoost = 0;
+
+  bool get isStoreStaffSpeedActive => storeStaffSpeedRemainingSeconds > 0.0;
+  bool get isStoreEarningsActive => storeEarningsRemainingSeconds > 0.0;
+  bool get isStoreCapacityActive => storeCapacityRemainingSeconds > 0.0;
+  bool get isAnyStoreBoostActive =>
+      isStoreStaffSpeedActive ||
+      isStoreEarningsActive ||
+      isStoreCapacityActive;
 
   // M10: VVIP Curbside Luxury Car & Gems Economy
   int gems;
@@ -406,11 +421,13 @@ class GameWorld {
     counter.update(dt);
     trashBin.update(dt);
 
-    // 2. Update player physics (apply 1.65x speed when staff turbo is active)
+    // 2. Update player physics (apply 1.65x speed when staff turbo is active, 1.5x when store boost is active)
     final playerBaseSpeed =
         GameBalance.playerSpeedLevels[playerSpeedLevel - 1];
+    final double storeSpeedMult = isStoreStaffSpeedActive ? 1.5 : 1.0;
     player.speed =
-        isStaffTurboActive ? playerBaseSpeed * 1.65 : playerBaseSpeed;
+        (isStaffTurboActive ? playerBaseSpeed * 1.65 : playerBaseSpeed) *
+            storeSpeedMult;
     player.update(dt);
 
     // 2.5 Automatic Sliding Door proximity detection (door center: 450, 1184)
@@ -522,6 +539,9 @@ class GameWorld {
 
     // 17. M10: VVIP Curbside Luxury Car update
     _updateVipCarSystem(dt);
+
+    // 18. Reward Center Store Boosts update
+    _updateStoreBoosts(dt);
   }
 
   void _checkGroundPads(double dt) {
@@ -859,18 +879,22 @@ class GameWorld {
     for (final bundle in cashBundles) {
       if (bundle.updateTowards(player.position, dt)) {
         collected.add(bundle);
-        rupees += bundle.value;
-        lifetimeRupees += bundle.value;
+        final multiplier = isStoreEarningsActive ? 2.0 : 1.0;
+        final earned = bundle.value * multiplier;
+        rupees += earned;
+        lifetimeRupees += earned;
 
         // Spawn floating +Rs popup
         floatingTexts.add(
           FloatingTextEntity(
             position: Vector2(player.position.x, player.position.y - 25.0),
-            text: '+Rs ${bundle.value.toInt()}',
+            text: multiplier > 1.0
+                ? '+Rs ${earned.toInt()} (2X! 💰)'
+                : '+Rs ${earned.toInt()}',
           ),
         );
 
-        onCashCollected?.call(bundle.value);
+        onCashCollected?.call(earned);
         checkMissions();
       }
     }
@@ -897,7 +921,8 @@ class GameWorld {
   double get currentWorkerSpeed =>
       GameBalance.workerSpeedLevels[workerSpeedLevel - 1];
   int get currentWorkerCapacity =>
-      GameBalance.workerCapacityLevels[workerCapacityLevel - 1];
+      GameBalance.workerCapacityLevels[workerCapacityLevel - 1] +
+      temporaryWorkerCapacityBoost;
 
   bool hireCashier({bool free = false}) {
     if (hasCashier) return false;
@@ -1249,11 +1274,13 @@ class GameWorld {
   // --- Autonomous Helper / Waiter AI Logic (M6) ---
 
   void _updateHelperAI(StaffEntity helper, double dt) {
-    // Apply speed adjustment (and 1.8x when staff turbo boost is active)
+    // Apply speed adjustment (and 1.8x when staff turbo boost is active, 1.5x when store boost is active)
     final baseSpeed = helper.isVip
         ? 230.0
         : GameBalance.workerSpeedLevels[workerSpeedLevel - 1];
-    helper.speed = isStaffTurboActive ? baseSpeed * 1.8 : baseSpeed;
+    final double storeSpeedMult = isStoreStaffSpeedActive ? 1.5 : 1.0;
+    helper.speed =
+        (isStaffTurboActive ? baseSpeed * 1.8 : baseSpeed) * storeSpeedMult;
 
     helper.updateMovement(dt);
 
@@ -1361,14 +1388,16 @@ class GameWorld {
         // Collect tips
         for (final seat in unclaimedDirtyTable.seats) {
           if (seat.cashTip > 0.0) {
-            final tip = seat.cashTip;
+            final tip = seat.cashTip * (isStoreEarningsActive ? 2.0 : 1.0);
             seat.cashTip = 0.0;
             rupees += tip;
             lifetimeRupees += tip;
             floatingTexts.add(
               FloatingTextEntity(
                 position: Vector2(seat.position.x, unclaimedDirtyTable.position.y - 20.0),
-                text: '+Rs ${tip.toInt()}',
+                text: isStoreEarningsActive
+                    ? '+Rs ${tip.toInt()} (2X! 💰)'
+                    : '+Rs ${tip.toInt()}',
               ),
             );
             onCashCollected?.call(tip);
@@ -1696,8 +1725,9 @@ class GameWorld {
   void _completeVipOrder(VipCar car) {
     car.state = CarState.drivingOut;
     gems += car.gemsReward;
-    rupees += car.cashTip;
-    lifetimeRupees += car.cashTip;
+    final tip = car.cashTip * (isStoreEarningsActive ? 2.0 : 1.0);
+    rupees += tip;
+    lifetimeRupees += tip;
     reputationPercent = (reputationPercent + 5.0).clamp(0.0, 100.0);
 
     floatingTexts.add(
@@ -1709,10 +1739,102 @@ class GameWorld {
     floatingTexts.add(
       FloatingTextEntity(
         position: Vector2(car.position.x, car.position.y - 95.0),
-        text: '+₹${car.cashTip.toInt()} VVIP TIP! 💰',
+        text: isStoreEarningsActive
+            ? '+₹${tip.toInt()} VVIP TIP! (2X! 💰)'
+            : '+₹${tip.toInt()} VVIP TIP! 💰',
       ),
     );
 
     onVipCarCompleted?.call(car);
+  }
+
+  // --- Reward Center Store Boosts & Deals ---
+
+  void _syncWorkerCapacities() {
+    final cap = currentWorkerCapacity;
+    for (final staffMember in staff) {
+      if (staffMember.role == StaffRole.helper) {
+        staffMember.carryCapacity = cap;
+      }
+    }
+  }
+
+  void _updateStoreBoosts(double dt) {
+    if (storeStaffSpeedRemainingSeconds > 0.0) {
+      storeStaffSpeedRemainingSeconds -= dt;
+      if (storeStaffSpeedRemainingSeconds <= 0.0) {
+        storeStaffSpeedRemainingSeconds = 0.0;
+      }
+    }
+    if (storeEarningsRemainingSeconds > 0.0) {
+      storeEarningsRemainingSeconds -= dt;
+      if (storeEarningsRemainingSeconds <= 0.0) {
+        storeEarningsRemainingSeconds = 0.0;
+      }
+    }
+    if (storeCapacityRemainingSeconds > 0.0) {
+      storeCapacityRemainingSeconds -= dt;
+      if (storeCapacityRemainingSeconds <= 0.0) {
+        storeCapacityRemainingSeconds = 0.0;
+        temporaryWorkerCapacityBoost = 0;
+        _syncWorkerCapacities();
+      }
+    }
+  }
+
+  bool activateCatalogDeal(CatalogDealItem deal) {
+    switch (deal.id) {
+      case 'store_staff_speed':
+        storeStaffSpeedRemainingSeconds += deal.durationSeconds;
+        floatingTexts.add(
+          FloatingTextEntity(
+            position: Vector2(player.position.x, player.position.y - 35.0),
+            text: '⚡ 1.5X STAFF SPEED ACTIVE!',
+          ),
+        );
+        return true;
+      case 'store_double_earnings':
+        storeEarningsRemainingSeconds += deal.durationSeconds;
+        floatingTexts.add(
+          FloatingTextEntity(
+            position: Vector2(player.position.x, player.position.y - 35.0),
+            text: '💰 2X EARNINGS ACTIVE!',
+          ),
+        );
+        return true;
+      case 'store_permanent_worker':
+        final hired = hireHelper(free: true);
+        if (hired) {
+          floatingTexts.add(
+            FloatingTextEntity(
+              position: Vector2(player.position.x, player.position.y - 35.0),
+              text: '👷 NEW WORKER HIRED!',
+            ),
+          );
+        }
+        return hired;
+      case 'store_worker_capacity':
+        storeCapacityRemainingSeconds += deal.durationSeconds;
+        temporaryWorkerCapacityBoost = deal.extraCapacity;
+        _syncWorkerCapacities();
+        floatingTexts.add(
+          FloatingTextEntity(
+            position: Vector2(player.position.x, player.position.y - 35.0),
+            text: '📦 +2 CARRY CAPACITY ACTIVE!',
+          ),
+        );
+        return true;
+    }
+    return false;
+  }
+
+  bool buyCatalogDealWithGems(CatalogDealItem deal) {
+    if (gems < deal.gemsCost) return false;
+    gems -= deal.gemsCost;
+    return activateCatalogDeal(deal);
+  }
+
+  bool claimCatalogDealWithAd(CatalogDealItem deal) {
+    return activateCatalogDeal(deal);
   }
 }

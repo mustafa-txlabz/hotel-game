@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../data/deals_catalog.dart';
 import '../engine/deals.dart';
 import '../engine/game_world.dart';
 import '../services/audio_service.dart';
@@ -202,6 +203,25 @@ class GameController extends ChangeNotifier {
   /// Dismisses an active deal pad
   void dismissDeal() {
     _world.dismissDealPad();
+    notifyListeners();
+  }
+
+  /// Buys an on-demand Reward Center deal using Store Gems
+  bool buyStoreDealWithGems(CatalogDealItem deal) {
+    final success = _world.buyCatalogDealWithGems(deal);
+    if (success) {
+      audioService.playBuy();
+      saveGame();
+      notifyListeners();
+    }
+    return success;
+  }
+
+  /// Claims an on-demand Reward Center deal via Rewarded Ad
+  void claimStoreDealWithAd(CatalogDealItem deal) {
+    _world.claimCatalogDealWithAd(deal);
+    audioService.playBuy();
+    saveGame();
     notifyListeners();
   }
 

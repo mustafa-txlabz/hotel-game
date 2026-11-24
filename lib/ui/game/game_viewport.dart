@@ -11,7 +11,7 @@ import '../overlays/hr_upgrade_sheet.dart';
 import '../overlays/hud_overlay.dart';
 import '../overlays/joystick_widget.dart';
 import '../overlays/level_complete_dialog.dart';
-import '../overlays/settings_dialog.dart';
+import '../overlays/reward_center_sheet.dart';
 import 'world_painter.dart';
 
 /// Interactive game viewport with 60 FPS Ticker loop, smooth camera follow,
@@ -274,15 +274,7 @@ class _GameViewportState extends State<GameViewport>
                     },
                   ),
                   const SizedBox(height: 14),
-                  _buildGlassIconButton(
-                    icon: Icons.settings_rounded,
-                    iconColor: Colors.white,
-                    tooltip: 'Settings',
-                    onTap: () {
-                      _resetJoystick();
-                      SettingsDialog.show(context, controller);
-                    },
-                  ),
+                  _buildRewardCenterButton(context, controller),
                   const SizedBox(height: 14),
                   // M10: Call VVIP Luxury Car Test/Trigger Button
                   _buildGlassIconButton(
@@ -324,6 +316,71 @@ class _GameViewportState extends State<GameViewport>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRewardCenterButton(
+    BuildContext context,
+    GameController controller,
+  ) {
+    final isBoostActive = controller.world.isAnyStoreBoostActive;
+
+    return Tooltip(
+      message: 'Reward Center (Deals & Boosts)',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          _resetJoystick();
+          RewardCenterSheet.show(context, controller);
+        },
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E140C).withValues(alpha: 0.88),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isBoostActive
+                  ? const Color(0xFF00E676)
+                  : const Color(0xFFFFB300).withValues(alpha: 0.7),
+              width: isBoostActive ? 2.0 : 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isBoostActive
+                    ? const Color(0xFF00E676).withValues(alpha: 0.4)
+                    : const Color(0xFFFFB300).withValues(alpha: 0.3),
+                blurRadius: 8,
+              ),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                Icons.storefront_rounded,
+                color: isBoostActive
+                    ? const Color(0xFF00E676)
+                    : const Color(0xFFFFB300),
+                size: 24,
+              ),
+              if (isBoostActive)
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Container(
+                    width: 9,
+                    height: 9,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF00E676),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
