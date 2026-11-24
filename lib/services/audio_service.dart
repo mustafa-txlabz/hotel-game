@@ -82,28 +82,13 @@ class AudioService {
     } catch (_) {}
   }
 
-  /// Sleek modern automatic sliding door opening sound (servo motor glide + air whoosh)
-  void playDoorOpen() {
-    if (isMuted) return;
-    try {
-      HapticFeedback.selectionClick();
-      _doorOpenPlayer ??= AudioPlayer();
-      _doorOpenPlayer?.play(AssetSource('audio/door_open.wav'), volume: 0.95);
-    } catch (_) {}
-  }
+  /// Door open/close sounds silenced per user request until custom sound asset is provided.
+  void playDoorOpen() {}
 
-  /// Sleek modern automatic sliding door closing sound (descending glide + soft rubber seal)
-  void playDoorClose() {
-    if (isMuted) return;
-    try {
-      HapticFeedback.selectionClick();
-      _doorClosePlayer ??= AudioPlayer();
-      _doorClosePlayer?.play(AssetSource('audio/door_close.wav'), volume: 0.90);
-    } catch (_) {}
-  }
+  void playDoorClose() {}
 
   /// Backward-compatible alias
-  void playDoorSlide() => playDoorOpen();
+  void playDoorSlide() {}
 
   void dispose() {
     _hornPlayer?.dispose();
