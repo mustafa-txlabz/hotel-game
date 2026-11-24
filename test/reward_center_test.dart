@@ -57,34 +57,40 @@ void main() {
       expect(world.rupees, initialRupees + (50.0 * 2.0));
     });
 
-    test('Store Permanent Worker deal hires an extra helper without rupee cost', () {
+    test('Store Permanent Worker deal hires an extra helper even at max HR limit', () {
       final deal = DealsCatalog.rewardStoreDeals.firstWhere((d) => d.id == 'store_permanent_worker');
-      final initialHelpers = world.helperCount;
-      final initialRupees = world.rupees;
+      // Fill workers to max (3)
+      world.hireHelper(free: true);
+      world.hireHelper(free: true);
+      world.hireHelper(free: true);
+      expect(world.canHireWorker, isFalse);
+      expect(world.helperCount, 3);
 
       final success = world.buyCatalogDealWithGems(deal);
       expect(success, isTrue);
-      expect(world.helperCount, initialHelpers + 1);
-      expect(world.rupees, initialRupees); // Free of rupee cost
+      expect(world.helperCount, 4); // Extra worker successfully hired!
       expect(world.gems, 5); // 10 - 5
     });
 
-    test('Store Worker Capacity deal increases worker capacity and syncs helpers', () {
+    test('Store Worker Capacity deal increases both worker and player carry capacity', () {
       final deal = DealsCatalog.rewardStoreDeals.firstWhere((d) => d.id == 'store_worker_capacity');
       world.hireHelper(free: true);
       final helper = world.staff.firstWhere((s) => s.role == StaffRole.helper);
       final initialCapacity = helper.carryCapacity;
+      final initialPlayerCapacity = world.player.carryCapacity;
 
       world.buyCatalogDealWithGems(deal);
       expect(world.isStoreCapacityActive, isTrue);
       expect(world.temporaryWorkerCapacityBoost, 2);
       expect(helper.carryCapacity, initialCapacity + 2);
+      expect(world.player.carryCapacity, initialPlayerCapacity + 2);
 
       // Fast forward past duration
       world.tick(60.1);
       expect(world.isStoreCapacityActive, isFalse);
       expect(world.temporaryWorkerCapacityBoost, 0);
       expect(helper.carryCapacity, initialCapacity);
+      expect(world.player.carryCapacity, initialPlayerCapacity);
     });
 
     test('Fails gracefully when player has insufficient gems', () {

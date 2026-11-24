@@ -245,16 +245,6 @@ class _GameViewportState extends State<GameViewport>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildGlassIconButton(
-                    icon: Icons.home_rounded,
-                    iconColor: AppTheme.cream,
-                    tooltip: 'Home Menu',
-                    onTap: () {
-                      _resetJoystick();
-                      Navigator.of(context).maybePop();
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  _buildGlassIconButton(
                     icon: Icons.assignment_ind_rounded,
                     iconColor: AppTheme.goldYellow,
                     tooltip: 'HR & Upgrades',

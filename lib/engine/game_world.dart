@@ -973,8 +973,9 @@ class GameWorld {
 
   bool hireWorker({bool free = false}) => hireHelper(free: free);
 
-  bool hireHelper({bool free = false}) {
-    if (!canHireWorker) return false;
+  bool hireHelper({bool free = false, bool bypassMax = false}) {
+    if (!bypassMax && !canHireWorker) return false;
+    if (bypassMax && helperCount >= 6) return false;
     final cost = nextHelperCost;
     if (!free && rupees < cost) return false;
     if (!free) rupees -= cost;
@@ -1757,6 +1758,9 @@ class GameWorld {
         staffMember.carryCapacity = cap;
       }
     }
+    player.carryCapacity =
+        GameBalance.playerCapacityLevels[playerCapacityLevel - 1] +
+        temporaryWorkerCapacityBoost;
   }
 
   void _updateStoreBoosts(double dt) {
@@ -1803,7 +1807,7 @@ class GameWorld {
         );
         return true;
       case 'store_permanent_worker':
-        final hired = hireHelper(free: true);
+        final hired = hireHelper(free: true, bypassMax: true);
         if (hired) {
           floatingTexts.add(
             FloatingTextEntity(
