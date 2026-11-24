@@ -2,14 +2,19 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+import '../../app.dart';
 import '../../core/theme.dart';
 import '../../services/ad_ids.dart';
 
 /// Production-ready AdMob Banner Ad Widget.
 ///
 /// Features:
-/// - Fixed height (50dp) to prevent layout shifting.
-/// - Seamless auto-refresh every [refreshInterval] (default 45s).
+/// - Screen-wide full adaptive banner width based on the device display.
+/// - Clean screen guarantee: If the ad fails to load (offline, ad blocker, no fill),
+///   it collapses completely ([SizedBox.shrink]) with zero placeholder or border.
+/// - Auto-refresh every [refreshInterval] (default 45s).
+/// - Instant refresh on route return: Refreshes whenever the user navigates back
+///   from the game viewport, city map, or settings.
 /// - Graceful lifecycle handling (pauses refresh when app is in background).
 /// - Non-flickering ad swap (loads replacement ad before disposing previous ad).
 /// - Safe test mode for automated unit and widget testing.
@@ -35,16 +40,20 @@ class BannerAdWidget extends StatefulWidget {
   static bool testMockLoaded = false;
 
   @override
-  State<BannerAdWidget> createState() => _BannerAdWidgetState();
+  State<BannerAdWidget> createState() => BannerAdWidgetState();
 }
 
-class _BannerAdWidgetState extends State<BannerAdWidget>
-    with WidgetsBindingObserver {
+class BannerAdWidgetState extends State<BannerAdWidget>
+    with WidgetsBindingObserver, RouteAware {
   BannerAd? _currentAd;
   BannerAd? _loadingAd;
   bool _isAdLoaded = false;
   Timer? _refreshTimer;
   bool _isAppActive = true;
+  bool _initialLoadRequested = false;
+
+  /// Public getter to check if banner is currently showing.
+  bool get isAdLoaded => _isAdLoaded;
 
   @override
   void initState() {
@@ -56,10 +65,31 @@ class _BannerAdWidgetState extends State<BannerAdWidget>
       return;
     }
 
-    _loadAd();
     if (widget.autoRefresh) {
       _startRefreshTimer();
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Subscribe to navigation events so returning to this screen triggers a refresh
+    final modalRoute = ModalRoute.of(context);
+    if (modalRoute != null) {
+      appRouteObserver.subscribe(this, modalRoute);
+    }
+
+    if (!_initialLoadRequested && !BannerAdWidget.testMode) {
+      _initialLoadRequested = true;
+      _loadAd();
+    }
+  }
+
+  @override
+  void didPopNext() {
+    // Called when the top route has been popped and this screen is visible again!
+    debugPrint('[BannerAdWidget] Returned to screen via pop. Triggering banner refresh...');
+    refreshAd();
   }
 
   @override
@@ -69,6 +99,7 @@ class _BannerAdWidgetState extends State<BannerAdWidget>
       if (widget.autoRefresh && (_refreshTimer == null || !_refreshTimer!.isActive)) {
         _startRefreshTimer();
       }
+      refreshAd();
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.inactive) {
@@ -81,29 +112,65 @@ class _BannerAdWidgetState extends State<BannerAdWidget>
     _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(widget.refreshInterval, (_) {
       if (_isAppActive && mounted) {
-        _refreshAd();
+        refreshAd();
       }
     });
   }
 
-  void _loadAd() {
+  /// Refreshes the banner ad on demand (e.g. on navigation return or timer).
+  void refreshAd() {
+    if (!mounted) return;
+    if (BannerAdWidget.testMode) {
+      setState(() {
+        _isAdLoaded = BannerAdWidget.testMockLoaded;
+      });
+      return;
+    }
+    _loadAd();
+  }
+
+  Future<void> _loadAd() async {
     if (BannerAdWidget.testMode) return;
 
     try {
+      int screenWidth = 320;
+      if (mounted) {
+        final queryWidth = MediaQuery.sizeOf(context).width.truncate();
+        if (queryWidth > 0) screenWidth = queryWidth;
+      }
+
+      // 1. Calculate device screen adaptive banner size
+      AdSize targetSize = AdSize.banner;
+      try {
+        final adaptiveSize =
+            await AdSize.getLargeAnchoredAdaptiveBannerAdSize(screenWidth);
+        if (adaptiveSize != null) {
+          targetSize = adaptiveSize;
+        }
+      } catch (e) {
+        debugPrint('[BannerAdWidget] Adaptive size query error, using standard banner: $e');
+      }
+
+      if (!mounted) return;
+
+      // 2. Create and load the full-width adaptive banner ad
       final banner = BannerAd(
         adUnitId: AdIds.bannerAdUnitId,
-        size: AdSize.banner,
+        size: targetSize,
         request: const AdRequest(),
         listener: BannerAdListener(
           onAdLoaded: (ad) {
+            final bannerAd = ad as BannerAd;
             if (!mounted) {
-              ad.dispose();
+              bannerAd.dispose();
               return;
             }
-            debugPrint('[BannerAdWidget] Banner ad loaded successfully.');
+            debugPrint(
+              '[BannerAdWidget] Full-width banner loaded successfully (${bannerAd.size.width}x${bannerAd.size.height}).',
+            );
             setState(() {
               _currentAd?.dispose();
-              _currentAd = ad as BannerAd;
+              _currentAd = bannerAd;
               _loadingAd = null;
               _isAdLoaded = true;
             });
@@ -115,10 +182,10 @@ class _BannerAdWidgetState extends State<BannerAdWidget>
             if (!mounted) return;
             setState(() {
               _loadingAd = null;
-              // If we already have a currently active ad, keep it rather than showing blank
-              if (_currentAd == null) {
-                _isAdLoaded = false;
-              }
+              // Clean screen guarantee: If ad fails, remove ad so screen stays clean
+              _currentAd?.dispose();
+              _currentAd = null;
+              _isAdLoaded = false;
             });
             widget.onAdFailedToLoad?.call(error);
           },
@@ -127,19 +194,24 @@ class _BannerAdWidgetState extends State<BannerAdWidget>
 
       _loadingAd?.dispose();
       _loadingAd = banner;
-      banner.load();
+      await banner.load();
     } catch (e) {
-      debugPrint('[BannerAdWidget] Error loading banner ad: $e');
+      debugPrint('[BannerAdWidget] Error in _loadAd: $e');
+      if (mounted) {
+        setState(() {
+          _loadingAd?.dispose();
+          _loadingAd = null;
+          _currentAd?.dispose();
+          _currentAd = null;
+          _isAdLoaded = false;
+        });
+      }
     }
-  }
-
-  void _refreshAd() {
-    if (!_isAppActive || !mounted) return;
-    _loadAd();
   }
 
   @override
   void dispose() {
+    appRouteObserver.unsubscribe(this);
     WidgetsBinding.instance.removeObserver(this);
     _refreshTimer?.cancel();
     _currentAd?.dispose();
@@ -149,109 +221,52 @@ class _BannerAdWidgetState extends State<BannerAdWidget>
 
   @override
   Widget build(BuildContext context) {
-    // Standard AdMob Banner dimensions: 320 x 50
-    const double bannerWidth = 320.0;
-    const double bannerHeight = 50.0;
-
-    return Center(
-      child: Container(
-        width: bannerWidth,
-        height: bannerHeight,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A0A04),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: AppTheme.saffronOrange.withValues(alpha: 0.25),
-            width: 1.0,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.35),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(7),
-          child: _buildBannerContent(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBannerContent() {
     if (BannerAdWidget.testMode) {
       if (BannerAdWidget.testMockLoaded) {
         return Container(
-          color: const Color(0xFF2C1409),
+          width: double.infinity,
+          height: 50.0,
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.ad_units_rounded, size: 16, color: AppTheme.goldYellow),
-                SizedBox(width: 6),
-                Text(
-                  'TEST AD • BANNER (320x50)',
-                  style: TextStyle(
-                    color: AppTheme.goldYellow,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.8,
-                  ),
+          color: const Color(0xFF2C1409),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Icon(Icons.ad_units_rounded, size: 16, color: AppTheme.goldYellow),
+              SizedBox(width: 8),
+              Text(
+                'TEST AD • FULL-WIDTH BANNER',
+                style: TextStyle(
+                  color: AppTheme.goldYellow,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.8,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       }
-      return _buildPlaceholder();
+      // Clean screen rule: completely collapsed if no ad
+      return const SizedBox.shrink();
     }
 
-    if (_isAdLoaded && _currentAd != null) {
-      return SizedBox(
+    // STRICT CLEAN SCREEN RULE:
+    // If ad is not loaded (offline, ad blocker, load failure, initial state),
+    // return SizedBox.shrink() so screen remains 100% clean with NO placeholder!
+    if (!_isAdLoaded || _currentAd == null) {
+      return const SizedBox.shrink();
+    }
+
+    // Full mobile screen width container
+    return Container(
+      width: double.infinity,
+      height: _currentAd!.size.height.toDouble(),
+      alignment: Alignment.center,
+      child: SizedBox(
         width: _currentAd!.size.width.toDouble(),
         height: _currentAd!.size.height.toDouble(),
         child: AdWidget(ad: _currentAd!),
-      );
-    }
-
-    return _buildPlaceholder();
-  }
-
-  Widget _buildPlaceholder() {
-    return Container(
-      color: const Color(0xFF180803),
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.local_cafe_rounded,
-              size: 14,
-              color: AppTheme.saffronOrange.withValues(alpha: 0.6),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              'DHABA TYCOON • AD BANNER',
-              style: TextStyle(
-                color: AppTheme.cream.withValues(alpha: 0.4),
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.0,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

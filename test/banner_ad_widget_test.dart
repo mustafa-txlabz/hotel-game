@@ -24,8 +24,8 @@ void main() {
     });
   });
 
-  group('BannerAdWidget Display Tests', () {
-    testWidgets('Renders placeholder when ad is not loaded', (
+  group('BannerAdWidget Clean Screen & Display Tests', () {
+    testWidgets('Clean screen rule: Renders SizedBox.shrink when ad is not loaded', (
       WidgetTester tester,
     ) async {
       BannerAdWidget.testMockLoaded = false;
@@ -41,11 +41,13 @@ void main() {
 
       // Verify widget renders
       expect(find.byType(BannerAdWidget), findsOneWidget);
-      // Verify placeholder branding text
-      expect(find.text('DHABA TYCOON • AD BANNER'), findsOneWidget);
+      // Clean screen guarantee: NO placeholder text or border rendered!
+      expect(find.text('DHABA TYCOON • AD BANNER'), findsNothing);
+      expect(find.byIcon(Icons.local_cafe_rounded), findsNothing);
+      expect(find.byType(SizedBox), findsWidgets);
     });
 
-    testWidgets('Renders simulated test ad banner when loaded', (
+    testWidgets('Renders full-width simulated test ad banner when loaded', (
       WidgetTester tester,
     ) async {
       BannerAdWidget.testMockLoaded = true;
@@ -60,7 +62,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(BannerAdWidget), findsOneWidget);
-      expect(find.text('TEST AD • BANNER (320x50)'), findsOneWidget);
+      expect(find.text('TEST AD • FULL-WIDTH BANNER'), findsOneWidget);
     });
 
     testWidgets('BannerAdWidget uses 45-second default auto-refresh interval', (
@@ -69,6 +71,30 @@ void main() {
       const widget = BannerAdWidget();
       expect(widget.refreshInterval, equals(const Duration(seconds: 45)));
       expect(widget.autoRefresh, isTrue);
+    });
+
+    testWidgets('refreshAd() public method updates banner display state', (
+      WidgetTester tester,
+    ) async {
+      final key = GlobalKey<BannerAdWidgetState>();
+      BannerAdWidget.testMockLoaded = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BannerAdWidget(key: key),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('TEST AD • FULL-WIDTH BANNER'), findsNothing);
+
+      // Simulate ad becoming available and trigger refreshAd
+      BannerAdWidget.testMockLoaded = true;
+      key.currentState?.refreshAd();
+      await tester.pump();
+
+      expect(find.text('TEST AD • FULL-WIDTH BANNER'), findsOneWidget);
     });
   });
 }

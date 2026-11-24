@@ -6,6 +6,10 @@ import 'core/theme.dart';
 import 'state/game_controller.dart';
 import 'ui/screens/splash_screen.dart';
 
+/// Global RouteObserver for screen navigation and banner refresh awareness.
+final RouteObserver<ModalRoute<void>> appRouteObserver =
+    RouteObserver<ModalRoute<void>>();
+
 /// Root game application widget.
 class ChaiDhabaEmpireApp extends StatelessWidget {
   final Widget? home;
@@ -20,6 +24,7 @@ class ChaiDhabaEmpireApp extends StatelessWidget {
         title: AppStrings.appTitle,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
+        navigatorObservers: [appRouteObserver],
         home: home ?? const SplashScreen(),
       ),
     );

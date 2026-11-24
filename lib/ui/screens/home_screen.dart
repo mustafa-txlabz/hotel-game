@@ -7,13 +7,22 @@ import '../game/game_viewport.dart';
 import '../widgets/banner_ad_widget.dart';
 
 /// Clean, punchy Main Menu / Home Screen for Dhaba Tycoon Empire.
-/// Features central PLAY button and MAP button with game branding.
-class HomeScreen extends StatelessWidget {
+/// Features central PLAY button and MAP button with game branding,
+/// and full-width bottom AdMob banner with auto-refresh on route return.
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  void _enterDhabaArena(BuildContext context) {
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final GlobalKey<BannerAdWidgetState> _bannerKey =
+      GlobalKey<BannerAdWidgetState>();
+
+  Future<void> _enterDhabaArena(BuildContext context) async {
     HapticFeedback.mediumImpact();
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             const GameViewport(),
@@ -29,6 +38,52 @@ class HomeScreen extends StatelessWidget {
         transitionDuration: const Duration(milliseconds: 350),
       ),
     );
+    // Refresh banner when returning from Dhaba arena
+    _bannerKey.currentState?.refreshAd();
+  }
+
+  Future<void> _openSettings(BuildContext context) async {
+    HapticFeedback.selectionClick();
+    await ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          '⚙️ Settings modal coming in M12!',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: const Color(0xFF2E170A),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    ).closed;
+    _bannerKey.currentState?.refreshAd();
+  }
+
+  Future<void> _openMap(BuildContext context) async {
+    HapticFeedback.mediumImpact();
+    await ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          '🗺️ City Travel Map coming in M13! Store 2 awaits!',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: const Color(0xFF2E170A),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    ).closed;
+    _bannerKey.currentState?.refreshAd();
   }
 
   @override
@@ -87,26 +142,7 @@ class HomeScreen extends StatelessWidget {
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text(
-                              '⚙️ Settings modal coming in M12!',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            backgroundColor: const Color(0xFF2E170A),
-                            behavior: SnackBarBehavior.floating,
-                            duration: const Duration(seconds: 2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        );
-                      },
+                      onTap: () => _openSettings(context),
                       child: const Center(
                         child: Icon(
                           Icons.settings_rounded,
@@ -121,135 +157,140 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
 
-          // 4. Centered Content: Logo, Title, PLAY button & MAP button
+          // 4. Centered Content + Bottom Full-Width Banner Ad
           SafeArea(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Spacer(flex: 3),
+            child: Column(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 28.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Spacer(flex: 2),
 
-                    // App Logo Icon with warm gold glow
-                    Container(
-                      width: 124,
-                      height: 124,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(
-                          color: AppTheme.goldYellow,
-                          width: 3.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.saffronOrange.withValues(alpha: 0.4),
-                            blurRadius: 26,
-                            spreadRadius: 3,
-                            offset: const Offset(0, 8),
-                          ),
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            blurRadius: 14,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(26),
-                        child: Image.asset(
-                          'assets/icon/app_icon_512.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: AppTheme.chaiDarkBrown,
-                              child: const Center(
-                                child: Icon(
-                                  Icons.restaurant_rounded,
-                                  color: AppTheme.goldYellow,
-                                  size: 56,
-                                ),
+                          // App Logo Icon with warm gold glow
+                          Container(
+                            width: 124,
+                            height: 124,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(30),
+                              border: Border.all(
+                                color: AppTheme.goldYellow,
+                                width: 3.5,
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 22),
-
-                    // Game Title
-                    Text(
-                      AppStrings.appTitle.toUpperCase(),
-                      style: const TextStyle(
-                        color: AppTheme.goldYellow,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black87,
-                            blurRadius: 8,
-                            offset: Offset(0, 4),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.saffronOrange.withValues(alpha: 0.4),
+                                  blurRadius: 26,
+                                  spreadRadius: 3,
+                                  offset: const Offset(0, 8),
+                                ),
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.5),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(26),
+                              child: Image.asset(
+                                'assets/icon/app_icon_512.png',
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: AppTheme.chaiDarkBrown,
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.restaurant_rounded,
+                                        color: AppTheme.goldYellow,
+                                        size: 56,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
                           ),
+
+                          const SizedBox(height: 22),
+
+                          // Game Title
+                          Text(
+                            AppStrings.appTitle.toUpperCase(),
+                            style: const TextStyle(
+                              color: AppTheme.goldYellow,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.5,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black87,
+                                  blurRadius: 8,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+
+                          const SizedBox(height: 6),
+
+                          // Subtitle Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.saffronOrange.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppTheme.saffronOrange.withValues(alpha: 0.6),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: const Text(
+                              'ARCADE IDLE TYCOON',
+                              style: TextStyle(
+                                color: AppTheme.cream,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 2.0,
+                              ),
+                            ),
+                          ),
+
+                          const Spacer(flex: 2),
+
+                          // Big Juicy Green PLAY Button (lifted higher)
+                          _buildPlayButton(context),
+
+                          const SizedBox(height: 14),
+
+                          // Amber/Gold MAP Button
+                          _buildMapButton(context),
+
+                          const Spacer(flex: 1),
+
+                          // Version Footer
+                          const Text(
+                            'v1.0.0 • Dhaba Arcade Tycoon',
+                            style: TextStyle(
+                              color: Color(0x66FFFFFF),
+                              fontSize: 11,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
                         ],
                       ),
-                      textAlign: TextAlign.center,
                     ),
-
-                    const SizedBox(height: 6),
-
-                    // Subtitle Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppTheme.saffronOrange.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppTheme.saffronOrange.withValues(alpha: 0.6),
-                          width: 1.2,
-                        ),
-                      ),
-                      child: const Text(
-                        'ARCADE IDLE TYCOON',
-                        style: TextStyle(
-                          color: AppTheme.cream,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 2.0,
-                        ),
-                      ),
-                    ),
-
-                    const Spacer(flex: 2),
-
-                    // Big Juicy Green PLAY Button (lifted higher for bottom banner)
-                    _buildPlayButton(context),
-
-                    const SizedBox(height: 14),
-
-                    // Amber/Gold MAP Button
-                    _buildMapButton(context),
-
-                    const Spacer(flex: 1),
-
-                    // Version Footer
-                    const Text(
-                      'v1.0.0 • Dhaba Arcade Tycoon',
-                      style: TextStyle(
-                        color: Color(0x66FFFFFF),
-                        fontSize: 11,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // AdMob Banner Ad (320x50 with auto-refresh every 45s)
-                    const BannerAdWidget(),
-                    const SizedBox(height: 8),
-                  ],
+                  ),
                 ),
-              ),
+
+                // 5. Full Mobile Width AdMob Banner Ad (Clean: zero space if no ad loaded)
+                BannerAdWidget(key: _bannerKey),
+              ],
             ),
           ),
         ],
@@ -357,26 +398,7 @@ class HomeScreen extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            HapticFeedback.selectionClick();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text(
-                  '🗺️ City Travel Map coming in M13! Store 2 awaits!',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                backgroundColor: const Color(0xFF2E170A),
-                behavior: SnackBarBehavior.floating,
-                duration: const Duration(seconds: 2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            );
-          },
+          onTap: () => _openMap(context),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: const [
