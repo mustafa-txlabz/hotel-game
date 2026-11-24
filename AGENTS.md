@@ -335,19 +335,15 @@ Build the game's launch presentation and primary entry menu matching the dhaba c
 1. **Animated Splash / Loading Screen**:
    - Uses the custom designed app icon (`assets/icon/app_icon_512.png`) centered with a warm golden glow.
    - Deep rich Chai-brown backdrop with stylized subtle pattern.
-   - Smooth animated loading progress bar (0% to 100%) with randomized dhaba loading quotes:
-     - *"Kadak Chai ubaal rahe hain... ☕"*
-     - *"Tawa garam ho raha hai... 🫓"*
-     - *"Gup shup aur karahi tayyar hai... 🔥"*
-     - *"Dhaba khul raha hai... ✨"*
+   - Smooth animated loading progress bar (0% to 100%) with randomized dhaba loading quotes.
    - Automatically initializes save state, sound services, and transitions seamlessly to Home Screen.
-2. **Main Menu Home Screen (Title Screen)**:
-   - Bold 3D cartoon game title (*Dhaba Tycoon: Arcade Idle*) with steam & sparkling gold badge.
-   - Active store status card (showing current store name, wallet balance ₹, and global gems 💎).
-   - Big pulsating green **"▶ PLAY / RESUME"** button with haptic tap to launch directly into the dhaba arena.
-   - **"🗺️ LOCATIONS / MAP"** button (navigates to city map selector).
-   - **"⚙️ SETTINGS"** modal button.
-*Done when: Launching the app shows the animated splash with custom icon & loading bar, transitions to the polished Home Screen, and tapping Play starts the game arena.*
+2. **Clean Minimalist Main Menu Home Screen**:
+   - Bold 3D cartoon game title (*Dhaba Tycoon: Arcade Idle*) with app icon badge.
+   - Centered clean layout: Big glowing **PLAY** button in the center, and directly below it the **MAP** button.
+   - Top-right settings shortcut button.
+   - Completely removed store progression card and global currency headers (clean, uncluttered mobile arcade style).
+   - **Per-Store Isolated Economy**: Both cash (₹) and gems (💎) are strictly stored and tracked per individual store so every store starts completely fresh!
+*Done when: Launching the app shows the animated splash with custom icon & loading bar, transitions to the clean Home Screen with central Play and Map buttons, and tapping Play starts the game arena.*
 
 ### **M12 — Settings Modal & Audio/Haptics Controls** *(Pending)*
 Add fully functional Settings modal accessible from both the Home Screen and in-game HUD:
@@ -373,9 +369,9 @@ Build the second major dhaba location with multi-room layout and new food variet
    - **VIP Lounge**: Luxury red carpet, golden rope dividers, executive round tables.
 2. **New Food Station**:
    - Authentic **Bun Kabab / Dhaba Burger Grill** cooking station + Chai Kettle.
-3. **Multi-Store Shared Economy**:
-   - Shared global Gems (💎) across all stores, with independent store wallet (₹) and equipment levels.
-*Done when: Player can manage Store 2 with multi-room layout, cook bun kababs, serve urban customers, and earn shared gems.*
+3. **Per-Store Fresh Economy**:
+   - Each store maintains its own independent store wallet (₹), individual Gems (💎), and equipment levels for a 100% fresh progression experience!
+*Done when: Player can manage Store 2 with multi-room layout, cook bun kababs, serve urban customers, and earn store gems.*
 
 ---
 
