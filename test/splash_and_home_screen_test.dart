@@ -59,17 +59,16 @@ void main() {
 
       // HomeScreen should now be displayed
       expect(find.byType(HomeScreen), findsOneWidget);
-      expect(find.text('ENTER DHABA'), findsOneWidget);
+      expect(find.text('PLAY'), findsOneWidget);
+      expect(find.text('MAP'), findsOneWidget);
     });
   });
 
   group('HomeScreen Main Menu Tests (M11)', () {
-    testWidgets('HomeScreen renders store showcase card, wallets, and action buttons', (
+    testWidgets('HomeScreen renders clean logo, title, PLAY button, and MAP button', (
       WidgetTester tester,
     ) async {
       final controller = GameController();
-      controller.world.rupees = 1500.0;
-      controller.world.gems = 12;
 
       await tester.pumpWidget(
         ChangeNotifierProvider<GameController>.value(
@@ -81,25 +80,22 @@ void main() {
       );
       await tester.pump();
 
-      // Verify Header Row
-      expect(find.text(AppStrings.appTitle), findsOneWidget);
-      expect(find.text('Rs 1.50K'), findsOneWidget);
-      expect(find.text('12'), findsOneWidget);
+      // Verify Title & Subtitle Badge
+      expect(find.text(AppStrings.appTitle.toUpperCase()), findsOneWidget);
+      expect(find.text('ARCADE IDLE TYCOON'), findsOneWidget);
 
-      // Verify Active Store Showcase Card
-      expect(find.text('Highway Kadak Dhaba'), findsOneWidget);
-      expect(find.text('Location 1 • Grand Trunk Road Highway'), findsOneWidget);
-      expect(find.text('☕ Kettle'), findsOneWidget);
-      expect(find.text('🫓 Paratha'), findsOneWidget);
-      expect(find.text('👥 Staff'), findsOneWidget);
-
-      // Verify Main Action Buttons
-      expect(find.text('ENTER DHABA'), findsOneWidget);
-      expect(find.text('MAP & LOCATIONS'), findsOneWidget);
+      // Verify Clean Main Action Buttons
+      expect(find.text('PLAY'), findsOneWidget);
+      expect(find.text('MAP'), findsOneWidget);
       expect(find.byIcon(Icons.settings_rounded), findsOneWidget);
+
+      // Verify no store progression or currency clutter on home screen
+      expect(find.text('Highway Kadak Dhaba'), findsNothing);
+      expect(find.byIcon(Icons.currency_rupee_rounded), findsNothing);
+      expect(find.byIcon(Icons.diamond_rounded), findsNothing);
     });
 
-    testWidgets('Tapping ENTER DHABA navigates to GameViewport', (
+    testWidgets('Tapping PLAY navigates to GameViewport', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
@@ -112,7 +108,7 @@ void main() {
       );
       await tester.pump();
 
-      final playButton = find.text('ENTER DHABA');
+      final playButton = find.text('PLAY');
       expect(playButton, findsOneWidget);
 
       await tester.tap(playButton);
@@ -123,7 +119,7 @@ void main() {
       expect(find.byType(GameViewport), findsOneWidget);
     });
 
-    testWidgets('Tapping MAP & LOCATIONS displays coming soon preview snackbar', (
+    testWidgets('Tapping MAP displays coming soon preview snackbar', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
@@ -136,7 +132,7 @@ void main() {
       );
       await tester.pump();
 
-      final mapButton = find.text('MAP & LOCATIONS');
+      final mapButton = find.text('MAP');
       await tester.tap(mapButton);
       await tester.pump();
 
