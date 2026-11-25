@@ -8,6 +8,7 @@ import 'package:chai_dhaba_empire/engine/game_world.dart';
 import 'package:chai_dhaba_empire/state/game_controller.dart';
 import 'package:chai_dhaba_empire/ui/game/game_viewport.dart';
 import 'package:chai_dhaba_empire/ui/screens/city_map_screen.dart';
+import 'package:chai_dhaba_empire/ui/widgets/banner_ad_widget.dart';
 
 void main() {
   group('M13: CityShopsCatalog Tests', () {
@@ -62,6 +63,7 @@ void main() {
       expect(find.text('1/10 OPEN'), findsOneWidget);
       expect(find.text('Highway Kadak Dhaba'), findsOneWidget);
       expect(find.text('Rep: 45%'), findsOneWidget);
+      expect(find.byType(BannerAdWidget), findsOneWidget);
     });
 
     testWidgets('Tapping Shop 1 opens preview sheet with stats and TRAVEL & PLAY', (tester) async {

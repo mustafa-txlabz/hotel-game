@@ -8,6 +8,7 @@ import '../../core/theme.dart';
 import '../../data/city_shops_catalog.dart';
 import '../../state/game_controller.dart';
 import '../game/game_viewport.dart';
+import '../widgets/banner_ad_widget.dart';
 
 /// Interactive City Travel Map displaying all 10 franchise shops along a
 /// scenic winding mountain highway.
@@ -24,6 +25,8 @@ class CityMapScreen extends StatefulWidget {
 
 class _CityMapScreenState extends State<CityMapScreen> {
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey<BannerAdWidgetState> _bannerKey =
+      GlobalKey<BannerAdWidgetState>();
 
   // Layout constants for the vertical scrollable map canvas
   static const double _topPadding = 160.0;
@@ -103,8 +106,11 @@ class _CityMapScreenState extends State<CityMapScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF4CAF50),
-      body: Stack(
+      body: Column(
         children: [
+          Expanded(
+            child: Stack(
+              children: [
           // 1. Scrollable Scenic Road & 10 Shops Canvas
           SingleChildScrollView(
             controller: _scrollController,
@@ -316,6 +322,14 @@ class _CityMapScreenState extends State<CityMapScreen> {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+          ),
+          // Bottom Full-Width AdMob Banner (Clean: collapses if no ad loaded)
+          SafeArea(
+            top: false,
+            child: BannerAdWidget(key: _bannerKey),
           ),
         ],
       ),
