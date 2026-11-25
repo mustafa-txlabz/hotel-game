@@ -8,6 +8,7 @@ import '../../state/game_controller.dart';
 import '../game/game_viewport.dart';
 import '../overlays/settings_dialog.dart';
 import '../widgets/banner_ad_widget.dart';
+import 'city_map_screen.dart';
 
 /// Clean, punchy Main Menu / Home Screen for Dhaba Tycoon Empire.
 /// Features central PLAY button and MAP button with game branding,
@@ -54,23 +55,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _openMap(BuildContext context) async {
     HapticFeedback.mediumImpact();
-    await ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          '🗺️ City Travel Map coming in M13! Store 2 awaits!',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: const Color(0xFF2E170A),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+    await Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const CityMapScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOut,
+            ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
       ),
-    ).closed;
+    );
+    // Refresh banner when returning from City Map
     _bannerKey.currentState?.refreshAd();
   }
 

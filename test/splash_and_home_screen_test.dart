@@ -126,7 +126,7 @@ void main() {
       expect(find.byType(GameViewport), findsOneWidget);
     });
 
-    testWidgets('Tapping MAP displays coming soon preview snackbar', (
+    testWidgets('Tapping MAP navigates to CityMapScreen', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
@@ -141,9 +141,10 @@ void main() {
 
       final mapButton = find.text('MAP');
       await tester.tap(mapButton);
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pump(const Duration(milliseconds: 50));
 
-      expect(find.text('🗺️ City Travel Map coming in M13! Store 2 awaits!'), findsOneWidget);
+      expect(find.text('CITY TRAVEL MAP'), findsOneWidget);
     });
   });
 }
